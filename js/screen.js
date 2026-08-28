@@ -571,7 +571,7 @@ class BuildingSignageApp {
   }
 
   async fetchShabbatAndHolidays() {
-    // Curated, verified, authentic Jewish holiday & Shabbat photographic collections
+    // Curated, verified, authentic Jewish holiday & Special Event photographic collections
     const HOLIDAY_COLLECTIONS = {
       'shabbat': [
         'https://images.unsplash.com/photo-1511994298241-608e28f14fde?auto=format&fit=crop&w=1920&q=85',
@@ -581,22 +581,73 @@ class BuildingSignageApp {
       ],
       'rosh-hashanah': [
         'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1601662528567-526cd06f6582?auto=format&fit=crop&w=1920&q=85'
+        'https://images.unsplash.com/photo-1601662528567-526cd06f6582?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1568644396922-5c3bfae12521?auto=format&fit=crop&w=1920&q=85'
       ],
-      'hanukkah': [
-        'https://images.unsplash.com/photo-1513297887119-d46091b24bfa?auto=format&fit=crop&w=1920&q=85'
+      'yom-kippur': [
+        'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1920&q=85'
       ],
       'sukkot': [
-        'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1920&q=85'
+        'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'simchat-torah': [
+        'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1511994298241-608e28f14fde?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'hanukkah': [
+        'https://images.unsplash.com/photo-1513297887119-d46091b24bfa?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1543258103-a62bdc069871?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'tu-bishvat': [
+        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1528183429752-a97d0bf99b5a?auto=format&fit=crop&w=1920&q=85'
       ],
       'purim': [
-        'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1920&q=85'
+        'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=1920&q=85'
       ],
       'pesach': [
-        'https://images.unsplash.com/photo-1587334274328-64186a80aeee?auto=format&fit=crop&w=1920&q=85'
+        'https://images.unsplash.com/photo-1587334274328-64186a80aeee?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'memorial': [
+        'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'israel': [
+        'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'lag-baomer': [
+        'https://images.unsplash.com/photo-1475724017904-b712052c192a?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'jerusalem': [
+        'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=85'
       ],
       'shavuot': [
-        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1920&q=85'
+        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'tu-baav': [
+        'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'back-to-school': [
+        'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'new-year': [
+        'https://images.unsplash.com/photo-1467810563316-b5476525c0f9?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'family-day': [
+        'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'elections': [
+        'https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&w=1920&q=85'
       ],
       'default': [
         'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=85',
@@ -628,29 +679,123 @@ class BuildingSignageApp {
             havdalah = { title: item.title, time: cleanTime, date: item.date };
           } else if (item.category === 'parashat') {
             parasha = item.hebrew || item.title;
-          } else if (item.category === 'holiday') {
+          } else if (item.category === 'holiday' || item.category === 'roshchodesh' || item.category === 'fast') {
             holidays.push({ title: item.hebrew || item.title, date: item.date });
           }
         });
 
         const now = new Date();
+        const month = now.getMonth(); // 0-11 (7=Aug, 8=Sep, 11=Dec, 0=Jan)
+        const dateOfMonth = now.getDate();
         const dayOfWeek = now.getDay();
+        
         // Active from Friday morning through Saturday night, or Thursday 18:00+
         const isShabbatActive = (dayOfWeek === 5) || (dayOfWeek === 6) || (dayOfWeek === 4 && now.getHours() >= 18);
         
+        let activeEvent = null;
         let recommendedTheme = 'default';
         let themeImages = HOLIDAY_COLLECTIONS.default;
 
+        // 1. Match Jewish Holidays from Hebcal
         if (holidays.length > 0) {
-          const hTitle = holidays[0].title.toLowerCase();
-          if (hTitle.includes('ראש השנה')) { recommendedTheme = 'rosh-hashanah'; themeImages = HOLIDAY_COLLECTIONS['rosh-hashanah']; }
-          else if (hTitle.includes('חנוכה')) { recommendedTheme = 'hanukkah'; themeImages = HOLIDAY_COLLECTIONS['hanukkah']; }
-          else if (hTitle.includes('סוכות')) { recommendedTheme = 'sukkot'; themeImages = HOLIDAY_COLLECTIONS['sukkot']; }
-          else if (hTitle.includes('פורים')) { recommendedTheme = 'purim'; themeImages = HOLIDAY_COLLECTIONS['purim']; }
-          else if (hTitle.includes('פסח')) { recommendedTheme = 'pesach'; themeImages = HOLIDAY_COLLECTIONS['pesach']; }
-          else if (hTitle.includes('שבועות')) { recommendedTheme = 'shavuot'; themeImages = HOLIDAY_COLLECTIONS['shavuot']; }
-          else if (hTitle.includes('עצמאות')) { recommendedTheme = 'israel'; themeImages = HOLIDAY_COLLECTIONS['shabbat']; }
-        } else if (isShabbatActive) {
+          const hTitle = holidays[0].title;
+          const hLower = hTitle.toLowerCase();
+
+          if (hLower.includes('ראש השנה')) {
+            recommendedTheme = 'rosh-hashanah';
+            themeImages = HOLIDAY_COLLECTIONS['rosh-hashanah'];
+            activeEvent = { title: 'ראש השנה', customGreeting: 'שנה טובה ומתוקה!', subtitle: 'ועד הבית מאחל לכל הדיירים ובני ביתם שנה של שגשוג, בריאות, שלום והתחדשות', icon: '🍎' };
+          } else if (hLower.includes('כיפור')) {
+            recommendedTheme = 'yom-kippur';
+            themeImages = HOLIDAY_COLLECTIONS['yom-kippur'];
+            activeEvent = { title: 'יום הכיפורים', customGreeting: 'גמר חתימה טובה!', subtitle: 'צום קל ומועיל לכל הדיירים והצמים • שנת סליחה ושלום', icon: '🕍' };
+          } else if (hLower.includes('שמחת תורה') || hLower.includes('שמיני עצרת')) {
+            recommendedTheme = 'simchat-torah';
+            themeImages = HOLIDAY_COLLECTIONS['simchat-torah'];
+            activeEvent = { title: 'שמחת תורה', customGreeting: 'חג שמחת תורה שמח!', subtitle: 'מועדים לשמחה וחגים וזמנים לששון לכל דיירי הבניין', icon: '📜' };
+          } else if (hLower.includes('סוכות') || hLower.includes('הושענא')) {
+            recommendedTheme = 'sukkot';
+            themeImages = HOLIDAY_COLLECTIONS['sukkot'];
+            activeEvent = { title: 'חג הסוכות', customGreeting: 'חג סוכות שמח!', subtitle: 'ועד הבית מאחל חג סוכות מבורך, שמחה ואושפיזין מבורכים', icon: '⛺' };
+          } else if (hLower.includes('חנוכה')) {
+            recommendedTheme = 'hanukkah';
+            themeImages = HOLIDAY_COLLECTIONS['hanukkah'];
+            activeEvent = { title: 'חנוכה', customGreeting: 'חג חנוכה שמח ומאיר!', subtitle: 'חג של אור, שמחה, ניסים ונפלאות לכל המשפחות', icon: '🕎' };
+          } else if (hLower.includes('ט״ו בשבט') || hLower.includes('טו בשבט')) {
+            recommendedTheme = 'tu-bishvat';
+            themeImages = HOLIDAY_COLLECTIONS['tu-bishvat'];
+            activeEvent = { title: 'ט"ו בשבט', customGreeting: 'חג לאילנות שמח!', subtitle: 'חג צמיחה, פריחה והתחדשות הטבע לכל דיירי הבניין', icon: '🌳' };
+          } else if (hLower.includes('פורים') || hLower.includes('אסתר')) {
+            recommendedTheme = 'purim';
+            themeImages = HOLIDAY_COLLECTIONS['purim'];
+            activeEvent = { title: 'פורים', customGreeting: 'חג פורים שמח ומבדח!', subtitle: 'ליהודים הייתה אורה ושמחה וששון ויקר • חג מלא צהלה', icon: '🎭' };
+          } else if (hLower.includes('פסח')) {
+            recommendedTheme = 'pesach';
+            themeImages = HOLIDAY_COLLECTIONS['pesach'];
+            activeEvent = { title: 'פסח', customGreeting: 'חג פסח כשר ושמח!', subtitle: 'חג אביב וחרות מלבלב, שקט ושלווה לכל דיירי הבניין', icon: '🍷' };
+          } else if (hLower.includes('שואה')) {
+            recommendedTheme = 'memorial';
+            themeImages = HOLIDAY_COLLECTIONS['memorial'];
+            activeEvent = { title: 'יום הזיכרון לשואה ולגבורה', customGreeting: 'יום הזיכרון לשואה ולגבורה', subtitle: 'נזכור ולא נשכח • מרכינים ראש לזכר ששת המיליונים', icon: '🕯️' };
+          } else if (hLower.includes('הזיכרון') || hLower.includes('חללי')) {
+            recommendedTheme = 'memorial';
+            themeImages = HOLIDAY_COLLECTIONS['memorial'];
+            activeEvent = { title: 'יום הזיכרון לחללי מערכות ישראל', customGreeting: 'יום הזיכרון לחללי מערכות ישראל ופעולות האיבה', subtitle: 'במותם ציוו לנו את החיים • יהי זכרם ברוך ונצור בליבנו תמיד', icon: '🇮🇱' };
+          } else if (hLower.includes('עצמאות')) {
+            recommendedTheme = 'israel';
+            themeImages = HOLIDAY_COLLECTIONS['israel'];
+            activeEvent = { title: 'יום העצמאות', customGreeting: 'חג עצמאות שמח למדינת ישראל!', subtitle: 'חג שמח ומלא גאווה לאומית לכל דיירי הבניין ועם ישראל', icon: '🇮🇱' };
+          } else if (hLower.includes('עומר') || hLower.includes('ל״ג')) {
+            recommendedTheme = 'lag-baomer';
+            themeImages = HOLIDAY_COLLECTIONS['lag-baomer'];
+            activeEvent = { title: 'ל"ג בעומר', customGreeting: 'ל"ג בעומר שמח!', subtitle: 'חג שמח ומאיר לכל המשפחות והילדים', icon: '🔥' };
+          } else if (hLower.includes('ירושלים')) {
+            recommendedTheme = 'jerusalem';
+            themeImages = HOLIDAY_COLLECTIONS['jerusalem'];
+            activeEvent = { title: 'יום ירושלים', customGreeting: 'יום ירושלים שמח!', subtitle: 'שמחי ירושלים וגילו בה כל אוהביה', icon: '🦁' };
+          } else if (hLower.includes('שבועות')) {
+            recommendedTheme = 'shavuot';
+            themeImages = HOLIDAY_COLLECTIONS['shavuot'];
+            activeEvent = { title: 'שבועות', customGreeting: 'חג שבועות שמח!', subtitle: 'חג מתן תורה, חג הקציר והביכורים לכל הדיירים', icon: '🌾' };
+          } else if (hLower.includes('ט״ו באב') || hLower.includes('טו באב')) {
+            recommendedTheme = 'tu-baav';
+            themeImages = HOLIDAY_COLLECTIONS['tu-baav'];
+            activeEvent = { title: 'ט"ו באב', customGreeting: 'יום אהבה עברי שמח!', subtitle: 'שמחה, אהבה ואחווה בקרב כל משפחות הבניין', icon: '❤️' };
+          } else {
+            activeEvent = { title: hTitle, customGreeting: `${hTitle} שמח!`, subtitle: 'ועד הבית מברך את כל דיירי ואורחי הבניין בברכת חג שמח ומבורך', icon: '✨' };
+          }
+        }
+
+        // 2. Check Civil & National Special Calendar Dates
+        if (!activeEvent) {
+          // Back to School (August 27 - September 3)
+          if ((month === 7 && dateOfMonth >= 27) || (month === 8 && dateOfMonth <= 3)) {
+            recommendedTheme = 'back-to-school';
+            themeImages = HOLIDAY_COLLECTIONS['back-to-school'];
+            activeEvent = {
+              title: 'פתיחת שנת הלימודים',
+              customGreeting: 'שלום כיתה א\' ושנת לימודים מוצלחת!',
+              subtitle: 'ועד הבית מברך את כל ילדי ותלמידי הבניין בשנת לימודים פורייה, מהנה ובטוחה',
+              icon: '🎒'
+            };
+          }
+          // New Year / Silvester (Dec 30 - Jan 2)
+          else if ((month === 11 && dateOfMonth >= 30) || (month === 0 && dateOfMonth <= 2)) {
+            recommendedTheme = 'new-year';
+            themeImages = HOLIDAY_COLLECTIONS['new-year'];
+            activeEvent = {
+              title: 'שנה אזרחית חדשה',
+              customGreeting: 'שנה אזרחית טובה ומבורכת! Happy New Year',
+              subtitle: 'ועד הבניין מאחל שנה של הצלחה, בריאות והתחלות חדשות וטובות',
+              icon: '🎆'
+            };
+          }
+          // Shabbat
+          else if (isShabbatActive) {
+            recommendedTheme = 'shabbat';
+            themeImages = HOLIDAY_COLLECTIONS['shabbat'];
+          }
+        } else if (isShabbatActive && recommendedTheme === 'default') {
           recommendedTheme = 'shabbat';
           themeImages = HOLIDAY_COLLECTIONS['shabbat'];
         }
@@ -661,13 +806,13 @@ class BuildingSignageApp {
           candleLighting,
           havdalah,
           holidays,
-          activeHoliday: holidays[0] || null,
+          activeHoliday: activeEvent || holidays[0] || null,
           recommendedTheme,
           themeImage: themeImages[0],
           themeImages
         };
 
-        // Update default wallpapers to match current holiday/Shabbat theme!
+        // Update default wallpapers to match current holiday/special event theme!
         this.wallpapers = themeImages.map((url, i) => ({ id: `theme-wall-${i}`, url }));
 
         this.renderShabbatAndHolidays();
@@ -947,14 +1092,18 @@ class BuildingSignageApp {
       });
     }
 
-    // 5. Auto Holiday / Shabbat Celebration Slide (With Real Photographic Visuals)
+    // 5. Auto Holiday / Special Date / Shabbat Celebration Slide (With Real Photographic Visuals)
     if (this.shabbatData?.activeHoliday) {
+      const h = this.shabbatData.activeHoliday;
+      const title = h.customGreeting || `חג ${h.title} שמח!`;
+      const subtitle = h.subtitle || 'ועד הבית מאחל לכל הדיירים ובני ביתם חג מבורך, שלווה ושמחה';
+      const icon = h.icon || '✨';
       this.slides.push({
         type: 'holiday_greeting',
         data: {
-          title: `חג ${this.shabbatData.activeHoliday.title} שמח!`,
-          subtitle: 'ועד הבית מאחל לכל הדיירים ובני ביתם חג מבורך, שלווה ושמחה',
-          icon: '✨',
+          title,
+          subtitle,
+          icon,
           image: this.shabbatData.themeImage
         }
       });
