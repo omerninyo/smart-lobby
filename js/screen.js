@@ -1,803 +1,475 @@
 /**
  * =========================================================
- * Building Digital Signage - Screen Core Logic
- * High-End Theme Engine, Shabbat Auto Detection, RSS, Weather,
- * Stage Carousel & Multi-Device Layout Support
+ * Building Digital Signage - Screen Controller (Multi-Zone & Touch)
+ * High-Performance, Multi-Zone Interactive Dashboard
+ * Touchscreen Controls, Real Holiday Photos & 24/7 Resilience
  * =========================================================
  */
 
-class SmartLobbyScreen {
+class BuildingSignageApp {
   constructor() {
+    window.signageApp = this;
     this.settings = null;
     this.notices = [];
     this.photos = [];
-    this.slides = [];
+    this.wallpapers = [];
+    this.weather = null;
+    this.shabbatData = null;
+    this.newsItems = [];
+
     this.currentSlideIndex = 0;
+    this.slides = [];
     this.slideTimer = null;
+    this.progressTimer = null;
+    this.slideDurationMs = 12000;
+    this.slideStartTime = 0;
     this.isPaused = false;
     this.pauseTimeout = null;
-    this.touchStartX = 0;
-    this.touchEndX = 0;
+
     this.audioPlayer = null;
-    this.adminClicksCount = 0;
-    this.adminClickTimer = null;
-    this.isAudioUnlocked = false;
+    this.audioUnlocked = false;
+
+    // Touch counters
+    this.clockTapCount = 0;
+    this.clockTapTimer = null;
+    this.touchStartX = 0;
 
     this.init();
   }
 
   async init() {
+    console.log('🚀 Initializing Building Digital Signage Touchscreen Controller...');
     this.setupAudio();
-    await this.fetchSettings();
-    await this.fetchNotices();
-    await this.fetchPhotos();
-    this.setupClockAndDate();
-    this.setupWeather();
-    this.setupShabbatStatus();
-    this.setupNewsTicker();
-    this.buildSlides();
-    this.startCarousel();
+    this.startClock();
     this.setupTouchInteractions();
-    this.setupSecretAdminAccess();
+    this.setupWatchdog();
+
+    // Initial Data Fetch
+    await this.fetchSettings();
+    await Promise.all([
+      this.fetchWeather(),
+      this.fetchShabbatAndHolidays(),
+      this.fetchNotices(),
+      this.fetchPhotos(),
+      this.fetchWallpapers(),
+      this.fetchNews()
+    ]);
+
+    this.buildSlides();
+    this.renderSideColumn();
+    this.startSlideshow();
     this.startPeriodicUpdates();
   }
 
   // =========================================================
-  // 1. DATA FETCHING & LOCALSTORAGE CACHE
+  // 1. CLOCK & SECRET ADMIN SHORTCUT (5-Tap)
   // =========================================================
-  async fetchSettings() {
-    try {
-      const res = await fetch('/api/settings');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.settings) {
-          this.settings = data.settings;
-          this.applySettings();
-          return;
-        }
+  startClock() {
+    const updateTime = () => {
+      const now = new Date();
+      
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      
+      const timeElem = document.getElementById('clock-time');
+      if (timeElem) {
+        timeElem.textContent = `${hours}:${minutes}:${seconds}`;
       }
-      throw new Error('API unavailable');
-    } catch (e) {
-      try {
-        const res = await fetch('data/settings.json');
-        if (res.ok) {
-          this.settings = await res.json();
+
+      const days = ['יום ראשון', 'יום שני', 'יום שלישי', 'יום רביעי', 'יום חמישי', 'יום שישי', 'יום שבת'];
+      const months = ['בינואר', 'בפברואר', 'במרץ', 'באפריל', 'במאי', 'ביוני', 'ביולי', 'באוגוסט', 'בספטמבר', 'באוקטובר', 'בנובמבר', 'בדצמבר'];
+      
+      const dayName = days[now.getDay()];
+      const dayOfMonth = now.getDate();
+      const monthName = months[now.getMonth()];
+      const year = now.getFullYear();
+
+      const gregDateElem = document.getElementById('clock-date-greg');
+      if (gregDateElem) {
+        gregDateElem.textContent = `${dayName}, ${dayOfMonth} ${monthName} ${year}`;
+      }
+    };
+
+    updateTime();
+    setInterval(updateTime, 1000);
+  }
+
+  // =========================================================
+  // 2. TOUCHSCREEN & INTERACTIVE FEATURES (Simplified for All Touch Screens)
+  // =========================================================
+  setupTouchInteractions() {
+    // 1. Long Press on Clock: Toggle Mute / Unmute
+    const clockWidget = document.getElementById('clock-touch-widget');
+    let clockPressTimer = null;
+    let isLongPress = false;
+
+    if (clockWidget) {
+      const startClockPress = () => {
+        isLongPress = false;
+        clockWidget.style.transition = 'transform 0.2s ease, filter 0.2s ease';
+        clockWidget.style.transform = 'scale(0.95)';
+        clockWidget.style.filter = 'brightness(1.25)';
+
+        clearTimeout(clockPressTimer);
+        clockPressTimer = setTimeout(() => {
+          isLongPress = true;
+          this.toggleSecretMute();
+          clockWidget.style.transform = '';
+          clockWidget.style.filter = '';
+        }, 1200); // 1.2 seconds long-press
+      };
+
+      const cancelClockPress = () => {
+        clearTimeout(clockPressTimer);
+        clockWidget.style.transform = '';
+        clockWidget.style.filter = '';
+      };
+
+      clockWidget.addEventListener('pointerdown', startClockPress);
+      clockWidget.addEventListener('pointerup', cancelClockPress);
+      clockWidget.addEventListener('pointercancel', cancelClockPress);
+      clockWidget.addEventListener('pointerleave', cancelClockPress);
+
+      clockWidget.addEventListener('click', (e) => {
+        if (isLongPress) {
+          e.preventDefault();
+          e.stopPropagation();
+          isLongPress = false;
         }
-      } catch (fbErr) {}
+      });
     }
 
+    // 2. Stage Navigation Arrows (Large Tap Targets)
+    const prevBtn = document.getElementById('stage-prev-btn');
+    const nextBtn = document.getElementById('stage-next-btn');
+    if (prevBtn) prevBtn.addEventListener('click', (e) => { e.stopPropagation(); this.prevSlide(); this.pauseTemporarily(20000); });
+    if (nextBtn) nextBtn.addEventListener('click', (e) => { e.stopPropagation(); this.nextSlide(); this.pauseTemporarily(20000); });
+
+    // 3. Stage Container Tap to Pause
+    const stageContainer = document.getElementById('stage-container');
+    if (stageContainer) {
+      stageContainer.addEventListener('click', (e) => {
+        if (e.target !== prevBtn && e.target !== nextBtn) {
+          this.pauseTemporarily(20000);
+        }
+      });
+    }
+
+    // 4. Radio Indicator Tap to Mute / Unmute
+    const radioIndicator = document.getElementById('radio-indicator');
+    if (radioIndicator) {
+      radioIndicator.addEventListener('click', () => {
+        this.toggleSecretMute();
+      });
+    }
+
+    // 5. Interactive Touch Modals (Weather, Shabbat, Contacts, News)
+    const weatherTouch = document.getElementById('weather-touch-widget');
+    const envTouch = document.getElementById('env-touch-card');
+    if (weatherTouch) weatherTouch.addEventListener('click', () => this.openWeatherModal());
+    if (envTouch) envTouch.addEventListener('click', () => this.openWeatherModal());
+
+    const shabbatTouch = document.getElementById('header-center-widget');
+    if (shabbatTouch) shabbatTouch.addEventListener('click', () => this.openShabbatModal());
+
+    const contactsTouch = document.getElementById('side-elevator-card');
+    if (contactsTouch) contactsTouch.addEventListener('click', () => this.openContactsModal());
+
+    const tickerTouch = document.getElementById('ticker-scroll-wrapper');
+    const tickerBadge = document.getElementById('ticker-badge-btn');
+    if (tickerTouch) tickerTouch.addEventListener('click', () => this.openNewsModal());
+    if (tickerBadge) tickerBadge.addEventListener('click', () => this.openNewsModal());
+
+    // Close Modal Button & Backdrop
+    const modalBackdrop = document.getElementById('interactive-modal');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+    if (modalCloseBtn) modalCloseBtn.addEventListener('click', () => this.closeModal());
+    if (modalBackdrop) {
+      modalBackdrop.addEventListener('click', (e) => {
+        if (e.target === modalBackdrop) this.closeModal();
+      });
+    }
+
+    // Global click listener to unlock audio
+    document.addEventListener('click', () => {
+      this.unlockAudio();
+    }, { once: false });
+  }
+
+  showTouchToast(text, icon = '🔊') {
+    const toast = document.getElementById('touch-toast');
+    const iconElem = document.getElementById('touch-toast-icon');
+    const textElem = document.getElementById('touch-toast-text');
+    if (!toast) return;
+
+    if (iconElem) iconElem.textContent = icon;
+    if (textElem) textElem.textContent = text;
+
+    toast.classList.remove('hidden');
+    clearTimeout(this.toastTimeout);
+    this.toastTimeout = setTimeout(() => {
+      toast.classList.add('hidden');
+    }, 2800);
+  }
+
+  toggleSecretMute() {
+    if (!this.audioPlayer) return;
+    if (this.audioPlayer.paused) {
+      this.audioPlayer.play().then(() => {
+        this.showTouchToast('מוזיקה ורדיו הופעלו', '🔊');
+      }).catch(err => console.log('Audio error:', err));
+    } else {
+      this.audioPlayer.pause();
+      this.showTouchToast('מוזיקת רקע הושתקה', '🔇');
+    }
+  }
+
+  showOnScreenAdminPrompt() {
+    const pin = prompt('הזן קוד PIN לניהול השילוט הדיגיטלי:');
+    if (pin === '1234' || pin === this.settings?.security?.adminPin) {
+      window.location.href = '/admin';
+    } else if (pin !== null) {
+      alert('קוד PIN שגוי');
+    }
+  }
+
+  pauseTemporarily(durationMs = 25000) {
+    this.isPaused = true;
+    clearTimeout(this.pauseTimeout);
+    this.pauseTimeout = setTimeout(() => {
+      this.isPaused = false;
+      this.slideStartTime = Date.now();
+    }, durationMs);
+  }
+
+  openModal(title, bodyHtml) {
+    const modal = document.getElementById('interactive-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+
+    if (!modal || !modalTitle || !modalBody) return;
+
+    modalTitle.textContent = title;
+    modalBody.innerHTML = bodyHtml;
+    modal.classList.remove('hidden');
+    this.pauseTemporarily(40000);
+  }
+
+  closeModal() {
+    const modal = document.getElementById('interactive-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  openWeatherModal() {
+    if (!this.weather) return;
+    const forecastRows = (this.weather.forecast || []).map(f => `
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: rgba(255,255,255,0.05); border-radius: 0.8rem; margin-bottom: 0.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 1.8rem;">${f.iconEmoji}</span>
+          <div>
+            <div style="font-weight: 700; color: #fff;">${f.dayName}</div>
+            <div style="font-size: 0.8rem; color: #94a3b8;">${f.description}</div>
+          </div>
+        </div>
+        <div style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 800; color: #38bdf8;">
+          ${f.tempMin}° - ${f.tempMax}°
+        </div>
+      </div>
+    `).join('');
+
+    this.openModal('🌤️ תחזית מזג אוויר מורחבת - חדרה', `
+      <div style="text-align: right; display: flex; flex-direction: column; gap: 1rem;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; text-align: center;">
+          <div style="background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); padding: 0.75rem; border-radius: 0.8rem;">
+            <div style="font-size: 0.8rem; color: #94a3b8;">טמפרטורה נוכחית</div>
+            <div style="font-size: 1.6rem; font-weight: 800; color: #fff;">${this.weather.temperature}°</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 0.75rem; border-radius: 0.8rem;">
+            <div style="font-size: 0.8rem; color: #94a3b8;">לחות יחסית</div>
+            <div style="font-size: 1.6rem; font-weight: 800; color: #fff;">${this.weather.humidity || 65}%</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.05); padding: 0.75rem; border-radius: 0.8rem;">
+            <div style="font-size: 0.8rem; color: #94a3b8;">עומס חום</div>
+            <div style="font-size: 1.6rem; font-weight: 800; color: #fff;">${this.weather.apparentTemperature || this.weather.temperature}°</div>
+          </div>
+        </div>
+        <div>
+          <h4 style="font-weight: 700; margin-bottom: 0.6rem; color: #f8fafc;">תחזית ל-4 ימים:</h4>
+          ${forecastRows}
+        </div>
+      </div>
+    `);
+  }
+
+  openShabbatModal() {
+    if (!this.shabbatData) return;
+    const candle = this.shabbatData.candleLighting?.time || '18:50';
+    const havdalah = this.shabbatData.havdalah?.time || '19:46';
+    const parasha = this.shabbatData.parasha || 'פרשת השבוע';
+
+    this.openModal('🕯️ זמני שבת ופרשת השבוע - חדרה', `
+      <div style="display: flex; flex-direction: column; gap: 1.25rem; text-align: center;">
+        <div style="font-size: 2.2rem; color: #fbbf24;">✨ שבת שלום ומבורכת ✨</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div style="background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.3); padding: 1.25rem; border-radius: 1rem;">
+            <div style="font-size: 0.9rem; color: #fbbf24; font-weight: 700;">🕯️ כניסת שבת</div>
+            <div style="font-family: var(--font-heading); font-size: 2rem; font-weight: 900; color: #fff; margin-top: 0.3rem;">${candle}</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); padding: 1.25rem; border-radius: 1rem;">
+            <div style="font-size: 0.9rem; color: #94a3b8; font-weight: 700;">🌟 יציאת שבת</div>
+            <div style="font-family: var(--font-heading); font-size: 2rem; font-weight: 900; color: #fff; margin-top: 0.3rem;">${havdalah}</div>
+          </div>
+        </div>
+        <div style="background: rgba(255,255,255,0.04); padding: 1rem; border-radius: 0.8rem;">
+          <span style="color: #94a3b8;">פרשת השבוע: </span>
+          <span style="color: #fbbf24; font-weight: 800; font-size: 1.2rem;">${parasha}</span>
+        </div>
+      </div>
+    `);
+  }
+
+  openContactsModal() {
+    const contacts = this.settings?.contacts || [];
+    const rows = contacts.map(c => `
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.1rem; background: rgba(255,255,255,0.05); border-radius: 0.9rem; margin-bottom: 0.6rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 1.8rem;">${c.icon || '📞'}</span>
+          <div>
+            <div style="font-weight: 700; color: #fff;">${c.name}</div>
+            <div style="font-size: 0.78rem; color: #94a3b8;">${c.desc || ''}</div>
+          </div>
+        </div>
+        <a href="tel:${c.phone.replace(/[^0-9*]/g, '')}" style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 800; color: #38bdf8; text-decoration: none; background: rgba(56,189,248,0.15); padding: 0.4rem 0.8rem; border-radius: 0.6rem;">
+          ${c.phone}
+        </a>
+      </div>
+    `).join('');
+
+    this.openModal('📞 מדריך מספרי טלפון וחירום - הירדן 5', `
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <p style="font-size: 0.88rem; color: #94a3b8;">מספרי טלפון שימושיים לדיירי הבניין:</p>
+        ${rows}
+      </div>
+    `);
+  }
+
+  openNewsModal() {
+    const newsRows = this.newsItems.slice(0, 8).map((item, i) => `
+      <div style="padding: 0.75rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: flex-start; gap: 0.6rem;">
+        <span style="color: #ef4444; font-weight: 800;">${i + 1}.</span>
+        <span style="font-size: 1.05rem; color: #f1f5f9; line-height: 1.4;">${item.title}</span>
+      </div>
+    `).join('');
+
+    this.openModal('📰 מבזקי חדשות אחרונים (Ynet)', `
+      <div style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 60vh; overflow-y: auto;">
+        ${newsRows}
+      </div>
+    `);
+  }
+
+  // =========================================================
+  // 3. DATA FETCHING & HOLIDAY IMAGERY (Static + API Support)
+  // =========================================================
+  async fetchSettings() {
+    // 1. If running on Node.js server (localhost / custom backend), try API
+    if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.settings) {
+            this.settings = data.settings;
+            this.applySettings();
+            return;
+          }
+        }
+      } catch (e) {}
+    }
+    // 2. Static GitHub Pages fallback
     try {
-      const local = JSON.parse(localStorage.getItem('smart_lobby_settings') || 'null');
-      if (local) {
-        this.settings = { ...this.settings, ...local };
+      const res = await fetch('data/settings.json');
+      if (res.ok) {
+        this.settings = await res.json();
+      }
+    } catch (fallbackErr) {
+      console.warn('Settings load error:', fallbackErr);
+    }
+
+    // 3. LocalStorage override
+    try {
+      const localSettings = JSON.parse(localStorage.getItem('smart_lobby_settings') || 'null');
+      if (localSettings) {
+        this.settings = { ...this.settings, ...localSettings };
       }
     } catch (e) {}
 
     this.applySettings();
   }
 
-  async fetchNotices() {
-    try {
-      let fetched = [];
-      try {
-        const res = await fetch('/api/notices');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.notices) fetched = data.notices;
-        }
-      } catch (e) {}
-
-      if (fetched.length === 0) {
-        try {
-          const res = await fetch('data/notices.json');
-          if (res.ok) fetched = await res.json();
-        } catch (e) {}
-      }
-
-      try {
-        const local = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
-        if (Array.isArray(local) && local.length > 0) {
-          const localIds = new Set(local.map(n => n.id));
-          fetched = [...local, ...fetched.filter(n => !localIds.has(n.id))];
-        }
-      } catch (e) {}
-
-      const now = new Date();
-      this.notices = fetched.filter(n => {
-        if (!n.expiresAt) return true;
-        return new Date(n.expiresAt) > now;
-      });
-
-      this.renderSidebarNotices();
-    } catch (err) {
-      console.error('Error fetching notices:', err);
-    }
-  }
-
-  async fetchPhotos() {
-    try {
-      const res = await fetch('/api/photos');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.photos) {
-          this.photos = data.photos;
-        }
-      }
-    } catch (e) {
-      this.photos = [];
-    }
-  }
-
-  // =========================================================
-  // 2. THEME & SETTINGS APPLICATION
-  // =========================================================
   applySettings() {
     if (!this.settings) return;
 
-    const display = this.settings.display || {};
-    const bld = this.settings.building || {};
-
-    // Building Title & Subtitle
+    // Building Title & City
     const titleElem = document.getElementById('building-name');
-    const subtitleElem = document.getElementById('building-subtitle');
-    if (titleElem && bld.name) titleElem.textContent = bld.name;
-    if (subtitleElem && bld.city) subtitleElem.textContent = `${bld.city} • ${bld.subtitle || 'לוח דיגיטלי'}`;
+    const cityElem = document.getElementById('building-city');
+    if (titleElem && this.settings.building?.name) titleElem.textContent = this.settings.building.name;
+    if (cityElem && this.settings.building?.city) cityElem.textContent = this.settings.building.city;
 
-    // Resolution & Orientation
-    document.body.className = document.body.className
-      .replace(/res-[a-z0-9]+/g, '')
-      .replace(/orient-[a-z0-9]+/g, '')
-      .trim();
+    // Resolution Presets
+    const resolution = this.settings.display?.resolution || 'auto';
+    document.body.classList.remove('res-1080p', 'res-720p', 'res-auto');
+    document.body.classList.add(`res-${resolution}`);
 
-    document.body.classList.add(`res-${display.resolution || 'auto'}`);
-    document.body.classList.add(`orient-${display.orientation || 'landscape'}`);
-
-    // Left Burn Compensation
-    const burnComp = display.leftBurnCompensation !== undefined ? display.leftBurnCompensation : 45;
-    document.documentElement.style.setProperty('--left-burn-comp', `${burnComp}%`);
-
-    // High Contrast Cards on Left Side
-    if (display.highContrastSideCards) {
-      document.body.classList.add('high-contrast-side');
-    } else {
-      document.body.classList.remove('high-contrast-side');
+    // Ticker speed
+    const tickerContent = document.getElementById('ticker-content');
+    if (tickerContent) {
+      const speed = this.settings.display?.tickerSpeed || 'slow';
+      tickerContent.classList.remove('ticker-speed-slow', 'ticker-speed-normal', 'ticker-speed-fast');
+      tickerContent.classList.add(`ticker-speed-${speed}`);
     }
 
-    // Dynamic Layout Customization Classes
-    document.body.classList.remove(
-      'layout-side-left', 'layout-side-right', 'layout-side-hidden',
-      'side-width-compact', 'side-width-normal', 'side-width-wide',
-      'header-clock-left', 'header-brand-right', 'header-brand-hidden',
-      'header-shabbat-hidden', 'hide-ticker', 'hide-arrows'
-    );
-
-    if (display.layoutSide === 'right') {
-      document.body.classList.add('layout-side-right');
-    } else if (display.layoutSide === 'hidden') {
-      document.body.classList.add('layout-side-hidden');
-    } else {
-      document.body.classList.add('layout-side-left');
-    }
-
-    if (display.sideColumnWidth === 'compact') {
-      document.body.classList.add('side-width-compact');
-    } else if (display.sideColumnWidth === 'wide') {
-      document.body.classList.add('side-width-wide');
-    }
-
-    if (display.headerClockPosition === 'left') {
-      document.body.classList.add('header-clock-left');
-    }
-    if (display.headerBrandPosition === 'right') {
-      document.body.classList.add('header-brand-right');
-    } else if (display.headerBrandPosition === 'hidden') {
-      document.body.classList.add('header-brand-hidden');
-    }
-    if (display.headerShabbatPosition === 'hidden') {
-      document.body.classList.add('header-shabbat-hidden');
-    }
-
-    if (display.showNewsTicker === false) {
-      document.body.classList.add('hide-ticker');
-    }
-    if (display.showStageArrows === false) {
-      document.body.classList.add('hide-arrows');
-    }
-
-    // Background Opacity & Brightness Slider
-    const bgOpacity = display.bgOpacity !== undefined ? display.bgOpacity : 85;
-    const bgElem = document.getElementById('bg-overlay');
-    if (bgElem) {
-      bgElem.style.opacity = (bgOpacity / 100).toString();
-    }
-
-    // Theme Evaluation
-    this.evaluateCurrentTheme();
-
-    // Elevator bar toggle
-    const elevBar = document.getElementById('elevator-status-bar');
-    if (elevBar) {
-      elevBar.style.display = (display.showElevatorBar !== false) ? 'flex' : 'none';
-    }
-
-    // Radio
-    this.updateRadioState();
-  }
-
-  evaluateCurrentTheme() {
-    const display = this.settings?.display || {};
-    const themeMode = display.theme || 'auto';
-    let chosenTheme = display.customTheme || 'modern-dark';
-
-    if (themeMode === 'auto') {
-      const now = new Date();
-      const day = now.getDay();
-      const hour = now.getHours();
-
-      // Shabbat Auto Detect (Friday 13:00 to Saturday 21:00)
-      const isShabbatTime = (day === 5 && hour >= 13) || (day === 6 && hour <= 21);
-      if (isShabbatTime) {
-        chosenTheme = 'shabbat';
-      } else {
-        chosenTheme = 'modern-dark';
-      }
-    }
-
-    document.body.setAttribute('data-theme', chosenTheme);
-  }
-
-  // =========================================================
-  // 3. CLOCK & HEBREW CALENDAR
-  // =========================================================
-  setupClockAndDate() {
-    const update = () => {
-      const now = new Date();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const seconds = String(now.getSeconds()).padStart(2, '0');
-
-      const clockElem = document.getElementById('header-clock');
-      const secElem = document.getElementById('header-seconds');
-      if (clockElem) clockElem.textContent = `${hours}:${minutes}`;
-      if (secElem) secElem.textContent = `:${seconds}`;
-
-      const daysHe = ['יום ראשון', 'יום שני', 'יום שלישי', 'יום רביעי', 'יום חמישי', 'יום שישי', 'שבת קודש'];
-      const monthsHe = ['בינואר', 'בפברואר', 'במרץ', 'באפריל', 'במאי', 'ביוני', 'ביולי', 'באוגוסט', 'בספטמבר', 'באוקטובר', 'בנובמבר', 'בדצמבר'];
-
-      const dateStr = `${daysHe[now.getDay()]}, ${now.getDate()} ${monthsHe[now.getMonth()]} ${now.getFullYear()}`;
-      const dateElem = document.getElementById('header-date');
-      if (dateElem) dateElem.textContent = dateStr;
-    };
-
-    update();
-    setInterval(update, 1000);
-  }
-
-  // =========================================================
-  // 4. WEATHER & OPEN-METEO INTEGRATION
-  // =========================================================
-  async setupWeather() {
-    const fetchWeather = async () => {
-      try {
-        const lat = this.settings?.building?.lat || 32.434;
-        const lon = this.settings?.building?.lon || 34.9197;
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
-
-        const res = await fetch(url);
-        if (!res.ok) return;
-        const data = await res.json();
-
-        if (data.current) {
-          const temp = Math.round(data.current.temperature_2m);
-          const humidity = data.current.relative_humidity_2m;
-          const code = data.current.weather_code;
-
-          const tempElem = document.getElementById('weather-temp');
-          const iconElem = document.getElementById('weather-icon');
-          const descElem = document.getElementById('weather-desc');
-
-          if (tempElem) tempElem.textContent = `${temp}°`;
-          if (descElem) descElem.textContent = this.getWeatherDescription(code);
-          if (iconElem) iconElem.textContent = this.getWeatherIcon(code);
-        }
-      } catch (err) {
-        console.log('Weather fetch failed, retaining cache:', err);
-      }
-    };
-
-    await fetchWeather();
-    setInterval(fetchWeather, 10 * 60 * 1000);
-  }
-
-  getWeatherDescription(code) {
-    if (code === 0) return 'בהיר ונאה';
-    if (code >= 1 && code <= 3) return 'מעונן חלקית';
-    if (code >= 45 && code <= 48) return 'ערפילי';
-    if (code >= 51 && code <= 67) return 'גשם קל';
-    if (code >= 71 && code <= 77) return 'שלג קל';
-    if (code >= 80 && code <= 82) return 'ממטרים';
-    if (code >= 95 && code <= 99) return 'סופת רעמים';
-    return 'נאה';
-  }
-
-  getWeatherIcon(code) {
-    if (code === 0) return '☀️';
-    if (code >= 1 && code <= 3) return '⛅';
-    if (code >= 45 && code <= 48) return '🌫️';
-    if (code >= 51 && code <= 67) return '🌧️';
-    if (code >= 71 && code <= 77) return '❄️';
-    if (code >= 80 && code <= 82) return '🌦️';
-    if (code >= 95 && code <= 99) return '⛈️';
-    return '🌤️';
-  }
-
-  // =========================================================
-  // 5. SHABBAT STATUS (Hebcal API)
-  // =========================================================
-  async setupShabbatStatus() {
-    const fetchShabbat = async () => {
-      try {
-        const url = 'https://www.hebcal.com/shabbat?cfg=json&geonameid=294942&M=on'; // Hadera
-        const res = await fetch(url);
-        if (!res.ok) return;
-        const data = await res.json();
-
-        const candleItem = data.items?.find(i => i.category === 'candles');
-        const havdalahItem = data.items?.find(i => i.category === 'havdalah');
-        const parashaItem = data.items?.find(i => i.category === 'parashat');
-
-        const candleTime = candleItem ? candleItem.title.split(': ')[1] : '18:45';
-        const havdalahTime = havdalahItem ? havdalahItem.title.split(': ')[1] : '19:42';
-        const parashaName = parashaItem ? parashaItem.hebrew : 'פרשת השבוע';
-
-        const candleElem = document.getElementById('shabbat-candle-time');
-        const havdalahElem = document.getElementById('shabbat-havdalah-time');
-        const parashaElem = document.getElementById('shabbat-parasha-name');
-
-        if (candleElem) candleElem.textContent = candleTime;
-        if (havdalahElem) havdalahElem.textContent = havdalahTime;
-        if (parashaElem) parashaElem.textContent = parashaName;
-      } catch (err) {
-        console.log('Shabbat data fetch fallback:', err);
-      }
-    };
-
-    await fetchShabbat();
-    setInterval(fetchShabbat, 60 * 60 * 1000);
-  }
-
-  // =========================================================
-  // 6. NEWS TICKER & RSS
-  // =========================================================
-  async setupNewsTicker() {
-    const fetchNews = async () => {
-      try {
-        let items = [];
-        try {
-          const res = await fetch('/api/news');
-          if (res.ok) {
-            const data = await res.json();
-            if (data.success && data.news) items = data.news;
-          }
-        } catch (e) {}
-
-        if (items.length === 0) {
-          items = [
-            'ברוכים הבאים לבניין הירדן 5 חדרה • ועד הבית מאחל יום נעים ובטוח לכל הדיירים והאורחים',
-            'נא לשמור על ניקיון השטחים המשותפים, הלובי וחדרי המדרגות',
-            'חניה במקומות המסומנים בלבד לרווחת כלל דיירי הבניין'
-          ];
-        }
-
-        const tickerTextElem = document.getElementById('news-ticker-text');
-        if (tickerTextElem) {
-          const custom = this.settings?.display?.customTickerText;
-          const allItems = custom ? [custom, ...items] : items;
-          tickerTextElem.innerHTML = allItems.map(t => `<span class="ticker-item">🔹 ${t}</span>`).join(' &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ');
-        }
-      } catch (err) {
-        console.log('Ticker fetch error:', err);
-      }
-    };
-
-    await fetchNews();
-    setInterval(fetchNews, 5 * 60 * 1000);
-  }
-
-  // =========================================================
-  // 7. SIDEBAR NOTICES LIST
-  // =========================================================
-  renderSidebarNotices() {
-    const container = document.getElementById('sidebar-notices-container');
-    if (!container) return;
-
-    if (!this.notices || this.notices.length === 0) {
-      container.innerHTML = `
-        <div class="empty-notice-card">
-          <p class="font-bold text-white mb-1">אין הודעות חדשות</p>
-          <p class="text-xs text-slate-400">לוח המודעות פעיל ומעודכן</p>
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = this.notices.map((n, idx) => {
-      const isUrgentClass = n.isUrgent ? 'urgent-card' : '';
-      const badge = n.isUrgent ? '<span class="badge-urgent">⚠️ דחוף</span>' : '';
-      return `
-        <div class="sidebar-notice-item touch-interactive ${isUrgentClass}" onclick="window.screenApp.jumpToNotice(${idx})">
-          <div class="flex items-center justify-between gap-1 mb-1">
-            <h4 class="font-bold text-sm text-white truncate">${n.title}</h4>
-            ${badge}
-          </div>
-          <p class="text-xs text-slate-300 line-clamp-2">${n.content}</p>
-        </div>
-      `;
-    }).join('');
-  }
-
-  jumpToNotice(idx) {
-    this.currentSlideIndex = idx;
-    this.renderCurrentSlide();
-    this.pauseTemporarily(20);
-  }
-
-  // =========================================================
-  // 8. MAIN STAGE SLIDESHOW ENGINE
-  // =========================================================
-  buildSlides() {
-    this.slides = [];
-
-    // Notice Slides
-    this.notices.forEach(n => {
-      this.slides.push({
-        type: 'notice',
-        data: n
-      });
-    });
-
-    // Shabbat / Atmosphere Slide
-    this.slides.push({
-      type: 'shabbat-atmosphere',
-      data: {
-        title: 'שבת שלום ומבורכת',
-        subtitle: 'לכל דיירי ואורחי הירדן 5 חדרה'
-      }
-    });
-
-    // Emergency Contacts Slide
-    if (this.settings?.display?.showContactsSlide !== false) {
-      this.slides.push({
-        type: 'contacts',
-        data: this.settings?.contacts || []
-      });
-    }
-
-    this.renderCurrentSlide();
-  }
-
-  renderCurrentSlide() {
-    const stage = document.getElementById('main-stage');
-    if (!stage || this.slides.length === 0) return;
-
-    const slide = this.slides[this.currentSlideIndex % this.slides.length];
-
-    if (slide.type === 'notice') {
-      const n = slide.data;
-      const urgentBanner = n.isUrgent ? '<div class="slide-urgent-header">⚠️ הודעת ועד דחופה</div>' : '';
-      
-      if (n.imageUrl) {
-        stage.innerHTML = `
-          <div class="slide-container slide-split">
-            <div class="slide-img-side">
-              <img src="${n.imageUrl}" alt="${n.title}" class="slide-flyer-img" />
-            </div>
-            <div class="slide-text-side">
-              ${urgentBanner}
-              <h2 class="slide-title">${n.title}</h2>
-              <div class="slide-body-scroll">
-                <p class="slide-text">${n.content}</p>
-              </div>
-              <div class="slide-footer">
-                <span>חתימה: ${n.author || 'ועד הבית'}</span>
-              </div>
-            </div>
-          </div>
-        `;
-      } else {
-        stage.innerHTML = `
-          <div class="slide-container slide-full-text">
-            ${urgentBanner}
-            <h2 class="slide-title">${n.title}</h2>
-            <div class="slide-body-scroll">
-              <p class="slide-text">${n.content}</p>
-            </div>
-            <div class="slide-footer">
-              <span>חתימה: ${n.author || 'ועד הבית'}</span>
-            </div>
-          </div>
-        `;
-      }
-    } else if (slide.type === 'shabbat-atmosphere') {
-      stage.innerHTML = `
-        <div class="slide-container slide-shabbat-lux">
-          <div class="shabbat-candles-icon">🕯️🕯️</div>
-          <h2 class="shabbat-slide-title">שבת שלום ומבורכת</h2>
-          <p class="shabbat-slide-sub">הירדן 5, חדרה • שלווה, בריאות ושמחה לכל הדיירים</p>
-          <div class="shabbat-blessing-box">
-            <span>"וּפְרוֹשׂ עָלֵינוּ סֻכַּת שְׁלוֹמֶךָ"</span>
-          </div>
-        </div>
-      `;
-    } else if (slide.type === 'contacts') {
-      const contacts = slide.data;
-      const listHtml = contacts.map(c => `
-        <div class="contact-card-item">
-          <span class="contact-icon">${c.icon || '📞'}</span>
-          <div class="min-w-0">
-            <h4 class="font-bold text-sm text-white">${c.name}</h4>
-            <span class="text-xs text-slate-400 block">${c.desc || ''}</span>
-          </div>
-          <a href="tel:${c.phone}" class="contact-phone font-mono">${c.phone}</a>
-        </div>
-      `).join('');
-
-      stage.innerHTML = `
-        <div class="slide-container slide-contacts-hub">
-          <h2 class="contacts-slide-title">📋 מדריך מספרי חירום ושירותי בניין</h2>
-          <div class="contacts-grid-layout">
-            ${listHtml}
-          </div>
-        </div>
-      `;
-    }
-
-    // Update dots indicator if present
-    this.updatePaginationDots();
-  }
-
-  nextSlide() {
-    if (this.slides.length <= 1) return;
-    this.currentSlideIndex = (this.currentSlideIndex + 1) % this.slides.length;
-    this.renderCurrentSlide();
-  }
-
-  prevSlide() {
-    if (this.slides.length <= 1) return;
-    this.currentSlideIndex = (this.currentSlideIndex - 1 + this.slides.length) % this.slides.length;
-    this.renderCurrentSlide();
-  }
-
-  startCarousel() {
-    if (this.slideTimer) clearInterval(this.slideTimer);
-    const duration = (this.settings?.display?.slideDurationSeconds || 12) * 1000;
-    this.slideTimer = setInterval(() => {
-      if (!this.isPaused) {
-        this.nextSlide();
-      }
-    }, duration);
-  }
-
-  pauseTemporarily(seconds = 20) {
-    this.isPaused = true;
-    clearTimeout(this.pauseTimeout);
-    this.pauseTimeout = setTimeout(() => {
-      this.isPaused = false;
-    }, seconds * 1000);
-  }
-
-  updatePaginationDots() {
-    const dotsContainer = document.getElementById('stage-dots');
-    if (!dotsContainer || this.slides.length <= 1) return;
-
-    dotsContainer.innerHTML = this.slides.map((_, i) => `
-      <span class="pagination-dot ${i === (this.currentSlideIndex % this.slides.length) ? 'active' : ''}"></span>
-    `).join('');
-  }
-
-  // =========================================================
-  // 9. TOUCH INTERACTIONS & GESTURES
-  // =========================================================
-  setupTouchInteractions() {
-    const stage = document.getElementById('main-stage');
-    if (!stage) return;
-
-    stage.addEventListener('touchstart', (e) => {
-      this.touchStartX = e.changedTouches[0].screenX;
-      this.pauseTemporarily(20);
-    }, { passive: true });
-
-    stage.addEventListener('touchend', (e) => {
-      this.touchEndX = e.changedTouches[0].screenX;
-      this.handleSwipe();
-    }, { passive: true });
-
-    // Stage Next/Prev Arrows
-    const nextBtn = document.getElementById('stage-next-btn');
-    const prevBtn = document.getElementById('stage-prev-btn');
-
-    if (nextBtn) {
-      nextBtn.addEventListener('click', () => {
-        this.nextSlide();
-        this.pauseTemporarily(20);
-      });
-    }
-
-    if (prevBtn) {
-      prevBtn.addEventListener('click', () => {
-        this.prevSlide();
-        this.pauseTemporarily(20);
-      });
-    }
-
-    // Double tap on building brand to mute/unmute
-    const brand = document.getElementById('header-brand-box');
-    let lastTap = 0;
-    if (brand) {
-      brand.addEventListener('click', () => {
-        const cur = Date.now();
-        if (cur - lastTap < 400) {
-          this.toggleAudioMute();
-        }
-        lastTap = cur;
-      });
-    }
-  }
-
-  handleSwipe() {
-    const diff = this.touchEndX - this.touchStartX;
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) {
-        // Swiped right (in RTL: previous slide)
-        this.prevSlide();
-      } else {
-        // Swiped left (in RTL: next slide)
-        this.nextSlide();
-      }
-    }
-  }
-
-  toggleAudioMute() {
-    if (!this.audioPlayer) return;
-    this.audioPlayer.muted = !this.audioPlayer.muted;
-    const toast = document.createElement('div');
-    toast.className = 'audio-toast';
-    toast.textContent = this.audioPlayer.muted ? '🔇 המוזיקה הושתקה' : '🔊 המוזיקה הופעלה';
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2500);
-  }
-
-  // =========================================================
-  // 10. SECRET ADMIN ACCESS (5 Taps on Clock)
-  // =========================================================
-  setupSecretAdminAccess() {
-    const clockBox = document.getElementById('header-clock-box');
-    if (!clockBox) return;
-
-    clockBox.addEventListener('click', () => {
-      this.adminClicksCount++;
-      clearTimeout(this.adminClickTimer);
-
-      if (this.adminClicksCount >= 5) {
-        this.adminClicksCount = 0;
-        window.location.href = 'admin.html';
-      } else {
-        this.adminClickTimer = setTimeout(() => {
-          this.adminClicksCount = 0;
-        }, 1500);
-      }
-    });
-  }
-
-  // =========================================================
-  // 11. BACKGROUND AUDIO & RADIO PLAYER
-  // =========================================================
-  setupAudio() {
-    this.audioPlayer = document.getElementById('bg-audio-player');
-    if (!this.audioPlayer) {
-      this.audioPlayer = document.createElement('audio');
-      this.audioPlayer.id = 'bg-audio-player';
-      this.audioPlayer.preload = 'none';
-      document.body.appendChild(this.audioPlayer);
-    }
-
-    const unlock = () => {
-      if (!this.isAudioUnlocked) {
-        this.isAudioUnlocked = true;
-        this.updateRadioState();
-        document.removeEventListener('click', unlock);
-        document.removeEventListener('touchstart', unlock);
-      }
-    };
-
-    document.addEventListener('click', unlock, { once: true });
-    document.addEventListener('touchstart', unlock, { once: true });
-  }
-
-  updateRadioState() {
-    if (!this.settings?.radio || !this.audioPlayer) return;
-
-    const radio = this.settings.radio;
-    const radioWidget = document.getElementById('radio-indicator');
-    const stationNameElem = document.getElementById('radio-station-name');
-    const unmutePrompt = document.getElementById('audio-unmute-prompt');
-
-    if (!radio.enabled) {
-      this.audioPlayer.pause();
-      if (radioWidget) radioWidget.style.display = 'none';
-      if (unmutePrompt) unmutePrompt.style.display = 'none';
-      return;
-    }
-
-    if (radioWidget) radioWidget.style.display = 'flex';
-
-    const fallbackStations = [
-      { id: 'galgalatz', name: 'גלגלצ', url: 'https://glzwizzlv.bynetcdn.com/glglz_mp3' },
-      { id: 'glz', name: 'גלי צה"ל', url: 'https://glzwizzlv.bynetcdn.com/glz_mp3' },
-      { id: 'kan_88', name: 'כאן 88', url: 'https://kanliveicy.media.kan.org.il/icy/kan88_mp3' },
-      { id: 'kan_gimmel', name: 'כאן גימל', url: 'https://kanliveicy.media.kan.org.il/icy/kangimmel_mp3' },
-      { id: 'kan_kol_hamusica', name: 'קול המוסיקה', url: 'https://kanliveicy.media.kan.org.il/icy/kankolhamusica_mp3' },
-      { id: 'eco99', name: 'Eco 99', url: 'https://eco01.livecdn.biz/ecolive/99fm_aac/icecast.audio' },
-      { id: 'radios100fm', name: '100FM', url: 'https://radios100fm.livecdn.biz/radios100fm' },
-      { id: 'chillhop', name: 'Chillout Lounge', url: 'https://streams.ilovemusic.de/iloveradio17.mp3' },
-      { id: 'dance', name: 'Dance Hits', url: 'https://streams.ilovemusic.de/iloveradio2.mp3' }
-    ];
-
-    const currentSt = radio.stations?.find(s => s.id === radio.currentStation) 
-      || fallbackStations.find(s => s.id === radio.currentStation) 
-      || fallbackStations[0];
-
-    if (currentSt) {
-      if (stationNameElem) stationNameElem.textContent = currentSt.name.split(' ')[0];
-      if (this.audioPlayer.src !== currentSt.url) {
-        this.audioPlayer.src = currentSt.url;
-      }
-      this.audioPlayer.volume = radio.volume || 0.4;
-
-      let startH = radio.startHour || '08:00';
-      let endH = radio.endHour || '21:00';
-      if (startH === '00:08') startH = '08:00';
-      if (endH === '00:21') endH = '21:00';
-
-      const now = new Date();
-      const currentHour = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      const inSchedule = (!radio.autoPlaySchedule) || (currentHour >= startH && currentHour <= endH);
-
-      if (inSchedule) {
-        this.audioPlayer.play().then(() => {
-          if (unmutePrompt) unmutePrompt.style.display = 'none';
-        }).catch(err => {
-          console.log('Browser blocked autoplay:', err.message);
-          if (unmutePrompt) unmutePrompt.style.display = 'flex';
-        });
-      } else {
-        this.audioPlayer.pause();
-        if (unmutePrompt) unmutePrompt.style.display = 'none';
-      }
-    }
-  }
-
-  // =========================================================
-  // 12. AUTO REFRESH & WATCHDOG
-  // =========================================================
-  startPeriodicUpdates() {
-    setInterval(async () => {
-      await this.fetchSettings();
-      await this.fetchNotices();
-      await this.fetchPhotos();
-      this.buildSlides();
-    }, 45 * 1000);
-
-    // Watchdog night refresh at 04:00 AM
-    setInterval(() => {
-      const now = new Date();
-      if (now.getHours() === 4 && now.getMinutes() === 0 && now.getSeconds() < 10) {
-        window.location.reload();
-      }
-    }, 10 * 1000);
-  }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  window.screenApp = new SmartLobbyScreen();
-});
+    // Background Opacity & Dimming (0% to 100%)
+    const bgOpacityVal = this.settings.display?.bgOpacity !== undefined ? this.settings.display.bgOpacity : 85;
+    const layerOpacity = (bgOpacityVal / 100).toFixed(2);
+    const overlayDim = Math.max(0.12, ((100 - bgOpacityVal) / 100 * 0.75 + 0.20)).toFixed(2);
+    document.documentElement.style.setProperty('--bg-layer-opacity', layerOpacity);
+    document.documentElement.style.setProperty('--bg-overlay-opacity', overlayDim);
+
+    // Left-Side Backlight Burn Compensation (Luminance Boost)
+    const leftBoostPct = this.settings.display?.leftBurnCompensation !== undefined ? this.settings.display.leftBurnCompensation : 40;
+    const boostOpacity = (leftBoostPct / 100) * 0.75;
+    document.documentElement.style.setProperty('--left-boost', boostOpacity);
+
+    // High-Contrast Light Side Cards
+    const isHighContrast = Boolean(this.settings.display?.highContrastSideCards);
+    document.body.classList.toggle('high-contrast-side', isHighContrast);
+
+    // Advanced Layout - Side Column Position (left / right / hidden)
+    const layoutSide = this.settings.display?.layoutSide || 'left';
+    document.body.classList.remove('layout-side-left', 'layout-side-right', 'layout-side-hidden', 'layout-flipped');
+    document.body.classList.add(`layout-side-${layoutSide}`);
+    if (layoutSide === 'right') document.body.classList.add('layout-flipped');
+
+    // Advanced Layout - Side Column Width (normal / compact / wide)
+    const sideWidth = this.settings.display?.sideColumnWidth || 'normal';
+    document.body.classList.remove('side-width-compact', 'side-width-normal', 'side-width-wide');
+    document.body.classList.add(`side-width-${sideWidth}`);
+
+    // Advanced Layout - Header Clock & Weather Position (right / left)
+    const clockPos = this.settings.display?.headerClockPosition || 'right';
+    document.body.classList.toggle('header-clock-left', clockPos === 'left');
+
+    // Advanced Layout - Header Brand Position (left / right / hidden)
+    const brandPos = this.settings.display?.headerBrandPosition || 'left';
+    document.body.classList.toggle('header-brand-hidden', brandPos === 'hidden');
+    document.body.classList.toggle('header-brand-right', brandPos === 'right');
+
+    // Advanced Layout - Header Shabbat Position (center / hidden)
+    const shabbatPos = this.settings.display?.headerShabbatPosition || 'center';
+    document.body.classList.toggle('header-shabbat-hidden', shabbatPos === 'hidden');
+
+    // Advanced Layout - News Ticker & Stage Navigation Toggles
+    const showTicker = this.settings.display?.showNewsTicker !== false;
+    document.body.classList.toggle('hide-ticker', !showTicker);\n    const showArrows = this.settings.display?.showStageArrows !== false;\n    document.body.classList.toggle('hide-arrows', !showArrows);\n\n    // Elevator bar\n    this.updateSideContact();\n\n    // Slide Duration\n    const durationSec = this.settings.display?.slideDurationSeconds || 12;\n    this.slideDurationMs = durationSec * 1000;\n\n    // Radio\n    this.updateRadioState();\n  }\n\n  updateSideContact() {\n    const sideCard = document.getElementById('side-elevator-card');\n    const elevName = document.getElementById('side-elevator-name');\n    const elevPhone = document.getElementById('side-elevator-phone');\n    if (!sideCard) return;\n\n    const showBar = this.settings?.display?.showElevatorBar !== false;\n    const contacts = this.settings?.contacts || [];\n    const elevContact = contacts.find(c => (c.isPrimaryElevator || c.name.includes('מעלית')) && c.enabled !== false);\n\n    if (!showBar || !elevContact) {\n      sideCard.style.display = 'none';\n      return;\n    }\n\n    sideCard.style.display = 'block';\n    if (elevName) elevName.textContent = `${elevContact.name}:`;\n    if (elevPhone) elevPhone.textContent = elevContact.phone;\n  }\n\n  async fetchWeather() {\n    if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {\n      try {\n        const res = await fetch('/api/weather');\n        if (res.ok) {\n          const data = await res.json();\n          if (data.success && data.weather) {\n            this.weather = data.weather;\n            this.renderWeather();\n            this.buildSlides();\n            return;\n          }\n        }\n      } catch (e) {}\n    }\n\n    // Direct Open-Meteo Client Call for GitHub Pages\n    try {\n      const lat = this.settings?.building?.lat || 32.4340;\n      const lon = this.settings?.building?.lon || 34.9197;\n      const cityName = this.settings?.building?.city || 'חדרה';\n      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,precipitation_probability_max,sunrise,sunset&timezone=Asia%2FJerusalem`;\n      const resp = await fetch(url);\n      if (resp.ok) {\n        const data = await resp.json();\n        const current = data.current;\n        const daily = data.daily;\n        const weatherCodeMap = {\n          0: { desc: 'בהיר ונאה', day: '☀️', night: '🌙' },\n          1: { desc: 'בהיר ברובו', day: '🌤️', night: '🌤️' },\n          2: { desc: 'מעונן חלקית', day: '⛅', night: '⛅' },\n          3: { desc: 'מעונן', day: '☁️', night: '☁️' },\n          45: { desc: 'אביך', day: '🌫️', night: '🌫️' },\n          61: { desc: 'גשם קל', day: '🌧️', night: '🌧️' },\n          63: { desc: 'גשם', day: '🌧️', night: '🌧️' },\n          80: { desc: 'ממטרים קלים', day: '🌦️', night: '🌦️' },\n          95: { desc: 'סופת רעמים', day: '⛈️', night: '⛈️' }\n        };\n        const wInfo = weatherCodeMap[current.weather_code] || { desc: 'נאה', day: '☀️', night: '🌙' };\n        const daysMap = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];\n        const forecast = [];\n        if (daily?.time) {\n          for (let i = 0; i < Math.min(daily.time.length, 4); i++) {\n            const dateObj = new Date(daily.time[i]);\n            const dInfo = weatherCodeMap[daily.weather_code[i]] || { desc: 'נאה', day: '☀️' };\n            forecast.push({\n              dayName: i === 0 ? 'היום' : (i === 1 ? 'מחר' : `יום ${daysMap[dateObj.getDay()]}`),\n              tempMax: Math.round(daily.temperature_2m_max[i]),\n              tempMin: Math.round(daily.temperature_2m_min[i]),\n              description: dInfo.desc,\n              iconEmoji: dInfo.day\n            });\n          }\n        }\n        this.weather = {\n          city: cityName,\n          temperature: Math.round(current.temperature_2m),\n          apparentTemperature: Math.round(current.apparent_temperature),\n          humidity: current.relative_humidity_2m,\n          description: wInfo.desc,\n          iconEmoji: current.is_day ? wInfo.day : wInfo.night,\n          tempMax: daily?.temperature_2m_max?.[0] ? Math.round(daily.temperature_2m_max[0]) : null,\n          tempMin: daily?.temperature_2m_min?.[0] ? Math.round(daily.temperature_2m_min[0]) : null,\n          sunrise: daily?.sunrise?.[0] ? daily.sunrise[0].split('T')[1].slice(0, 5) : '06:15',\n          sunset: daily?.sunset?.[0] ? daily.sunset[0].split('T')[1].slice(0, 5) : '19:15',\n          forecast\n        };\n        this.renderWeather();\n        this.buildSlides();\n      }\n    } catch (omErr) {\n      console.warn('Weather fallback failed:', omErr);\n    }\n  }\n\n  renderWeather() {\n    if (!this.weather) return;\n\n    const tempElem = document.getElementById('weather-temp');\n    const iconElem = document.getElementById('weather-icon');\n    const descElem = document.getElementById('weather-desc');\n\n    if (tempElem) tempElem.textContent = `${this.weather.temperature}°`;\n    if (iconElem) iconElem.textContent = this.weather.iconEmoji || '☀️';\n    if (descElem) {\n      const maxMin = (this.weather.tempMax && this.weather.tempMin) ? ` | ${this.weather.tempMin}° - ${this.weather.tempMax}°` : '';\n      descElem.textContent = `${this.weather.description}${maxMin}`;\n    }\n\n    // Environmental stats in side widget\n    const humidityElem = document.getElementById('env-humidity');\n    const sunriseElem = document.getElementById('env-sunrise');\n    const sunsetElem = document.getElementById('env-sunset');\n\n    if (humidityElem) humidityElem.textContent = `${this.weather.humidity || 65}%`;\n    if (sunriseElem) sunriseElem.textContent = this.weather.sunrise || '06:15';\n    if (sunsetElem) sunsetElem.textContent = this.weather.sunset || '19:15';\n  }\n\n  async fetchShabbatAndHolidays() {\n    // Curated, verified, authentic Jewish holiday & Special Event photographic collections\n    const HOLIDAY_COLLECTIONS = {\n      'shabbat': [\n        'https://images.unsplash.com/photo-1511994298241-608e28f14fde?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1576085898323-218337e3e43c?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'rosh-hashanah': [\n        'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1601662528567-526cd06f6582?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1568644396922-5c3bfae12521?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'yom-kippur': [\n        'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'sukkot': [\n        'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'simchat-torah': [\n        'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1511994298241-608e28f14fde?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'hanukkah': [\n        'https://images.unsplash.com/photo-1513297887119-d46091b24bfa?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1543258103-a62bdc069871?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'tu-bishvat': [\n        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1528183429752-a97d0bf99b5a?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'purim': [\n        'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'pesach': [\n        'https://images.unsplash.com/photo-1587334274328-64186a80aeee?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'memorial': [\n        'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'israel': [\n        'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'lag-baomer': [\n        'https://images.unsplash.com/photo-1475724017904-b712052c192a?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'jerusalem': [\n        'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'shavuot': [\n        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'tu-baav': [\n        'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'back-to-school': [\n        'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'new-year': [\n        'https://images.unsplash.com/photo-1467810563316-b5476525c0f9?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'family-day': [\n        'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'elections': [\n        'https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&w=1920&q=85'\n      ],\n      'default': [\n        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1920&q=85',\n        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=85'\n      ]\n    };\n\n    // Direct Hebcal Client Call\n    try {\n      const lat = this.settings?.building?.lat || 32.4340;\n      const lon = this.settings?.building?.lon || 34.9197;\n      const url = `https://www.hebcal.com/shabbat?cfg=json&latitude=${lat}&longitude=${lon}&tzid=Asia/Jerusalem&M=on&lg=he`;\n      const resp = await fetch(url);\n      if (resp.ok) {\n        const data = await resp.json();\n        const items = data.items || [];\n        let candleLighting = null;\n        let havdalah = null;\n        let parasha = null;\n        const holidays = [];\n\n        items.forEach(item => {\n          if (item.category === 'candles') {\n            const cleanTime = (item.title || '').match(/\\d{1,2}:\\d{2}/)?.[0] || item.title;\n            candleLighting = { title: item.title, time: cleanTime, date: item.date };\n          } else if (item.category === 'havdalah') {\n            const cleanTime = (item.title || '').match(/\\d{1,2}:\\d{2}/)?.[0] || item.title;\n            havdalah = { title: item.title, time: cleanTime, date: item.date };\n          } else if (item.category === 'parashat') {\n            parasha = item.hebrew || item.title;\n          } else if (item.category === 'holiday' || item.category === 'roshchodesh' || item.category === 'fast') {\n            holidays.push({ title: item.hebrew || item.title, date: item.date });\n          }\n        });\n\n        const now = new Date();\n        const month = now.getMonth(); // 0-11 (7=Aug, 8=Sep, 11=Dec, 0=Jan)\n        const dateOfMonth = now.getDate();\n        const dayOfWeek = now.getDay();\n        \n        // Active from Friday morning through Saturday night, or Thursday 18:00+\n        const isShabbatActive = (dayOfWeek === 5) || (dayOfWeek === 6) || (dayOfWeek === 4 && now.getHours() >= 18);\n        \n        let activeEvent = null;\n        let recommendedTheme = 'default';\n        let themeImages = HOLIDAY_COLLECTIONS.default;\n\n        // 1. Match Jewish Holidays from Hebcal\n        if (holidays.length > 0) {\n          const hTitle = holidays[0].title;\n          const hLower = hTitle.toLowerCase();\n\n          if (hLower.includes('ראש השנה')) {\n            recommendedTheme = 'rosh-hashanah';\n            themeImages = HOLIDAY_COLLECTIONS['rosh-hashanah'];\n            activeEvent = { title: 'ראש השנה', customGreeting: 'שנה טובה ומתוקה!', subtitle: 'ועד הבית מאחל לכל הדיירים ובני ביתם שנה של שגשוג, בריאות, שלום והתחדשות', icon: '🍎' };\n          } else if (hLower.includes('כיפור')) {\n            recommendedTheme = 'yom-kippur';\n            themeImages = HOLIDAY_COLLECTIONS['yom-kippur'];\n            activeEvent = { title: 'יום הכיפורים', customGreeting: 'גמר חתימה טובה!', subtitle: 'צום קל ומועיל לכל הדיירים והצמים • שנת סליחה ושלום', icon: '🕍' };\n          } else if (hLower.includes('שמחת תורה') || hLower.includes('שמיני עצרת')) {\n            recommendedTheme = 'simchat-torah';\n            themeImages = HOLIDAY_COLLECTIONS['simchat-torah'];\n            activeEvent = { title: 'שמחת תורה', customGreeting: 'חג שמחת תורה שמח!', subtitle: 'מועדים לשמחה וחגים וזמנים לששון לכל דיירי הבניין', icon: '📜' };\n          } else if (hLower.includes('סוכות') || hLower.includes('הושענא')) {\n            recommendedTheme = 'sukkot';\n            themeImages = HOLIDAY_COLLECTIONS['sukkot'];\n            activeEvent = { title: 'חג הסוכות', customGreeting: 'חג סוכות שמח!', subtitle: 'ועד הבית מאחל חג סוכות מבורך, שמחה ואושפיזין מבורכים', icon: '⛺' };\n          } else if (hLower.includes('חנוכה')) {\n            recommendedTheme = 'hanukkah';\n            themeImages = HOLIDAY_COLLECTIONS['hanukkah'];\n            activeEvent = { title: 'חנוכה', customGreeting: 'חג חנוכה שמח ומאיר!', subtitle: 'חג של אור, שמחה, ניסים ונפלאות לכל המשפחות', icon: '🕎' };\n          } else if (hLower.includes('ט״ו בשבט') || hLower.includes('טו בשבט')) {\n            recommendedTheme = 'tu-bishvat';\n            themeImages = HOLIDAY_COLLECTIONS['tu-bishvat'];\n            activeEvent = { title: 'ט\"ו בשבט', customGreeting: 'חג לאילנות שמח!', subtitle: 'חג צמיחה, פריחה והתחדשות הטבע לכל דיירי הבניין', icon: '🌳' };\n          } else if (hLower.includes('פורים') || hLower.includes('אסתר')) {\n            recommendedTheme = 'purim';\n            themeImages = HOLIDAY_COLLECTIONS['purim'];\n            activeEvent = { title: 'פורים', customGreeting: 'חג פורים שמח ומבדח!', subtitle: 'ליהודים הייתה אורה ושמחה וששון ויקר • חג מלא צהלה', icon: '🎭' };\n          } else if (hLower.includes('פסח')) {\n            recommendedTheme = 'pesach';\n            themeImages = HOLIDAY_COLLECTIONS['pesach'];\n            activeEvent = { title: 'פסח', customGreeting: 'חג פסח כשר ושמח!', subtitle: 'חג אביב וחירות מלבלב, שקט ושלווה לכל דיירי הבניין', icon: '🍷' };\n          } else if (hLower.includes('שואה')) {\n            recommendedTheme = 'memorial';\n            themeImages = HOLIDAY_COLLECTIONS['memorial'];\n            activeEvent = { title: 'יום הזיכרון לשואה ולגבורה', customGreeting: 'יום הזיכרון לשואה ולגבורה', subtitle: 'נזכור ולא נשכח • מרכינים ראש לזכר ששת המיליונים', icon: '🕯️' };\n          } else if (hLower.includes('הזיכרון') || hLower.includes('חללי')) {\n            recommendedTheme = 'memorial';\n            themeImages = HOLIDAY_COLLECTIONS['memorial'];\n            activeEvent = { title: 'יום הזיכרון לחללי מערכות ישראל', customGreeting: 'יום הזיכרון לחללי מערכות ישראל ופעולות האיבה', subtitle: 'במותם ציוו לנו את החיים • יהי זכרם ברוך ונצור בליבנו תמיד', icon: '🇮🇱' };\n          } else if (hLower.includes('עצמאות')) {\n            recommendedTheme = 'israel';\n            themeImages = HOLIDAY_COLLECTIONS['israel'];\n            activeEvent = { title: 'יום העצמאות', customGreeting: 'חג עצמאות שמח למדינת ישראל!', subtitle: 'חג שמח ומלא גאווה לאומית לכל דיירי הבניין ועם ישראל', icon: '🇮🇱' };\n          } else if (hLower.includes('עומר') || hLower.includes('ל״ג')) {\n            recommendedTheme = 'lag-baomer';\n            themeImages = HOLIDAY_COLLECTIONS['lag-baomer'];\n            activeEvent = { title: 'ל\"ג בעומר', customGreeting: 'ל\"ג בעומר שמח!', subtitle: 'חג שמח ומאיר לכל המשפחות והילדים', icon: '🔥' };\n          } else if (hLower.includes('ירושלים')) {\n            recommendedTheme = 'jerusalem';\n            themeImages = HOLIDAY_COLLECTIONS['jerusalem'];\n            activeEvent = { title: 'יום ירושלים', customGreeting: 'יום ירושלים שמח!', subtitle: 'שמחי ירושלים וגילו בה כל אוהביה • חג שמח', icon: '🦁' };\n          } else if (hLower.includes('שבועות')) {\n            recommendedTheme = 'shavuot';\n            themeImages = HOLIDAY_COLLECTIONS['shavuot'];\n            activeEvent = { title: 'חג השבועות', customGreeting: 'חג שבועות שמח!', subtitle: 'חג מתן תורה, ביכורים וקציר שמח ומבורך לכל בית הירדן 5', icon: '🌾' };\n          } else if (hLower.includes('אב') || hLower.includes('טו באב')) {\n            recommendedTheme = 'tu-baav';\n            themeImages = HOLIDAY_COLLECTIONS['tu-baav'];\n            activeEvent = { title: 'ט\"ו באב - יום האהבה', customGreeting: 'יום אהבה ושמחה שמח!', subtitle: 'מרבים באהבת חינם, אחווה ושלום בין כל השכנים', icon: '❤️' };\n          }\n        }\n\n        // 2. Fixed Israeli/Civil Special Events (Gregorian calendar)\n        if (!activeEvent) {\n          // Back to school (Aug 25 - Sep 3)\n          if ((month === 7 && dateOfMonth >= 25) || (month === 8 && dateOfMonth <= 3)) {\n            recommendedTheme = 'back-to-school';\n            themeImages = HOLIDAY_COLLECTIONS['back-to-school'];\n            activeEvent = {\n              title: 'פתיחת שנת הלימודים',\n              customGreeting: 'שלום כיתה א\' ושנת לימודים מוצלחת!',\n              subtitle: 'ועד הבית מברך את כל ילדי ותלמידי הבניין בשנת לימודים פורייה, מהנה ובטוחה',\n              icon: '🎒'\n            };\n          }\n          // New Year / Silvester (Dec 30 - Jan 2)\n          else if ((month === 11 && dateOfMonth >= 30) || (month === 0 && dateOfMonth <= 2)) {\n            recommendedTheme = 'new-year';\n            themeImages = HOLIDAY_COLLECTIONS['new-year'];\n            activeEvent = {\n              title: 'שנה אזרחית חדשה',\n              customGreeting: 'שנה אזרחית טובה ומבורכת! Happy New Year',\n              subtitle: 'ועד הבניין מאחל שנה של הצלחה, בריאות והתחלות חדשות וטובות',\n              icon: '🎆'\n            };\n          }\n          // Shabbat\n          else if (isShabbatActive) {\n            recommendedTheme = 'shabbat';\n            themeImages = HOLIDAY_COLLECTIONS['shabbat'];\n          }\n        } else if (isShabbatActive && recommendedTheme === 'default') {\n          recommendedTheme = 'shabbat';\n          themeImages = HOLIDAY_COLLECTIONS['shabbat'];\n        }\n\n        this.shabbatData = {\n          isShabbatActive,\n          parasha,\n          candleLighting,\n          havdalah,\n          holidays,\n          activeHoliday: activeEvent || holidays[0] || null,\n          recommendedTheme,\n          themeImage: themeImages[0],\n          themeImages\n        };\n\n        // Update default wallpapers to match current holiday/special event theme!\n        this.wallpapers = themeImages.map((url, i) => ({ id: `theme-wall-${i}`, url }));\n\n        this.renderShabbatAndHolidays();\n        this.buildSlides();\n        this.rotateBackground();\n      }\n    } catch (hebErr) {\n      console.warn('Hebcal fallback failed:', hebErr);\n    }\n  }\n\n  renderShabbatAndHolidays() {\n    if (!this.shabbatData) return;\n\n    const container = document.getElementById('header-center-widget');\n    if (!container) return;\n\n    // Apply auto theme & REAL HOLIDAY PHOTO WALLPAPER\n    if (this.settings?.display?.theme === 'auto' || !this.settings?.display?.theme) {\n      const theme = this.shabbatData.recommendedTheme || 'default';\n      Array.from(document.body.classList).forEach(cls => {\n        if (cls.startsWith('theme-')) document.body.classList.remove(cls);\n      });\n      document.body.classList.add(`theme-${theme}`);\n\n      // Immediately set photographic holiday wallpaper\n      if (this.shabbatData.themeImage) {\n        const bgLayer = document.getElementById('background-layer');\n        if (bgLayer) bgLayer.style.backgroundImage = `url('${this.shabbatData.themeImage}')`;\n      }\n    }\n\n    let html = '';\n\n    // Active Holiday Banner\n    if (this.shabbatData.activeHoliday) {\n      html += `\n        <div class="special-badge">\n          <span>✨</span>\n          <span>${this.shabbatData.activeHoliday.title}</span>\n        </div>\n      `;\n    }\n\n    // Shabbat Times (Active on Thu evening, Fri, Sat)\n    if (this.shabbatData.isShabbatActive) {\n      const candle = this.shabbatData.candleLighting?.time || '18:50';\n      const havdalah = this.shabbatData.havdalah?.time || '19:46';\n      const parasha = this.shabbatData.parasha || 'פרשת השבוע';\n\n      html += `\n        <div class="shabbat-times">\n          ${candle ? `<div>כניסת שבת: <span>${candle}</span></div>` : ''}\n          ${havdalah ? `<div>יציאת שבת: <span>${havdalah}</span></div>` : ''}\n          ${parasha ? `<div>${parasha}</div>` : ''}\n        </div>\n      `;\n    }\n\n    container.innerHTML = html;\n  }\n\n  async fetchNotices() {\n    let list = [];\n    if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {\n      try {\n        const res = await fetch('/api/notices');\n        if (res.ok) {\n          const data = await res.json();\n          if (data.success && data.notices) {\n            list = data.notices;\n          }\n        }\n      } catch (e) {}\n    }\n\n    // Static fallback: load data/notices.json\n    if (list.length === 0) {\n      try {\n        const res = await fetch('data/notices.json');\n        if (res.ok) {\n          list = await res.json();\n        }\n      } catch (fallbackErr) {\n        console.warn('Notices load error:', fallbackErr);\n      }\n    }\n\n    // Merge with any client-side localStorage notices\n    try {\n      const localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');\n      if (Array.isArray(localNotices) && localNotices.length > 0) {\n        const localIds = new Set(localNotices.map(n => n.id));\n        list = [...localNotices, ...list.filter(n => !localIds.has(n.id))];\n      }\n    } catch (e) {}\n\n    this.notices = list;\n    this.renderSideColumn();\n    this.buildSlides();\n  }\n\n  async fetchPhotos() {\n    if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {\n      try {\n        const res = await fetch('/api/photos');\n        if (res.ok) {\n          const data = await res.json();\n          if (data.success) {\n            this.photos = data.photos || [];\n            this.buildSlides();\n            return;\n          }\n        }\n      } catch (e) {}\n    }\n    this.photos = [];\n  }\n\n  async fetchWallpapers() {\n    this.wallpapers = [\n      { id: 'wall-1', url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=80' },\n      { id: 'wall-2', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80' }\n    ];\n    this.buildSlides();\n  }\n\n  async fetchNews() {\n    if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {\n      try {\n        const source = this.settings?.display?.newsSource || 'ynet';\n        const res = await fetch(`/api/news?source=${source}`);\n        if (res.ok) {\n          const data = await res.json();\n          if (data.success && data.items) {\n            this.newsItems = data.items;\n            this.renderNewsTicker();\n            return;\n          }\n        }\n      } catch (e) {}\n    }\n\n    // Client-side RSS proxy for GitHub Pages\n    try {\n      const proxyRes = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://www.ynet.co.il/Integration/StoryRss2.xml');\n      if (proxyRes.ok) {\n        const data = await proxyRes.json();\n        if (data.items && data.items.length > 0) {\n          this.newsItems = data.items.slice(0, 10).map(i => ({ title: i.title }));\n          this.renderNewsTicker();\n          return;\n        }\n      }\n    } catch (proxyErr) {}\n\n    // Fallback Announcements Ticker\n    this.newsItems = [\n      { title: 'ועד הבית מברך את כל דיירי ואורחי הבניין בברכת שבת שלום וסוף שבוע נעים' },\n      { title: 'נא לוודא כי דלת הלובי הראשית והשער נסגרים כראוי לאחר כניסה ויציאה' },\n      { title: 'שמירה על ניקיון וסדר בשטחים המשותפים תורמת לאיכות החיים של כולנו' }\n    ];\n    this.renderNewsTicker();\n  }\n\n  renderNewsTicker() {\n    const tickerContent = document.getElementById('ticker-content');\n    if (!tickerContent) return;\n\n    let itemsHtml = '';\n\n    if (this.settings?.display?.customTickerText) {\n      itemsHtml += `\n        <span class="ticker-item" style="color: #fbbf24; font-weight: 800;">\n          <span class="ticker-item-bullet">📢</span>\n          ${this.settings.display.customTickerText}\n        </span>\n      `;\n    }\n\n    (this.newsItems || []).forEach(item => {\n      itemsHtml += `\n        <span class="ticker-item">\n          <span class="ticker-item-bullet">●</span>\n          ${item.title}\n        </span>\n      `;\n    });\n\n    tickerContent.innerHTML = itemsHtml;\n  }\n\n  // =========================================================\n  // 4. SIDE COLUMN FEED (Touch-To-Jump)\n  // =========================================================\n  renderSideColumn() {\n    const feedContainer = document.getElementById('side-notices-feed');\n    const countBadge = document.getElementById('notices-count-badge');\n    if (!feedContainer) return;\n\n    if (countBadge) countBadge.textContent = `${this.notices.length} הודעות`;\n\n    if (this.notices.length === 0) {\n      feedContainer.innerHTML = `\n        <div style="padding: 1.25rem 0.5rem; text-align: center; color: #94a3b8; font-size: 0.85rem;">\n          <p>אין הודעות ועד מיוחדות כרגע</p>\n          <p style="font-size: 0.72rem; margin-top: 0.2rem;">ועד הבית מאחל יום נעים!</p>\n        </div>\n      `;\n      return;\n    }\n\n    let html = '';\n    this.notices.forEach((notice, index) => {\n      const isUrgent = Boolean(notice.urgent);\n      const badge = isUrgent \n        ? '<span style=\"background: #ef4444; color: #fff; font-size: 0.68rem; font-weight: 800; padding: 2px 6px; border-radius: 6px;\">⚠️ דחוף</span>' \n        : '';\n\n      html += `\n        <div class=\"side-notice-item ${isUrgent ? 'urgent' : ''} touch-interactive\" data-notice-idx=\"${index}\">\n          <div class=\"side-notice-meta\">\n            <span class=\"side-notice-author\">${notice.author || 'ועד הבית'}</span>\n            ${badge}\n          </div>\n          <h4 class=\"side-notice-title\">${notice.title}</h4>\n          <p class=\"side-notice-excerpt\">${notice.content || ''}</p>\n          ${notice.imageUrl ? '<div style=\"font-size: 0.72rem; color: #38bdf8; margin-top: 4px;\">🖼️ תמונה מצורפת</div>' : ''}\n        </div>\n      `;\n    });\n\n    feedContainer.innerHTML = html;\n\n    // Attach click listeners to jump directly to notice on stage\n    feedContainer.querySelectorAll('.side-notice-item').forEach(item => {\n      item.addEventListener('click', () => {\n        const idx = parseInt(item.getAttribute('data-notice-idx'), 10);\n        if (!isNaN(idx)) {\n          this.jumpToNotice(idx);\n        }\n      });\n    });\n  }\n\n  jumpToNotice(noticeIndex) {\n    const targetSlideIndex = this.slides.findIndex(s => s.type === 'notice' && s.originalIndex === noticeIndex);\n    if (targetSlideIndex !== -1) {\n      this.currentSlideIndex = targetSlideIndex;\n      this.renderCurrentSlide();\n      this.pauseTemporarily(25000);\n    }\n  }\n\n  // =========================================================\n  // 5. MAIN STAGE SLIDESHOW ENGINE\n  // =========================================================\n  buildSlides() {\n    this.slides = [];\n\n    // 1. Notice Slides\n    this.notices.forEach((n, idx) => {\n      this.slides.push({\n        type: 'notice',\n        originalIndex: idx,\n        data: n\n      });\n    });\n\n    // 2. Shabbat / Holiday Atmosphere Slide\n    if (this.shabbatData?.activeHoliday) {\n      this.slides.push({\n        type: 'holiday-greeting',\n        data: this.shabbatData.activeHoliday\n      });\n    } else if (this.shabbatData?.isShabbatActive) {\n      this.slides.push({\n        type: 'shabbat-greeting',\n        data: {\n          title: 'שבת שלום ומבורכת',\n          parasha: this.shabbatData.parasha || 'פרשת השבוע'\n        }\n      });\n    }\n\n    // 3. Weather Forecast Slide\n    if (this.weather) {\n      this.slides.push({\n        type: 'weather-slide',\n        data: this.weather\n      });\n    }\n\n    // 4. Building Directory & Emergency Contacts Slide\n    const showContactsSlide = this.settings?.display?.showContactsSlide !== false;\n    if (showContactsSlide && (this.settings?.contacts || []).length > 0) {\n      this.slides.push({\n        type: 'contacts-slide',\n        data: this.settings.contacts\n      });\n    }\n\n    // Fallback Welcome Slide if no notices\n    if (this.slides.length === 0) {\n      this.slides.push({\n        type: 'welcome',\n        data: {\n          title: 'ברוכים הבאים לבניין הירדן 5',\n          subtitle: 'לוח המודעות הדיגיטלי פעיל ומעודכן'\n        }\n      });\n    }\n\n    if (this.currentSlideIndex >= this.slides.length) {\n      this.currentSlideIndex = 0;\n    }\n\n    this.renderCurrentSlide();\n  }\n\n  renderCurrentSlide() {\n    const container = document.getElementById('slides-container');\n    if (!container || this.slides.length === 0) return;\n\n    const slide = this.slides[this.currentSlideIndex];\n    if (!slide) return;\n\n    let html = '';\n\n    switch (slide.type) {\n      case 'notice':\n        const n = slide.data;\n        const urgentBadge = n.urgent \n          ? '<span style=\"background: #ef4444; color: #fff; font-size: 0.85rem; font-weight: 800; padding: 4px 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px;\">⚠️ הודעה דחופה</span>' \n          : '';\n\n        if (n.imageUrl) {\n          // Split layout: image on right, text on left (or full flyer mode)\n          html = `\n            <div style=\"display: flex; height: 100%; gap: 1.5rem; padding: 1.5rem;\">\n              <div style=\"flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: right;\">\n                <div style=\"display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;\">\n                  <span style=\"font-size: 0.9rem; color: #94a3b8;\">${n.author || 'ועד הבית'}</span>\n                  ${urgentBadge}\n                </div>\n                <h2 style=\"font-family: var(--font-heading); font-size: 2.2rem; font-weight: 900; line-height: 1.2; color: #fff; margin-bottom: 1rem;\">${n.title}</h2>\n                <p style=\"font-size: 1.2rem; line-height: 1.6; color: #e2e8f0; white-space: pre-line;\">${n.content || ''}</p>\n              </div>\n              <div style=\"flex: 1; display: flex; align-items: center; justify-content: center;\">\n                <img src=\"${n.imageUrl}\" alt=\"${n.title}\" style=\"max-height: 100%; max-width: 100%; object-fit: contain; border-radius: 1rem; box-shadow: 0 12px 30px rgba(0,0,0,0.5);\" />\n              </div>\n            </div>\n          `;\n        } else {\n          // Full text notice\n          html = `\n            <div style=\"display: flex; flex-direction: column; justify-content: center; height: 100%; padding: 2.5rem; text-align: center;\">\n              <div style=\"display: flex; justify-content: center; align-items: center; gap: 0.75rem; margin-bottom: 1rem;\">\n                <span style=\"font-size: 1rem; color: #94a3b8;\">${n.author || 'ועד הבית'}</span>\n                ${urgentBadge}\n              </div>\n              <h2 style=\"font-family: var(--font-heading); font-size: 2.8rem; font-weight: 900; color: #fff; margin-bottom: 1.5rem; line-height: 1.2;\">${n.title}</h2>\n              <p style=\"font-size: 1.45rem; line-height: 1.7; color: #cbd5e1; max-width: 850px; margin: 0 auto; white-space: pre-line;\">${n.content || ''}</p>\n            </div>\n          `;\n        }\n        break;\n\n      case 'holiday-greeting':\n        const h = slide.data;\n        html = `\n          <div style=\"display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 2rem; text-align: center;\">\n            <div style=\"font-size: 4.5rem; margin-bottom: 0.5rem;\">${h.icon || '✨'}</div>\n            <h2 style=\"font-family: var(--font-heading); font-size: 3.2rem; font-weight: 900; color: #fbbf24; margin-bottom: 0.75rem;\">${h.customGreeting || h.title}</h2>\n            <p style=\"font-size: 1.4rem; color: #f8fafc; max-width: 750px; line-height: 1.6;\">${h.subtitle || ''}</p>\n          </div>\n        `;\n        break;\n\n      case 'shabbat-greeting':\n        html = `\n          <div style=\"display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 2rem; text-align: center;\">\n            <div style=\"font-size: 4rem; margin-bottom: 0.5rem;\">🕯️🕯️</div>\n            <h2 style=\"font-family: var(--font-heading); font-size: 3.5rem; font-weight: 900; color: #fbbf24; margin-bottom: 0.5rem;\">שבת שלום ומבורכת</h2>\n            <p style=\"font-size: 1.3rem; color: #94a3b8; margin-bottom: 1rem;\">בניין הירדן 5, חדרה</p>\n            <div style=\"background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.35); padding: 0.75rem 2rem; border-radius: 2rem; color: #fbbf24; font-weight: 700; font-size: 1.2rem;\">\n              ${slide.data.parasha}\n            </div>\n          </div>\n        `;\n        break;\n\n      case 'weather-slide':\n        const w = slide.data;\n        const forecastCards = (w.forecast || []).map(f => `\n          <div style=\"background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); padding: 1rem 1.25rem; border-radius: 1rem; text-align: center;\">\n            <div style=\"font-size: 0.9rem; color: #94a3b8; font-weight: 700;\">${f.dayName}</div>\n            <div style=\"font-size: 2.5rem; margin: 0.3rem 0;\">${f.iconEmoji}</div>\n            <div style=\"font-family: var(--font-heading); font-size: 1.3rem; font-weight: 800; color: #38bdf8;\">${f.tempMin}° - ${f.tempMax}°</div>\n            <div style=\"font-size: 0.75rem; color: #cbd5e1; margin-top: 0.2rem;\">${f.description}</div>\n          </div>\n        `).join('');\n\n        html = `\n          <div style=\"display: flex; flex-direction: column; justify-content: center; height: 100%; padding: 2rem;\">\n            <div style=\"display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; padding: 0 1rem;\">\n              <div>\n                <h3 style=\"font-family: var(--font-heading); font-size: 2rem; font-weight: 800; color: #fff;\">תחזית מזג אוויר - ${w.city}</h3>\n                <span style=\"color: #94a3b8; font-size: 1rem;\">${w.description}</span>\n              </div>\n              <div style=\"display: flex; align-items: center; gap: 1rem;\">\n                <span style=\"font-size: 3.5rem;\">${w.iconEmoji}</span>\n                <span style=\"font-family: var(--font-heading); font-size: 3.5rem; font-weight: 900; color: #fff;\">${w.temperature}°</span>\n              </div>\n            </div>\n            <div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;\">\n              ${forecastCards}\n            </div>\n          </div>\n        `;\n        break;\n\n      case 'contacts-slide':\n        const contactsList = slide.data || [];\n        const contactCards = contactsList.filter(c => c.enabled !== false).map(c => `\n          <div style=\"display: flex; align-items: center; gap: 1rem; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); padding: 1rem 1.25rem; border-radius: 1rem;\">\n            <span style=\"font-size: 2.2rem;\">${c.icon || '📞'}</span>\n            <div style=\"flex: 1; min-width: 0;\">\n              <div style=\"font-weight: 700; color: #fff; font-size: 1.1rem; truncate;\">${c.name}</div>\n              <div style=\"font-size: 0.8rem; color: #94a3b8;\">${c.desc || ''}</div>\n            </div>\n            <div style=\"font-family: var(--font-heading); font-size: 1.25rem; font-weight: 900; color: #38bdf8;\">${c.phone}</div>\n          </div>\n        `).join('');\n\n        html = `\n          <div style=\"display: flex; flex-direction: column; justify-content: center; height: 100%; padding: 2rem;\">\n            <h3 style=\"font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; color: #fff; text-align: center; margin-bottom: 1.25rem;\">📋 מדריך מספרי טלפון וחירום בבניין</h3>\n            <div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 900px; margin: 0 auto; width: 100%;\">\n              ${contactCards}\n            </div>\n          </div>\n        `;\n        break;\n\n      case 'welcome':\n      default:\n        html = `\n          <div style=\"display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 2rem; text-align: center;\">\n            <div style=\"font-size: 4rem; margin-bottom: 1rem;\">🏢</div>\n            <h2 style=\"font-family: var(--font-heading); font-size: 2.8rem; font-weight: 900; color: #fff; margin-bottom: 0.5rem;\">${slide.data.title}</h2>\n            <p style=\"font-size: 1.3rem; color: #94a3b8;\">${slide.data.subtitle}</p>\n          </div>\n        `;\n        break;\n    }\n\n    container.innerHTML = html;\n    this.slideStartTime = Date.now();\n  }\n\n  nextSlide() {\n    if (this.slides.length === 0) return;\n    this.currentSlideIndex = (this.currentSlideIndex + 1) % this.slides.length;\n    this.renderCurrentSlide();\n  }\n\n  prevSlide() {\n    if (this.slides.length === 0) return;\n    this.currentSlideIndex = (this.currentSlideIndex - 1 + this.slides.length) % this.slides.length;\n    this.renderCurrentSlide();\n  }\n\n  startSlideshow() {\n    if (this.slideTimer) clearInterval(this.slideTimer);\n    if (this.progressTimer) clearInterval(this.progressTimer);\n\n    const progressFill = document.getElementById('stage-progress-fill');\n\n    this.slideTimer = setInterval(() => {\n      if (!this.isPaused) {\n        this.nextSlide();\n      }\n    }, this.slideDurationMs);\n\n    // Smooth progress bar indicator\n    this.progressTimer = setInterval(() => {\n      if (progressFill) {\n        if (this.isPaused) {\n          progressFill.style.width = '100%';\n          progressFill.style.background = '#eab308'; // Amber when paused\n        } else {\n          const elapsed = Date.now() - this.slideStartTime;\n          const pct = Math.min(100, (elapsed / this.slideDurationMs) * 100);\n          progressFill.style.width = `${pct}%`;\n          progressFill.style.background = '#38bdf8'; // Blue when playing\n        }\n      }\n    }, 100);\n  }\n\n  rotateBackground() {\n    if (this.wallpapers.length === 0) return;\n    const bgLayer = document.getElementById('background-layer');\n    if (!bgLayer) return;\n\n    // Rotate every 60 seconds\n    let wallIdx = 0;\n    setInterval(() => {\n      if (this.wallpapers.length > 0) {\n        wallIdx = (wallIdx + 1) % this.wallpapers.length;\n        const imgUrl = this.wallpapers[wallIdx].url;\n        bgLayer.style.backgroundImage = `url('${imgUrl}')`;\n      }\n    }, 60000);\n  }\n\n  // =========================================================\n  // 6. AUDIO & BACKGROUND RADIO PLAYER\n  // =========================================================\n  setupAudio() {\n    this.audioPlayer = document.getElementById('radio-audio');\n    if (!this.audioPlayer) return;\n\n    // User interaction unlock listener\n    const unlock = () => {\n      if (!this.audioUnlocked) {\n        this.unlockAudio();\n      }\n    };\n    document.addEventListener('click', unlock, { once: false });\n    document.addEventListener('touchstart', unlock, { once: false });\n  }\n\n  unlockAudio() {\n    if (this.audioUnlocked || !this.audioPlayer) return;\n    this.audioUnlocked = true;\n\n    if (this.settings?.radio?.enabled) {\n      this.audioPlayer.play().then(() => {\n        const prompt = document.getElementById('audio-unmute-prompt');\n        if (prompt) prompt.style.display = 'none';\n      }).catch(err => {\n        console.log('Audio unlock failed:', err);\n      });\n    }\n  }\n\n  updateRadioState() {\n    if (!this.settings?.radio || !this.audioPlayer) return;\n\n    const radio = this.settings.radio;\n    const radioWidget = document.getElementById('radio-indicator');\n    const stationNameElem = document.getElementById('radio-station-name');\n    const unmutePrompt = document.getElementById('audio-unmute-prompt');\n\n    if (!radio.enabled) {\n      this.audioPlayer.pause();\n      if (radioWidget) radioWidget.style.display = 'none';\n      if (unmutePrompt) unmutePrompt.style.display = 'none';\n      return;\n    }\n\n    if (radioWidget) radioWidget.style.display = 'flex';\n\n    const fallbackStations = [\n      { id: 'galgalatz', name: 'גלגלצ', url: 'https://glzwizzlv.bynetcdn.com/glglz_mp3' },\n      { id: 'glz', name: 'גלי צה\"ל', url: 'https://glzwizzlv.bynetcdn.com/glz_mp3' },\n      { id: 'kan_88', name: 'כאן 88', url: 'https://kanliveicy.media.kan.org.il/icy/kan88_mp3' },\n      { id: 'kan_gimmel', name: 'כאן גימל', url: 'https://kanliveicy.media.kan.org.il/icy/kangimmel_mp3' },\n      { id: 'kan_kol_hamusica', name: 'קול המוסיקה', url: 'https://kanliveicy.media.kan.org.il/icy/kankolhamusica_mp3' },\n      { id: 'eco99', name: 'Eco 99', url: 'https://eco01.livecdn.biz/ecolive/99fm_aac/icecast.audio' },\n      { id: 'radios100fm', name: '100FM', url: 'https://radios100fm.livecdn.biz/radios100fm' },\n      { id: 'chillhop', name: 'Chillout Lounge', url: 'https://streams.ilovemusic.de/iloveradio17.mp3' },\n      { id: 'dance', name: 'Dance Hits', url: 'https://streams.ilovemusic.de/iloveradio2.mp3' }\n    ];\n\n    const currentSt = radio.stations?.find(s => s.id === radio.currentStation) \n      || fallbackStations.find(s => s.id === radio.currentStation) \n      || fallbackStations[0];\n\n    if (currentSt) {\n      if (stationNameElem) stationNameElem.textContent = currentSt.name.split(' ')[0];\n      if (this.audioPlayer.src !== currentSt.url) {\n        this.audioPlayer.src = currentSt.url;\n      }\n      this.audioPlayer.volume = radio.volume || 0.4;\n\n      let startH = radio.startHour || '08:00';\n      let endH = radio.endHour || '21:00';\n      if (startH === '00:08') startH = '08:00';\n      if (endH === '00:21') endH = '21:00';\n\n      const now = new Date();\n      const currentHour = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;\n      const inSchedule = (!radio.autoPlaySchedule) || (currentHour >= startH && currentHour <= endH);\n\n      if (inSchedule) {\n        this.audioPlayer.play().then(() => {\n          if (unmutePrompt) unmutePrompt.style.display = 'none';\n        }).catch(err => {\n          console.log('Browser blocked autoplay:', err.message);\n          if (unmutePrompt) unmutePrompt.style.display = 'flex';\n        });\n      } else {\n        this.audioPlayer.pause();\n        if (unmutePrompt) unmutePrompt.style.display = 'none';\n      }\n    }\n  }\n\n  // =========================================================\n  // 7. AUTO REFRESH & WATCHDOG\n  // =========================================================\n  startPeriodicUpdates() {\n    setInterval(async () => {\n      await this.fetchSettings();\n      await this.fetchNotices();\n      await this.fetchPhotos();\n      this.buildSlides();\n    }, 45 * 1000);\n\n    setInterval(() => {\n      this.fetchWeather();\n    }, 10 * 60 * 1000);\n\n    setInterval(() => {\n      this.fetchNews();\n    }, 5 * 60 * 1000);\n\n    setInterval(() => {\n      this.fetchShabbatAndHolidays();\n    }, 60 * 60 * 1000);\n  }\n\n  setupWatchdog() {\n    setInterval(() => {\n      const now = new Date();\n      if (now.getHours() === 4 && now.getMinutes() === 0 && now.getSeconds() < 10) {\n        console.log('🔄 Maintenance reload (04:00 AM)...');\n        window.location.reload();\n      }\n    }, 10000);\n  }\n}\n\ndocument.addEventListener('DOMContentLoaded', () => {\n  window.signageApp = new BuildingSignageApp();\n});\n
