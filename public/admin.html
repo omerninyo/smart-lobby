@@ -534,7 +534,7 @@
       <div class="admin-card p-4 sm:p-5 space-y-4 sm:space-y-5">
         <div>
           <h2 class="text-base sm:text-lg font-bold mb-1">📻 רדיו ומוזיקת רקע במסך</h2>
-          <p class="text-xs text-gray-400">השמעת מוזיקה נעימה או תחנות רדיו ישראליות ברקע (לחיצה כפולה על הלוגו במסך משתיקה)</p>
+          <p class="text-xs text-gray-400">השמעת מוזיקה נעימה או תחנות רדיו ישראליות ברקע (לחיצה ארוכה על השעון במסך משתיקה/מפעילה)</p>
         </div>
 
         <!-- Master Radio Toggle Card -->
@@ -676,33 +676,33 @@
         <!-- Touch Map Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 pt-2">
           
-          <!-- Zone 1: Clock & Secret Admin -->
+          <!-- Zone 1: Clock & Radio Long-Press -->
           <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-3.5 sm:p-4 transition space-y-2">
             <div class="flex items-center justify-between">
               <span class="font-bold text-xs sm:text-sm text-white flex items-center gap-2">
                 <span class="text-base sm:text-lg">🕒</span>
                 <span>שעון ותאריך (פינה עליונה)</span>
               </span>
-              <span class="text-[11px] bg-blue-900 bg-opacity-60 text-blue-300 px-2 py-0.5 rounded-md font-semibold">שעון ותאריך</span>
+              <span class="text-[11px] bg-blue-900 bg-opacity-60 text-blue-300 px-2 py-0.5 rounded-md font-semibold">שעון ושמע</span>
             </div>
             <ul class="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
-              <li><strong class="text-white">לחיצה בודדת:</strong> פותחת חלון תחזית מזג אוויר וסביבה מורחבת.</li>
-              <li><strong class="text-amber-300">5 לחיצות מהירות רצופות:</strong> פותחת חלון גישה סודי לניהול ישירות על גבי המסך.</li>
+              <li><strong class="text-amber-300">לחיצה ארוכה (1.2 שניות):</strong> השתקה / הפעלה מיידית של הרדיו ומוזיקת הרקע (מופיעה בועת חיווי 🔊 / 🔇).</li>
+              <li><strong class="text-white">לחיצה רגילה:</strong> פותחת חלון תחזית מזג אוויר וסביבה מורחבת.</li>
             </ul>
           </div>
 
-          <!-- Zone 2: Logo Secret Mute -->
+          <!-- Zone 2: Building Brand -->
           <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-3.5 sm:p-4 transition space-y-2">
             <div class="flex items-center justify-between">
               <span class="font-bold text-xs sm:text-sm text-white flex items-center gap-2">
                 <span class="text-base sm:text-lg">🏢</span>
                 <span>לוגו ושם הבניין (פינה שמאלית עליונה)</span>
               </span>
-              <span class="text-[11px] bg-purple-900 bg-opacity-60 text-purple-300 px-2 py-0.5 rounded-md font-semibold">השתקה חשאית</span>
+              <span class="text-[11px] bg-purple-900 bg-opacity-60 text-purple-300 px-2 py-0.5 rounded-md font-semibold">פרטי הבניין</span>
             </div>
             <ul class="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
-              <li><strong class="text-amber-300">לחיצה כפולה מהירה (Double-Tap):</strong> השתקה / הפעלה חשאית של מוזיקת הרקע והרדיו ללא כניסה לאדמין.</li>
-              <li>מופיעה הודעת חיווי מהירה בפינת המסך (🔊 / 🔇).</li>
+              <li>מציג באופן קבוע ואלגנטי את שם הבניין והעיר ("הירדן 5 חדרה").</li>
+              <li>ניתן להתאמה או להסתרה דרך לשונית "תצוגה, רקע וחגים".</li>
             </ul>
           </div>
 
@@ -736,18 +736,17 @@
             </ul>
           </div>
 
-          <!-- Zone 5: Main Stage Slides & Swiping -->
+          <!-- Zone 5: Main Stage Slides & Arrow Navigation -->
           <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-3.5 sm:p-4 transition space-y-2">
             <div class="flex items-center justify-between">
               <span class="font-bold text-xs sm:text-sm text-white flex items-center gap-2">
                 <span class="text-base sm:text-lg">🖼️</span>
-                <span>במת השקופיות הראשית (מרכז המסך)</span>
+                <span>במת השקופיות הראשית וחיצי מעבר (מרכז המסך)</span>
               </span>
-              <span class="text-[11px] bg-emerald-900 bg-opacity-60 text-emerald-300 px-2 py-0.5 rounded-md font-semibold">מחוות מגע</span>
+              <span class="text-[11px] bg-emerald-900 bg-opacity-60 text-emerald-300 px-2 py-0.5 rounded-md font-semibold">ניווט שקופיות</span>
             </div>
             <ul class="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
-              <li><strong class="text-white">החלקה ימינה / שמאלה (Swipe):</strong> מעבר ידני בין מודעות ועד, פליירים, תחזית ומספרי חירום.</li>
-              <li><strong class="text-white">חיצי ניווט בצידי הבמה:</strong> מעבר ישיר קדימה/אחורה.</li>
+              <li><strong class="text-white">חיצי ניווט בצידי הבמה (◀️ ▶️):</strong> מעבר ישיר קדימה/אחורה בין מודעות ועד, פליירים, תחזית ומספרי חירום.</li>
               <li><strong class="text-white">השהיה חכמה:</strong> כל נגיעה בבמה משהה את ההתחלפות האוטומטית ל-20 שניות לקריאה נוחה.</li>
             </ul>
           </div>
