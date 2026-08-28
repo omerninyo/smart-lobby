@@ -461,9 +461,35 @@ body.layout-flipped.side-width-wide .main-dashboard-grid {
   grid-template-columns: 30rem 1fr;
 }
 
-/* Header Positions & Toggles */
-body.header-clock-right .header-bar {
-  flex-direction: row-reverse;
+/* Header Positions & Toggles (Explicit Flex Order for RTL: 1=Right, 2=Center, 3=Left) */
+.header-stats {
+  order: 1; /* Default Right in RTL */
+}
+
+.header-center {
+  order: 2; /* Center */
+}
+
+.building-brand {
+  order: 3; /* Default Left in RTL */
+}
+
+/* Clock Position: Right vs Left */
+body.header-clock-right .header-stats {
+  order: 1 !important;
+}
+
+body.header-clock-left .header-stats {
+  order: 3 !important;
+}
+
+/* Brand / Street Name Position: Left vs Right vs Hidden */
+body.header-brand-left .building-brand {
+  order: 3 !important;
+}
+
+body.header-brand-right .building-brand {
+  order: 1 !important;
 }
 
 body.header-brand-hidden .building-brand {

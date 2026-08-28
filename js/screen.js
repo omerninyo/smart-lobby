@@ -468,14 +468,16 @@ class BuildingSignageApp {
     document.body.classList.remove('side-width-compact', 'side-width-normal', 'side-width-wide');
     document.body.classList.add(`side-width-${sideWidth}`);
 
-    // Advanced Layout - Header Clock & Weather Position (left / right)
-    const clockPos = this.settings.display?.headerClockPosition || 'left';
+    // Advanced Layout - Header Clock & Weather Position (right / left)
+    const clockPos = this.settings.display?.headerClockPosition || 'right';
     document.body.classList.toggle('header-clock-right', clockPos === 'right');
+    document.body.classList.toggle('header-clock-left', clockPos === 'left');
 
-    // Advanced Layout - Header Brand Position (right / left / hidden)
-    const brandPos = this.settings.display?.headerBrandPosition || 'right';
-    document.body.classList.toggle('header-brand-hidden', brandPos === 'hidden');
+    // Advanced Layout - Header Brand Position (left / right / hidden)
+    const brandPos = this.settings.display?.headerBrandPosition || 'left';
     document.body.classList.toggle('header-brand-left', brandPos === 'left');
+    document.body.classList.toggle('header-brand-right', brandPos === 'right');
+    document.body.classList.toggle('header-brand-hidden', brandPos === 'hidden');
 
     // Advanced Layout - Header Shabbat Position (center / hidden)
     const shabbatPos = this.settings.display?.headerShabbatPosition || 'center';
