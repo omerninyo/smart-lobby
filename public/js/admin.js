@@ -426,6 +426,12 @@ function setupDisplayControls() {
           leftBurnCompensation: parseInt(burnCompInput?.value || '45', 10),
           highContrastSideCards: document.getElementById('setting-high-contrast-side')?.checked || false,
           layoutSide: document.getElementById('setting-layout-side')?.value || 'left',
+          headerClockPosition: document.getElementById('setting-pos-clock')?.value || 'right',
+          headerBrandPosition: document.getElementById('setting-pos-brand')?.value || 'left',
+          headerShabbatPosition: document.getElementById('setting-pos-shabbat')?.value || 'center',
+          sideColumnWidth: document.getElementById('setting-side-width')?.value || 'normal',
+          showNewsTicker: document.getElementById('setting-show-news-ticker')?.checked !== false,
+          showStageArrows: document.getElementById('setting-show-stage-arrows')?.checked !== false,
           slideDurationSeconds: parseInt(document.getElementById('setting-slide-duration')?.value || '12', 10),
           tickerSpeed: document.getElementById('setting-ticker-speed')?.value || 'slow',
           resolution: document.getElementById('setting-resolution')?.value || 'auto',
@@ -435,7 +441,7 @@ function setupDisplayControls() {
         }
       };
 
-      await saveSettingsToServer(updatedSettings, 'הגדרות התצוגה, הרקע והחגים נשמרו בהצלחה!');
+      await saveSettingsToServer(updatedSettings, 'הגדרות התצוגה, פריסת המסך והרקע נשמרו בהצלחה!');
     });
   }
 }
@@ -638,6 +644,24 @@ function populateSettingsUI() {
 
   const layoutSide = document.getElementById('setting-layout-side');
   if (layoutSide) layoutSide.value = settingsData.display?.layoutSide || 'left';
+
+  const posClock = document.getElementById('setting-pos-clock');
+  if (posClock) posClock.value = settingsData.display?.headerClockPosition || 'right';
+
+  const posBrand = document.getElementById('setting-pos-brand');
+  if (posBrand) posBrand.value = settingsData.display?.headerBrandPosition || 'left';
+
+  const posShabbat = document.getElementById('setting-pos-shabbat');
+  if (posShabbat) posShabbat.value = settingsData.display?.headerShabbatPosition || 'center';
+
+  const sideWidth = document.getElementById('setting-side-width');
+  if (sideWidth) sideWidth.value = settingsData.display?.sideColumnWidth || 'normal';
+
+  const showNewsTicker = document.getElementById('setting-show-news-ticker');
+  if (showNewsTicker) showNewsTicker.checked = settingsData.display?.showNewsTicker !== false;
+
+  const showStageArrows = document.getElementById('setting-show-stage-arrows');
+  if (showStageArrows) showStageArrows.checked = settingsData.display?.showStageArrows !== false;
 
   const slideDuration = document.getElementById('setting-slide-duration');
   if (slideDuration) slideDuration.value = settingsData.display?.slideDurationSeconds || 12;
