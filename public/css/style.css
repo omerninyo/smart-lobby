@@ -1188,8 +1188,8 @@ body.high-contrast-side .env-stat-box {
   animation: modal-fade-in 0.25s ease-out;
 }
 
-.modal-backdrop.hidden {
-  display: none;
+.modal-backdrop.hidden, .hidden {
+  display: none !important;
 }
 
 .modal-card {
