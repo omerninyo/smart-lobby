@@ -223,6 +223,20 @@ function setupNoticesForm() {
     });
   }
 
+  // 1-Click Preset Topic Image Buttons
+  document.querySelectorAll('.preset-topic-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const url = btn.getAttribute('data-img');
+      if (url) {
+        imgUrlHidden.value = url;
+        selectedNoticeFile = null;
+        if (fileInput) fileInput.value = '';
+        if (previewImg) previewImg.src = url;
+        if (previewBox) previewBox.classList.remove('hidden');
+      }
+    });
+  });
+
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -967,3 +981,4 @@ async function saveSettingsToServer(newSettings, successMessage) {
     return true;
   }
 }
+

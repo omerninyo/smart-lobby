@@ -18,21 +18,33 @@
     "content": "ועד הבית מברך את כל הדיירים והאורחים. לכל פנייה, שאלה או דיווח על תקלה ניתן לפנות לחברי הוועד.",
     "author": "ועד הבית",
     "isUrgent": false,
-    "imageUrl": null,
+    "imageUrl": "/uploads/img_1787928129872_IMG_1916.jpg",
     "bgColor": "from-slate-900/80 to-slate-950/90",
-    "createdAt": "2026-08-28T10:00:00.000Z",
+    "createdAt": "2026-08-28T14:42:09.913Z",
     "expiresAt": null
   },
   {
     "id": "notice-2",
+    "type": "maintenance",
+    "title": "בדיקת מערכות וכיבוי אש שנתית",
+    "content": "ביום שלישי הקרוב תתבצע בדיקת תקינות למערכות גילוי העשן והספרינקלרים בלובי ובקומות. תיתכן השמעת צופרים קצרים.",
+    "isUrgent": true,
+    "icon": "shield-alert",
+    "author": "חברת ניהול / ועד",
+    "createdAt": "2026-08-28T12:00:00.000Z",
+    "expiresAt": "2026-09-15T23:59:59.000Z",
+    "bgColor": "from-amber-950/70 to-orange-950/80"
+  },
+  {
+    "id": "notice-3",
     "type": "reminder",
-    "title": "שמירה על ניקיון וסדר בלובי",
-    "content": "אנא הקפידו לא להשאיר עגלות, אופניים או שקיות אשפה במעברים המשותפים. תודה על שיתוף הפעולה!",
-    "author": "ועד הבית",
+    "title": "שמירה על ניקיון וסדר בשטחים המשותפים",
+    "content": "נא להקפיד על סגירת דלת הלובי הראשית, השלכת שקיות אשפה קשורות למכולה ואי חסימת המעבר לעגלות ואופניים.",
     "isUrgent": false,
-    "imageUrl": null,
-    "bgColor": "from-slate-900/80 to-slate-950/90",
-    "createdAt": "2026-08-28T09:00:00.000Z",
-    "expiresAt": null
+    "icon": "sparkles",
+    "author": "ועד הבית",
+    "createdAt": "2026-08-28T12:00:00.000Z",
+    "expiresAt": null,
+    "bgColor": "from-blue-950/70 to-indigo-950/80"
   }
 ]

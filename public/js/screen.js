@@ -619,99 +619,69 @@ class BuildingSignageApp {
   }
 
   async fetchShabbatAndHolidays() {
-    // Curated, verified, authentic Jewish holiday & Special Event photographic collections - STRICTLY NO PEOPLE
+    // Curated, verified, authentic Jewish holiday & Special Event AI wallpapers - STRICTLY NO PEOPLE
     const HOLIDAY_COLLECTIONS = {
       'shabbat': [
-        'https://images.unsplash.com/photo-1543258103-a62bdc069871?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1606293926075-69a00dbfde81?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/shabbat/shabbat_candles_luxury.jpg'
       ],
       'rosh-hashanah': [
-        'https://images.unsplash.com/photo-1568644396922-5c3bfae12521?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/holidays/rosh_hashanah.jpg'
       ],
       'yom-kippur': [
-        'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/abstract/luxury_fluid_gold.jpg'
       ],
       'sukkot': [
-        'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/holidays/sukkot.jpg'
       ],
       'simchat-torah': [
-        'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1543258103-a62bdc069871?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/holidays/sukkot.jpg'
       ],
       'hanukkah': [
-        'https://images.unsplash.com/photo-1513297887119-d46091b24bfa?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1543258103-a62bdc069871?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/holidays/hanukkah.jpg'
       ],
       'tu-bishvat': [
-        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1528183429752-a97d0bf99b5a?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/landscapes/galilee_olive_sunrise.jpg'
       ],
       'purim': [
-        'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/holidays/rosh_hashanah.jpg'
       ],
       'pesach': [
-        'https://images.unsplash.com/photo-1587334274328-64186a80aeee?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/holidays/pesach.jpg'
       ],
       'memorial': [
-        'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/abstract/luxury_fluid_gold.jpg'
       ],
       'israel': [
-        'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/landscapes/jerusalem_sunset.jpg'
       ],
       'lag-baomer': [
-        'https://images.unsplash.com/photo-1475724017904-b712052c192a?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/holidays/hanukkah.jpg'
       ],
       'jerusalem': [
-        'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/landscapes/jerusalem_sunset.jpg'
       ],
       'shavuot': [
-        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/holidays/shavuot.jpg'
       ],
       'tu-baav': [
-        'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/landscapes/galilee_olive_sunrise.jpg'
       ],
       'back-to-school': [
-        'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/landscapes/jerusalem_sunset.jpg'
       ],
       'new-year': [
-        'https://images.unsplash.com/photo-1467810563316-b5476525c0f9?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/abstract/luxury_fluid_gold.jpg'
       ],
       'family-day': [
-        'https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/landscapes/galilee_olive_sunrise.jpg'
       ],
       'elections': [
-        'https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/landscapes/jerusalem_sunset.jpg'
       ],
       'default': [
-        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1509773896068-7fd415d91e2e?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1519751138087-5bf79df62d5b?auto=format&fit=crop&w=1920&q=85'
+        'images/wallpapers/abstract/luxury_fluid_gold.jpg',
+        'images/wallpapers/landscapes/jerusalem_sunset.jpg',
+        'images/wallpapers/landscapes/galilee_olive_sunrise.jpg'
       ]
     };
 
@@ -999,9 +969,24 @@ class BuildingSignageApp {
   }
 
   async fetchWallpapers() {
+    try {
+      const res = await fetch('data/wallpapers.json?v=' + Date.now());
+      if (res.ok) {
+        const data = await res.json();
+        this.wallpaperData = data;
+        if (data.default && data.default.length > 0) {
+          this.wallpapers = data.default.map(w => ({ id: w.id, url: w.url }));
+          this.buildSlides();
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load data/wallpapers.json', e);
+    }
     this.wallpapers = [
-      { id: 'wall-1', url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=80' },
-      { id: 'wall-2', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80' }
+      { id: 'wall-1', url: 'images/wallpapers/abstract/luxury_fluid_gold.jpg' },
+      { id: 'wall-2', url: 'images/wallpapers/landscapes/jerusalem_sunset.jpg' },
+      { id: 'wall-3', url: 'images/wallpapers/landscapes/galilee_olive_sunrise.jpg' }
     ];
     this.buildSlides();
   }
