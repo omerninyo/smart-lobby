@@ -30,34 +30,41 @@ Designed and developed by **[Omer Ninyo](https://github.com/omerninyo)**.
 * **Auto-Expiration:** Notices can be scheduled to disappear automatically after a set date.
 * **Touch-to-Jump:** Tapping any notice in the side column instantly focuses it on the main stage.
 
-### 🕯️ 2. Autonomous Jewish Calendar & Shabbat Times (שבת וחגי ישראל)
-* **Hebcal Integration:** Auto-calculates candle lighting, Havdalah times, and weekly Torah portion (Parashat HaShavua) based on local coordinates.
-* **HD Holiday Themes & Photography:** Automatically transitions the kiosk theme and displays authentic high-resolution wallpapers for *Shabbat, Rosh Hashanah, Sukkot, Hanukkah, Purim, Pesach, Yom Ha'Atzmaut, and Shavuot*.
+### 🕯️ 2. Autonomous Jewish Calendar & Israeli Special Events (שבת, מועדים ותאריכים מיוחדים)
+* **Hebcal Integration:** Auto-calculates candle lighting, Havdalah times, and weekly Torah portion (Parashat HaShavua) dynamically based on local GPS coordinates.
+* **Complete Holiday & Event Roster:** Full automated theme and photo collections for *שבת, ראש השנה, יום כיפור, סוכות ושמחת תורה, חנוכה, ט"ו בשבט, פורים, פסח, יום הזיכרון לשואה ולגבורה, יום הזיכרון לחללי צה"ל, יום העצמאות, ל"ג בעומר, יום ירושלים, שבועות, ט"ו באב*.
+* **Israeli National & Civil Dates:** Auto-activates for **1 בספטמבר (שלום כיתה א' ופתיחת שנת הלימודים)**, **שנה אזרחית חדשה (31.12 - 1.1)**, **יום המשפחה** ו**ימי בחירות**.
+* **HD Photographic Collections:** Verified, authentic high-resolution photographic wallpapers matching each specific holiday/event.
 
-### 🌦️ 3. Live Weather & Environmental Metrics (מזג אוויר וסביבה)
+### 🎨 3. Background Opacity & Dimming Controls
+* **Real-time Opacity Slider (0–100%):** Fine-tune background wallpaper visibility directly from the admin panel.
+* **Auto-Dimming Contrast Layer:** Dynamically balances brightness to guarantee 100% text readability over complex photos.
+
+### 🌦️ 4. Live Weather & Environmental Metrics (מזג אוויר וסביבה)
 * **Real-time API:** Fetches live temperature, weather conditions, relative humidity, and sunrise/sunset times.
 * **4-Day Forecast:** Interactive touch modal and scheduled slide displaying full multi-day forecasts.
 
-### 📰 4. Live Breaking News Ticker (פס מבזקי חדשות רץ)
+### 📰 5. Live Breaking News Ticker (פס מבזקי חדשות רץ)
 * Multi-source RSS feed streaming live news headlines from **Ynet**, **Kan News**, or **Walla!**.
 * Integrated custom ticker announcement from the building committee.
 * Speed control (*Slow, Normal, Fast*) for comfortable reading from a distance.
 
-### 📻 5. Background Radio & Lounge Audio (רדיו ומוזיקת רקע)
+### 📻 6. Background Radio & Lounge Audio (רדיו ומוזיקת רקע)
 * Live internet radio streaming (Galgalatz, GLZ, Chillout Lounge, Dance).
 * Daily broadcast schedule timer (e.g. 08:00–21:00) with volume control.
 * **Secret Mute Gesture:** Double-tapping the building logo on the touchscreen secretly mutes or unmutes the audio stream.
 
-### 💡 6. Hardware Backlight Burn Compensation (פיצוי תאורה לצד שמאל)
+### 💡 7. Hardware Backlight Burn Compensation (פיצוי תאורה לצד שמאל)
 * Specially engineered for older LCD panels suffering from degraded or burnt-out left-edge backlight LEDs:
   * **Luminance Boost Slider (0–100%):** Smooth mathematical gradient overlay that lifts gamma and luminance across the dim panel.
   * **High-Contrast Pearl Cards:** Forces maximum LCD crystal transmittance to emit the highest possible lux from weak LEDs.
   * **Layout Flipping:** One-click toggle to swap the side info column between left and right.
 
-### 📱 7. Mobile & iPhone Optimized Admin Panel
+### 📱 8. Mobile & iPhone Optimized Admin Panel + Touch Cheat Sheet
+* **Reorganized 6-Tab Interface:** Notice Board, Display & Holidays, Contacts & Elevator, Music & Radio, Security & Settings, and Help.
+* **Interactive Touch Cheat Sheet (מפת אזורי מגע):** Comprehensive guide to all on-screen gestures (5-tap admin PIN popup on clock, double-tap secret mute, slide swipe gestures, modal expansions).
 * Protected with an on-screen PIN code.
 * 100% native HTML5 file picker support for iOS Safari (Photo Library / Camera) and Android browsers.
-* Real-time settings customization (resolution presets: Auto, 1080p, 720p).
 
 ---
 
