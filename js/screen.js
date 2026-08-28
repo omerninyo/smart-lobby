@@ -420,6 +420,13 @@ class BuildingSignageApp {
       tickerContent.classList.add(`ticker-speed-${speed}`);
     }
 
+    // Background Opacity & Dimming (0% to 100%)
+    const bgOpacityVal = this.settings.display?.bgOpacity !== undefined ? this.settings.display.bgOpacity : 85;
+    const layerOpacity = (bgOpacityVal / 100).toFixed(2);
+    const overlayDim = Math.max(0.12, ((100 - bgOpacityVal) / 100 * 0.75 + 0.20)).toFixed(2);
+    document.documentElement.style.setProperty('--bg-layer-opacity', layerOpacity);
+    document.documentElement.style.setProperty('--bg-overlay-opacity', overlayDim);
+
     // Left-Side Backlight Burn Compensation (Luminance Boost)
     const leftBoostPct = this.settings.display?.leftBurnCompensation !== undefined ? this.settings.display.leftBurnCompensation : 40;
     const boostOpacity = (leftBoostPct / 100) * 0.75;
@@ -564,22 +571,41 @@ class BuildingSignageApp {
   }
 
   async fetchShabbatAndHolidays() {
-    if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {
-      try {
-        const res = await fetch('/api/shabbat-holidays');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.data) {
-            this.shabbatData = data.data;
-            this.renderShabbatAndHolidays();
-            this.buildSlides();
-            return;
-          }
-        }
-      } catch (e) {}
-    }
+    // Curated, verified, authentic Jewish holiday & Shabbat photographic collections
+    const HOLIDAY_COLLECTIONS = {
+      'shabbat': [
+        'https://images.unsplash.com/photo-1511994298241-608e28f14fde?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1576085898323-218337e3e43c?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'rosh-hashanah': [
+        'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1601662528567-526cd06f6582?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'hanukkah': [
+        'https://images.unsplash.com/photo-1513297887119-d46091b24bfa?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'sukkot': [
+        'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'purim': [
+        'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'pesach': [
+        'https://images.unsplash.com/photo-1587334274328-64186a80aeee?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'shavuot': [
+        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1920&q=85'
+      ],
+      'default': [
+        'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=85'
+      ]
+    };
 
-    // Direct Hebcal Client Call for GitHub Pages
+    // Direct Hebcal Client Call
     try {
       const lat = this.settings?.building?.lat || 32.4340;
       const lon = this.settings?.building?.lon || 34.9197;
@@ -609,13 +635,25 @@ class BuildingSignageApp {
 
         const now = new Date();
         const dayOfWeek = now.getDay();
-        const isShabbatActive = dayOfWeek === 5 || dayOfWeek === 6 || (dayOfWeek === 4 && now.getHours() >= 18);
-        let recommendedTheme = isShabbatActive ? 'shabbat' : 'default';
+        // Active from Friday morning through Saturday night, or Thursday 18:00+
+        const isShabbatActive = (dayOfWeek === 5) || (dayOfWeek === 6) || (dayOfWeek === 4 && now.getHours() >= 18);
+        
+        let recommendedTheme = 'default';
+        let themeImages = HOLIDAY_COLLECTIONS.default;
 
-        const THEME_IMAGES = {
-          'shabbat': 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1920&q=80',
-          'default': 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=80'
-        };
+        if (holidays.length > 0) {
+          const hTitle = holidays[0].title.toLowerCase();
+          if (hTitle.includes('ראש השנה')) { recommendedTheme = 'rosh-hashanah'; themeImages = HOLIDAY_COLLECTIONS['rosh-hashanah']; }
+          else if (hTitle.includes('חנוכה')) { recommendedTheme = 'hanukkah'; themeImages = HOLIDAY_COLLECTIONS['hanukkah']; }
+          else if (hTitle.includes('סוכות')) { recommendedTheme = 'sukkot'; themeImages = HOLIDAY_COLLECTIONS['sukkot']; }
+          else if (hTitle.includes('פורים')) { recommendedTheme = 'purim'; themeImages = HOLIDAY_COLLECTIONS['purim']; }
+          else if (hTitle.includes('פסח')) { recommendedTheme = 'pesach'; themeImages = HOLIDAY_COLLECTIONS['pesach']; }
+          else if (hTitle.includes('שבועות')) { recommendedTheme = 'shavuot'; themeImages = HOLIDAY_COLLECTIONS['shavuot']; }
+          else if (hTitle.includes('עצמאות')) { recommendedTheme = 'israel'; themeImages = HOLIDAY_COLLECTIONS['shabbat']; }
+        } else if (isShabbatActive) {
+          recommendedTheme = 'shabbat';
+          themeImages = HOLIDAY_COLLECTIONS['shabbat'];
+        }
 
         this.shabbatData = {
           isShabbatActive,
@@ -625,10 +663,16 @@ class BuildingSignageApp {
           holidays,
           activeHoliday: holidays[0] || null,
           recommendedTheme,
-          themeImage: THEME_IMAGES[recommendedTheme] || THEME_IMAGES.default
+          themeImage: themeImages[0],
+          themeImages
         };
+
+        // Update default wallpapers to match current holiday/Shabbat theme!
+        this.wallpapers = themeImages.map((url, i) => ({ id: `theme-wall-${i}`, url }));
+
         this.renderShabbatAndHolidays();
         this.buildSlides();
+        this.rotateBackground();
       }
     } catch (hebErr) {
       console.warn('Hebcal fallback failed:', hebErr);
@@ -642,14 +686,14 @@ class BuildingSignageApp {
     if (!container) return;
 
     // Apply auto theme & REAL HOLIDAY PHOTO WALLPAPER
-    if (this.settings?.display?.theme === 'auto') {
+    if (this.settings?.display?.theme === 'auto' || !this.settings?.display?.theme) {
       const theme = this.shabbatData.recommendedTheme || 'default';
       Array.from(document.body.classList).forEach(cls => {
         if (cls.startsWith('theme-')) document.body.classList.remove(cls);
       });
       document.body.classList.add(`theme-${theme}`);
 
-      // Set photographic holiday wallpaper if available
+      // Immediately set photographic holiday wallpaper
       if (this.shabbatData.themeImage) {
         const bgLayer = document.getElementById('background-layer');
         if (bgLayer) bgLayer.style.backgroundImage = `url('${this.shabbatData.themeImage}')`;
@@ -670,9 +714,9 @@ class BuildingSignageApp {
 
     // Shabbat Times (Active on Thu evening, Fri, Sat)
     if (this.shabbatData.isShabbatActive) {
-      const candle = this.shabbatData.candleLighting?.time;
-      const havdalah = this.shabbatData.havdalah?.time;
-      const parasha = this.shabbatData.parasha;
+      const candle = this.shabbatData.candleLighting?.time || '18:50';
+      const havdalah = this.shabbatData.havdalah?.time || '19:46';
+      const parasha = this.shabbatData.parasha || 'פרשת השבוע';
 
       html += `
         <div class="shabbat-times">
@@ -1182,16 +1226,16 @@ class BuildingSignageApp {
     const bgLayer = document.getElementById('background-layer');
     if (!bgLayer) return;
 
-    // If auto theme holiday image is active, prioritize it
-    if (this.shabbatData?.themeImage && this.settings?.display?.theme === 'auto') {
-      bgLayer.style.backgroundImage = `url('${this.shabbatData.themeImage}')`;
-      return;
-    }
+    // Use theme wallpapers collection if available
+    const activeList = (this.shabbatData?.themeImages && this.shabbatData.themeImages.length > 0)
+      ? this.shabbatData.themeImages.map((u, i) => ({ id: `th-${i}`, url: u }))
+      : this.wallpapers;
 
-    if (this.wallpapers.length === 0) return;
-    const wallIndex = this.currentSlideIndex % this.wallpapers.length;
-    const nextWall = this.wallpapers[wallIndex];
-    if (nextWall) {
+    if (!activeList || activeList.length === 0) return;
+
+    const wallIndex = this.currentSlideIndex % activeList.length;
+    const nextWall = activeList[wallIndex];
+    if (nextWall && nextWall.url) {
       bgLayer.style.backgroundImage = `url('${nextWall.url}')`;
       bgLayer.classList.toggle('zoom-effect');
     }
