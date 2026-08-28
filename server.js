@@ -114,6 +114,7 @@ const WEATHER_CODE_MAP = {
 // ==========================================
 app.get('/api/settings', (req, res) => {
   const settings = readJsonFile(SETTINGS_FILE, {});
+  // Do not expose admin PIN to public
   const safeSettings = { ...settings };
   if (safeSettings.security) {
     delete safeSettings.security.adminPin;
@@ -149,11 +150,13 @@ app.get('/api/notices', (req, res) => {
   const notices = readJsonFile(NOTICES_FILE, []);
   const now = new Date();
 
+  // Filter out expired notices
   const activeNotices = notices.filter(n => {
     if (!n.expiresAt) return true;
     return new Date(n.expiresAt) > now;
   });
 
+  // Sort urgent first, then by createdAt desc
   activeNotices.sort((a, b) => {
     if (a.isUrgent && !b.isUrgent) return -1;
     if (!a.isUrgent && b.isUrgent) return 1;
@@ -277,7 +280,7 @@ app.get('/api/weather', async (req, res) => {
   const lon = settings.building?.lon || 34.9197;
   const cityName = settings.building?.city || 'חדרה';
 
-  const CACHE_TTL_MS = 15 * 60 * 1000;
+  const CACHE_TTL_MS = 15 * 60 * 1000; // 15 mins
   if (weatherCache.data && (Date.now() - weatherCache.timestamp < CACHE_TTL_MS)) {
     return res.json({ success: true, cached: true, weather: weatherCache.data });
   }
@@ -379,7 +382,7 @@ app.get('/api/shabbat-holidays', async (req, res) => {
   const lat = settings.building?.lat || 32.4340;
   const lon = settings.building?.lon || 34.9197;
 
-  const CACHE_TTL_MS = 60 * 60 * 1000;
+  const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
   if (shabbatCache.data && (Date.now() - shabbatCache.timestamp < CACHE_TTL_MS)) {
     return res.json({ success: true, cached: true, data: shabbatCache.data });
   }
@@ -400,19 +403,32 @@ app.get('/api/shabbat-holidays', async (req, res) => {
     items.forEach(item => {
       if (item.category === 'candles') {
         const cleanTime = (item.title || '').match(/\d{1,2}:\d{2}/)?.[0] || item.title;
-        candleLighting = { title: item.title, time: cleanTime, date: item.date };
+        candleLighting = {
+          title: item.title,
+          time: cleanTime,
+          date: item.date
+        };
       } else if (item.category === 'havdalah') {
         const cleanTime = (item.title || '').match(/\d{1,2}:\d{2}/)?.[0] || item.title;
-        havdalah = { title: item.title, time: cleanTime, date: item.date };
+        havdalah = {
+          title: item.title,
+          time: cleanTime,
+          date: item.date
+        };
       } else if (item.category === 'parashat') {
         parasha = item.hebrew || item.title;
       } else if (item.category === 'holiday') {
-        holidays.push({ title: item.hebrew || item.title, subcat: item.subcat, date: item.date });
+        holidays.push({
+          title: item.hebrew || item.title,
+          subcat: item.subcat,
+          date: item.date
+        });
       }
     });
 
+    // Detect active holiday / theme recommendation
     const now = new Date();
-    const dayOfWeek = now.getDay();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 5 = Friday, 6 = Saturday
     const isShabbatActive = dayOfWeek === 5 || dayOfWeek === 6 || (dayOfWeek === 4 && now.getHours() >= 18);
 
     let activeHoliday = null;
@@ -489,7 +505,7 @@ app.get('/api/news', async (req, res) => {
   const source = req.query.source || 'ynet';
   const feedUrl = RSS_FEEDS[source] || RSS_FEEDS.ynet;
 
-  const CACHE_TTL_MS = 6 * 60 * 1000;
+  const CACHE_TTL_MS = 6 * 60 * 1000; // 6 mins
   if (newsCache[source]?.data && (Date.now() - newsCache[source].timestamp < CACHE_TTL_MS)) {
     return res.json({ success: true, cached: true, items: newsCache[source].data });
   }
@@ -497,6 +513,7 @@ app.get('/api/news', async (req, res) => {
   try {
     const feed = await rssParser.parseURL(feedUrl);
     const items = (feed.items || []).slice(0, 15).map(item => {
+      // Clean HTML tags and entities from title & description
       const cleanTitle = (item.title || '')
         .replace(/<[^>]*>?/gm, '')
         .replace(/&quot;/g, '"')
