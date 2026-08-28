@@ -270,7 +270,8 @@ function setupNoticesForm() {
         const res = await fetch('/api/notices', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin: currentPin, notice: noticeData })\n        });
+          body: JSON.stringify({ pin: currentPin, notice: noticeData })
+        });
 
         if (res.ok) {
           const result = await res.json();
@@ -325,7 +326,7 @@ async function loadNotices() {
     
     if (notices.length === 0) {
       try {
-        const res = await fetch('data/notices.json');
+        const res = await fetch('data/notices.json?v=' + Date.now());
         if (res.ok) notices = await res.json();
       } catch (e) {}
     }
@@ -723,7 +724,7 @@ async function loadSettings() {
     throw new Error('API settings unavailable');
   } catch (err) {
     try {
-      const res = await fetch('data/settings.json');
+      const res = await fetch('data/settings.json?v=' + Date.now());
       if (res.ok) {
         settingsData = await res.json();
       }
