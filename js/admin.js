@@ -8,6 +8,7 @@
 
 const RADIO_STATIONS_MAP = [
   { id: 'galgalatz', name: 'גלגלצ (Galgalatz)', url: 'https://glzwizzlv.bynetcdn.com/glglz_mp3' },
+  { id: '103fm', name: '103FM (רדיו ללא הפסקה)', url: 'https://cdn.cybercdn.live/103FM/Live/icecast.audio' },
   { id: 'glz', name: 'גלי צה"ל (GLZ)', url: 'https://glzwizzlv.bynetcdn.com/glz_mp3' },
   { id: 'kan_88', name: 'כאן 88 (Kan 88)', url: 'https://kanliveicy.media.kan.org.il/icy/kan88_mp3' },
   { id: 'kan_gimmel', name: 'כאן גימל (מוזיקה ישראלית)', url: 'https://kanliveicy.media.kan.org.il/icy/kangimmel_mp3' },
@@ -290,6 +291,12 @@ function setupNoticesForm() {
         // Fallback for static GitHub Pages (localStorage)
         const localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
         if (!noticeData.id) noticeData.id = 'notice_' + Date.now();
+
+        // If editing/re-adding, remove from deleted notices list
+        const deletedIds = JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]');
+        const updatedDeleted = deletedIds.filter(dId => dId !== noticeData.id);
+        localStorage.setItem('smart_lobby_deleted_notices', JSON.stringify(updatedDeleted));
+
         const existingIdx = localNotices.findIndex(n => n.id === noticeData.id);
         if (existingIdx !== -1) {
           localNotices[existingIdx] = noticeData;
@@ -297,6 +304,7 @@ function setupNoticesForm() {
           localNotices.unshift(noticeData);
         }
         localStorage.setItem('smart_lobby_notices', JSON.stringify(localNotices));
+        try { window.dispatchEvent(new Event('storage')); } catch (e) {}
         formBox.classList.add('hidden');
         form.reset();
         selectedNoticeFile = null;
@@ -331,13 +339,15 @@ async function loadNotices() {
       } catch (e) {}
     }
 
-    // Merge localStorage notices
+    // Merge localStorage notices and filter deleted notices
     try {
       const localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
       if (Array.isArray(localNotices) && localNotices.length > 0) {
         const localIds = new Set(localNotices.map(n => n.id));
         notices = [...localNotices, ...notices.filter(n => !localIds.has(n.id))];
       }
+      const deletedIds = new Set(JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]'));
+      notices = notices.filter(n => !deletedIds.has(n.id));
     } catch (e) {}
     
     if (!notices || notices.length === 0) {
@@ -420,27 +430,29 @@ window.editNotice = function(id, encodedNotice) {
 window.deleteNotice = async function(id) {
   if (!confirm('האם למחוק הודעה זו מהמסך?')) return;
   try {
-    const res = await fetch(`/api/notices/${id}`, {
+    await fetch(`/api/notices/${id}`, {
       method: 'DELETE',
       headers: { 'x-admin-pin': currentPin }
     });
-    if (res.ok) {
-      const result = await res.json();
-      if (result.success) {
-        await loadNotices();
-        showAdminToast('ההודעה נמחקה בהצלחה', '🗑️');
-        return;
-      }
+  } catch (err) {}
+
+  // Always update LocalStorage & track deleted notice ID persistently
+  try {
+    const deletedIds = JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]');
+    if (!deletedIds.includes(id)) {
+      deletedIds.push(id);
+      localStorage.setItem('smart_lobby_deleted_notices', JSON.stringify(deletedIds));
     }
-    throw new Error('API unavailable');
-  } catch (err) {
-    // LocalStorage fallback
     const localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
     const updated = localNotices.filter(n => n.id !== id);
     localStorage.setItem('smart_lobby_notices', JSON.stringify(updated));
-    await loadNotices();
-    showAdminToast('ההודעה נמחקה בהצלחה', '🗑️');
-  }
+
+    // Dispatch event to notify other open screens
+    window.dispatchEvent(new Event('storage'));
+  } catch (e) {}
+
+  await loadNotices();
+  showAdminToast('ההודעה נמחקה בהצלחה מהמסך!', '🗑️');
 };
 
 // ==========================================
