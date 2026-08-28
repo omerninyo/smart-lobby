@@ -135,6 +135,7 @@
     ]
   },
   "security": {
-    "adminPin": "1234"
+    "adminPin": "1234",
+    "editorPin": "1111"
   }
 }
