@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupTabs();
   setupHeaderQuickActions();
   setupNoticesForm();
+  setupGalleryPicker();
   setupDisplayControls();
   setupContactsManager();
   setupRadioControls();
@@ -468,6 +469,135 @@ window.deleteNotice = async function(id) {
   await loadNotices();
   showAdminToast('ההודעה נמחקה בהצלחה מהמסך!', '🗑️');
 };
+
+// ==========================================
+// 3.5 GALLERY IMAGE PICKER FOR NOTICES
+// ==========================================
+function setupGalleryPicker() {
+  const modal = document.getElementById('gallery-picker-modal');
+  const openBtn = document.getElementById('open-gallery-picker-btn');
+  const closeBtn = document.getElementById('close-gallery-picker-btn');
+  const grid = document.getElementById('gallery-picker-grid');
+  const imgUrlHidden = document.getElementById('notice-image-url');
+  const previewImg = document.getElementById('notice-img-preview');
+  const previewBox = document.getElementById('notice-img-preview-box');
+  const fileInput = document.getElementById('notice-file-input');
+
+  let allImages = [];
+
+  const loadGalleryImages = async () => {
+    try {
+      const res = await fetch('data/wallpapers.json?v=' + Date.now());
+      if (res.ok) {
+        const data = await res.json();
+        allImages = [];
+
+        // 1. Notice topics
+        (data.notice_topics || []).forEach(item => {
+          allImages.push({
+            id: item.id,
+            title: item.title,
+            category: 'notices',
+            catName: 'הודעות ועד',
+            url: item.url
+          });
+        });
+
+        // 2. Shabbat & Holidays
+        if (data.shabbat) {
+          data.shabbat.forEach(item => allImages.push({ id: item.id, title: item.title || 'שבת קודש', category: 'shabbat', catName: 'שבת קודש', url: item.url }));
+        }
+        ['rosh-hashanah', 'sukkot', 'hanukkah', 'pesach', 'shavuot'].forEach(hKey => {
+          if (data[hKey]) {
+            data[hKey].forEach(item => allImages.push({ id: item.id, title: item.title, category: 'shabbat', catName: 'חגי ישראל', url: item.url }));
+          }
+        });
+
+        // 3. Default / Landscapes & Abstract
+        (data.default || []).forEach(item => {
+          allImages.push({
+            id: item.id,
+            title: item.title,
+            category: 'landscapes',
+            catName: 'נוף ואבסטרקט',
+            url: item.url
+          });
+        });
+
+        renderGrid('all');
+      }
+    } catch (e) {
+      console.warn('Could not load wallpapers for picker', e);
+    }
+  };
+
+  const renderGrid = (filterCat = 'all') => {
+    if (!grid) return;
+    const filtered = filterCat === 'all' ? allImages : allImages.filter(img => img.category === filterCat);
+
+    grid.innerHTML = filtered.map(img => `
+      <div class="bg-gray-950 rounded-xl overflow-hidden border border-gray-800 hover:border-blue-500 cursor-pointer group transition active:scale-95 shadow-md flex flex-col" data-url="${img.url}">
+        <div class="h-28 overflow-hidden bg-black/40 relative">
+          <img src="${img.url}" alt="${img.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" loading="lazy" />
+          <span class="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-black/70 text-blue-300 border border-blue-500/30">${img.catName}</span>
+        </div>
+        <div class="p-2 flex items-center justify-between gap-1 bg-gray-900/90">
+          <span class="text-xs font-bold text-gray-200 truncate">${img.title}</span>
+          <button type="button" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shrink-0">בחר</button>
+        </div>
+      </div>
+    `).join('');
+
+    // Attach click listeners to cards
+    grid.querySelectorAll('[data-url]').forEach(card => {
+      card.addEventListener('click', () => {
+        const url = card.getAttribute('data-url');
+        if (url) {
+          if (imgUrlHidden) imgUrlHidden.value = url;
+          selectedNoticeFile = null;
+          if (fileInput) fileInput.value = '';
+          if (previewImg) previewImg.src = url;
+          if (previewBox) previewBox.classList.remove('hidden');
+          if (modal) modal.classList.add('hidden');
+          showAdminToast('תמונת ההודעה נבחרה בהצלחה!', '🖼️');
+        }
+      });
+    });
+  };
+
+  // Category filter tabs
+  document.querySelectorAll('.picker-cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.picker-cat-btn').forEach(b => {
+        b.classList.remove('active', 'bg-blue-600', 'text-white');
+        b.classList.add('bg-gray-800', 'text-gray-300');
+      });
+      btn.classList.add('active', 'bg-blue-600', 'text-white');
+      btn.classList.remove('bg-gray-800', 'text-gray-300');
+      const cat = btn.getAttribute('data-cat') || 'all';
+      renderGrid(cat);
+    });
+  });
+
+  if (openBtn && modal) {
+    openBtn.addEventListener('click', () => {
+      loadGalleryImages();
+      modal.classList.remove('hidden');
+    });
+  }
+
+  if (closeBtn && modal) {
+    closeBtn.addEventListener('click', () => {
+      modal.classList.add('hidden');
+    });
+  }
+
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.classList.add('hidden');
+    });
+  }
+}
 
 // ==========================================
 // 4. TAB 2: DISPLAY, THEMES & BACKGROUND OPACITY
