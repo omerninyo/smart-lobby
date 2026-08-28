@@ -1,24 +1,22 @@
 /**
  * =========================================================
  * Building Digital Signage - Mobile & Desktop Admin Panel
- * 100% Reliable Native File Selection (iOS / Android / Desktop)
+ * 5 Streamlined Categories, Background Opacity & Live Sync
  * =========================================================
  */
 
 let currentPin = sessionStorage.getItem('admin_pin') || '';
 let settingsData = null;
 let selectedNoticeFile = null;
-let selectedGalleryFile = null;
 let testAudio = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   setupAuth();
   setupTabs();
   setupNoticesForm();
-  setupPhotoUpload();
+  setupDisplayControls();
   setupContactsManager();
   setupRadioControls();
-  setupThemeControls();
   setupGeneralSettings();
   
   if (currentPin) {
@@ -63,7 +61,7 @@ function setupAuth() {
         sessionStorage.setItem('admin_pin', pin);
         unlockAdmin();
       } else {
-        pinError.classList.remove('hidden');
+        if (pinError) pinError.classList.remove('hidden');
       }
     }
   };
@@ -90,11 +88,10 @@ function unlockAdmin() {
 async function loadAllData() {
   await loadSettings();
   await loadNotices();
-  await loadPhotos();
 }
 
 // ==========================================
-// 2. TAB NAVIGATION
+// 2. TAB NAVIGATION (5 Categories)
 // ==========================================
 function setupTabs() {
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -119,7 +116,7 @@ function setupTabs() {
 }
 
 // ==========================================
-// 3. NOTICES MANAGEMENT (With Native Image Upload)
+// 3. TAB 1: NOTICES & FLYERS
 // ==========================================
 function setupNoticesForm() {
   const addBtn = document.getElementById('add-notice-btn');
@@ -152,7 +149,7 @@ function setupNoticesForm() {
     });
   }
 
-  // Native input change event
+  // File selection
   if (fileInput) {
     fileInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files.length > 0) {
@@ -167,7 +164,6 @@ function setupNoticesForm() {
     });
   }
 
-  // Remove attached image
   if (removeImgBtn) {
     removeImgBtn.addEventListener('click', () => {
       selectedNoticeFile = null;
@@ -177,7 +173,6 @@ function setupNoticesForm() {
     });
   }
 
-  // Submit Notice Form
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -206,7 +201,9 @@ function setupNoticesForm() {
             imageUrl = uploadData.file.url;
           }
         } catch (uploadErr) {
-          console.error('Image upload failed:', uploadErr);
+          if (previewImg && previewImg.src) {
+            imageUrl = previewImg.src;
+          }
         }
       }
 
@@ -256,7 +253,7 @@ function setupNoticesForm() {
         selectedNoticeFile = null;
         if (fileInput) fileInput.value = '';
         await loadNotices();
-        alert('ההודעה נשמרה בהצלחה!');
+        alert('ההודעה נשמרה בהצלחה במסך הראשי!');
       }
     });
   }
@@ -297,34 +294,34 @@ async function loadNotices() {
     if (!notices || notices.length === 0) {
       list.innerHTML = `
         <div class="admin-card p-6 text-center text-gray-400">
-          <p class="text-lg mb-1">אין כרגע הודעות פעילות במסך</p>
-          <p class="text-xs">המסך יציג רקעים יפהפיים, מזג אוויר וזמני שבת אוטומטית</p>
+          <p class="text-base mb-1">אין כרגע הודעות פעילות במסך</p>
+          <p class="text-xs">המסך מציג צילומי שבת וחגים, מזג אוויר ועדכוני חדשות אוטומטית</p>
         </div>
       `;
       return;
     }
 
     list.innerHTML = notices.map(n => {
-      const urgentBadge = n.isUrgent ? `<span class="bg-red-600 text-white text-xs px-2 py-1 rounded-md font-bold">⚠️ דחוף</span>` : '';
-      const imgBadge = n.imageUrl ? `<span class="bg-blue-600 text-white text-xs px-2 py-1 rounded-md">🖼️ תמונה</span>` : '';
+      const urgentBadge = n.isUrgent ? `<span class="bg-red-600 text-white text-xs px-2 py-0.5 rounded-md font-bold">⚠️ דחוף</span>` : '';
+      const imgBadge = n.imageUrl ? `<span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-md">🖼️ תמונה</span>` : '';
       const expDate = n.expiresAt ? `<span class="text-xs text-amber-400">תפוגה: ${new Date(n.expiresAt).toLocaleDateString('he-IL')}</span>` : '<span class="text-xs text-gray-500">ללא תפוגה</span>';
 
       return `
-        <div class="admin-card p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-          <div class="space-y-1">
+        <div class="admin-card p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:border-gray-600 transition">
+          <div class="space-y-1 flex-1">
             <div class="flex items-center gap-2">
               ${urgentBadge}
               ${imgBadge}
-              <h3 class="font-bold text-md text-white">${n.title}</h3>
+              <h3 class="font-bold text-sm sm:text-base text-white">${n.title}</h3>
             </div>
-            <p class="text-sm text-gray-300 line-clamp-2">${n.content}</p>
-            <div class="flex items-center gap-3 pt-1">
-              <span class="text-xs text-gray-400">נכתב ע"י: ${n.author || 'ועד'}</span>
+            <p class="text-xs sm:text-sm text-gray-300 line-clamp-2">${n.content}</p>
+            <div class="flex items-center gap-3 pt-1 text-xs text-gray-400">
+              <span>נכתב ע"י: ${n.author || 'ועד הבית'}</span>
               <span>•</span>
               ${expDate}
             </div>
           </div>
-          <div class="flex gap-2 self-end sm:self-center">
+          <div class="flex gap-2 self-end sm:self-center shrink-0">
             <button onclick="editNotice('${n.id}', '${encodeURIComponent(JSON.stringify(n))}')" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-semibold">✏️ ערוך</button>
             <button onclick="deleteNotice('${n.id}')" class="px-3 py-1.5 bg-red-900 bg-opacity-40 hover:bg-opacity-80 text-red-300 rounded-lg text-xs font-semibold">🗑️ מחק</button>
           </div>
@@ -332,7 +329,7 @@ async function loadNotices() {
       `;
     }).join('');
   } catch (err) {
-    list.innerHTML = '<p class="text-red-400">שגיאה בטעינת הודעות</p>';
+    list.innerHTML = '<p class="text-red-400 text-xs">שגיאה בטעינת הודעות</p>';
   }
 }
 
@@ -396,145 +393,77 @@ window.deleteNotice = async function(id) {
 };
 
 // ==========================================
-// 4. PHOTO & GALLERY UPLOADS (100% Native & Reliable)
+// 4. TAB 2: DISPLAY, THEMES & BACKGROUND OPACITY
 // ==========================================
-function setupPhotoUpload() {
-  const fileInput = document.getElementById('gallery-file-input');
-  const uploadBtn = document.getElementById('gallery-upload-btn');
-  const previewContainer = document.getElementById('gallery-preview-container');
-  const previewImg = document.getElementById('gallery-preview-img');
-  const fileName = document.getElementById('gallery-file-name');
+function setupDisplayControls() {
+  const bgOpacityInput = document.getElementById('setting-bg-opacity');
+  const bgOpacityLabel = document.getElementById('bg-opacity-label');
+  const burnCompInput = document.getElementById('setting-left-burn-comp');
+  const burnCompLabel = document.getElementById('burn-comp-val-label');
+  const saveBtn = document.getElementById('save-display-btn');
 
-  if (fileInput) {
-    fileInput.addEventListener('change', (e) => {
-      if (e.target.files && e.target.files.length > 0) {
-        selectedGalleryFile = e.target.files[0];
-        if (fileName) fileName.textContent = `נבחר: ${selectedGalleryFile.name} (${Math.round(selectedGalleryFile.size / 1024)} KB)`;
-        const reader = new FileReader();
-        reader.onload = (re) => {
-          if (previewImg) previewImg.src = re.target.result;
-          if (previewContainer) previewContainer.classList.remove('hidden');
-        };
-        reader.readAsDataURL(selectedGalleryFile);
-      }
+  if (bgOpacityInput && bgOpacityLabel) {
+    bgOpacityInput.addEventListener('input', () => {
+      bgOpacityLabel.textContent = `${bgOpacityInput.value}%`;
     });
   }
 
-  if (uploadBtn) {
-    uploadBtn.addEventListener('click', async () => {
-      if (!selectedGalleryFile) {
-        alert('נא לבחור תמונה תחילה ע"י לחיצה על כפתור בחירת הקובץ');
-        if (fileInput) fileInput.click();
-        return;
-      }
+  if (burnCompInput && burnCompLabel) {
+    burnCompInput.addEventListener('input', () => {
+      burnCompLabel.textContent = `${burnCompInput.value}%`;
+    });
+  }
 
-      const formData = new FormData();
-      formData.append('photo', selectedGalleryFile);
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const selectedThemeMode = document.querySelector('input[name="theme-mode"]:checked')?.value || 'auto';
+      const customTheme = document.getElementById('custom-theme-select')?.value || 'modern-dark';
 
-      uploadBtn.disabled = true;
-      uploadBtn.innerHTML = '<span>מעלה תמונה למסך הלובי...</span>';
-
-      try {
-        const res = await fetch('/api/photos/upload', {
-          method: 'POST',
-          headers: { 'x-admin-pin': currentPin },
-          body: formData
-        });
-
-        const data = await res.json();
-        if (data.success) {
-          selectedGalleryFile = null;
-          if (fileInput) fileInput.value = '';
-          if (previewContainer) previewContainer.classList.add('hidden');
-          await loadPhotos();
-          alert('התמונה הועלתה בהצלחה ותוצג בסבב השקופיות במסך הראשי!');
-        } else {
-          alert(data.error || 'שגיאה בהעלאת תמונה');
+      const updatedSettings = {
+        display: {
+          ...settingsData?.display,
+          bgOpacity: parseInt(bgOpacityInput?.value || '85', 10),
+          leftBurnCompensation: parseInt(burnCompInput?.value || '45', 10),
+          highContrastSideCards: document.getElementById('setting-high-contrast-side')?.checked || false,
+          layoutSide: document.getElementById('setting-layout-side')?.value || 'left',
+          slideDurationSeconds: parseInt(document.getElementById('setting-slide-duration')?.value || '12', 10),
+          tickerSpeed: document.getElementById('setting-ticker-speed')?.value || 'slow',
+          resolution: document.getElementById('setting-resolution')?.value || 'auto',
+          customTickerText: document.getElementById('setting-custom-ticker')?.value.trim() || '',
+          theme: selectedThemeMode,
+          customTheme
         }
-      } catch (err) {
-        alert('שגיאת תקשורת בעת העלאת התמונה');
-      } finally {
-        uploadBtn.disabled = false;
-        uploadBtn.innerHTML = '<span>📤</span><span>שמור והעלה למסך הראשי</span>';
-      }
+      };
+
+      await saveSettingsToServer(updatedSettings, 'הגדרות התצוגה, הרקע והחגים נשמרו בהצלחה!');
     });
   }
 }
-
-async function loadPhotos() {
-  const grid = document.getElementById('photos-grid');
-  if (!grid) return;
-
-  try {
-    const res = await fetch('/api/photos');
-    const data = await res.json();
-
-    if (!data.success || !data.photos || data.photos.length === 0) {
-      grid.innerHTML = `
-        <div class="col-span-full admin-card p-6 text-center text-gray-400">
-          <p class="text-md">אין כרגע תמונות או פליירים בגלריה</p>
-          <p class="text-xs">העלה תמונות ופליירים מהמחשב או הנייד והם יוצגו במסך הלובי</p>
-        </div>
-      `;
-      return;
-    }
-
-    grid.innerHTML = data.photos.map(p => `
-      <div class="admin-card p-2 rounded-xl relative group overflow-hidden">
-        <img src="${p.url}" alt="פלייר" class="w-full h-40 object-cover rounded-lg" />
-        <button onclick="deletePhoto('${p.filename}')" class="absolute top-3 left-3 bg-red-600 text-white p-2 rounded-lg shadow hover:bg-red-700 transition">
-          🗑️
-        </button>
-      </div>
-    `).join('');
-  } catch (err) {
-    grid.innerHTML = '<p class="text-red-400">שגיאה בטעינת גלריה</p>';
-  }
-}
-
-window.deletePhoto = async function(filename) {
-  if (!confirm('האם למחוק תמונה זו מהמסך?')) return;
-  try {
-    const res = await fetch(`/api/photos/${filename}`, {
-      method: 'DELETE',
-      headers: { 'x-admin-pin': currentPin }
-    });
-    const result = await res.json();
-    if (result.success) {
-      await loadPhotos();
-    } else {
-      alert(result.error || 'שגיאה במחיקת תמונה');
-    }
-  } catch (err) {
-    alert('שגיאת תקשורת');
-  }
-};
 
 // ==========================================
-// 5. CONTACTS & ELEVATORS MANAGER (With Toggles)
+// 5. TAB 3: CONTACTS & ELEVATORS
 // ==========================================
 function setupContactsManager() {
   const saveBtn = document.getElementById('save-contacts-btn');
 
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
-      const showElevatorBar = document.getElementById('toggle-show-elevator-bar').checked;
-      const showContactsSlide = document.getElementById('toggle-show-contacts-slide').checked;
+      const showElevatorBar = document.getElementById('toggle-show-elevator-bar')?.checked !== false;
+      const showContactsSlide = document.getElementById('toggle-show-contacts-slide')?.checked !== false;
 
-      const elevEnabled = document.getElementById('contact-elevator-enabled').checked;
-      const elevName = document.getElementById('contact-elevator-name').value.trim() || 'שירות ותקלות מעלית';
-      const elevPhone = document.getElementById('contact-elevator-phone').value.trim() || '*5555';
-      const elevDesc = document.getElementById('contact-elevator-desc').value.trim() || 'חברת מעליות';
+      const elevEnabled = document.getElementById('contact-elevator-enabled')?.checked !== false;
+      const elevName = document.getElementById('contact-elevator-name')?.value.trim() || 'שירות ותקלות מעלית';
+      const elevPhone = document.getElementById('contact-elevator-phone')?.value.trim() || '*5555 / 03-5555555';
 
-      const cityEnabled = document.getElementById('contact-city-enabled').checked;
-      const cityPhone = document.getElementById('contact-city-phone').value.trim() || '106';
+      const cityEnabled = document.getElementById('contact-city-enabled')?.checked !== false;
+      const cityPhone = document.getElementById('contact-city-phone')?.value.trim() || '106';
 
-      const vaadEnabled = document.getElementById('contact-vaad-enabled').checked;
-      const vaadPhone = document.getElementById('contact-vaad-phone').value.trim() || '050-1234567';
+      const vaadEnabled = document.getElementById('contact-vaad-enabled')?.checked !== false;
+      const vaadPhone = document.getElementById('contact-vaad-phone')?.value.trim() || '050-1234567';
 
       const updatedContacts = [
-        { id: 'c-1', name: elevName, phone: elevPhone, icon: '🛗', desc: elevDesc, isPrimaryElevator: true, enabled: elevEnabled },
-        { id: 'c-2', name: 'מוקד עיריית חדרה', phone: cityPhone, icon: '🏛️', desc: '24/7 לדיווח על מפגעים עירוניים', enabled: cityEnabled },
+        { id: 'c-1', name: elevName, phone: elevPhone, icon: '🛗', desc: 'חברת מעליות', isPrimaryElevator: true, enabled: elevEnabled },
+        { id: 'c-2', name: 'מוקד עיריית חדרה', phone: cityPhone, icon: '🏛️', desc: '24/7 לדיווח על מפגעים', enabled: cityEnabled },
         { id: 'c-3', name: 'ועד הבית / ניהול', phone: vaadPhone, icon: '🏢', desc: 'פניות ועד', enabled: vaadEnabled },
         { id: 'c-4', name: 'כיבוי והצלה', phone: '102', icon: '🚒', desc: 'חירום', enabled: true },
         { id: 'c-5', name: 'עזרה ראשונה (מד"א)', phone: '101', icon: '🚑', desc: 'חירום', enabled: true }
@@ -549,128 +478,14 @@ function setupContactsManager() {
         contacts: updatedContacts
       };
 
-      await saveSettingsToServer(updatedSettings, 'הגדרות אנשי הקשר, המעלית והתצוגה עודכנו בהצלחה!');
+      await saveSettingsToServer(updatedSettings, 'הגדרות אנשי הקשר והמעלית נשמרו בהצלחה!');
     });
   }
 }
 
 // ==========================================
-// 6. RADIO, THEMES & GENERAL SETTINGS
+// 6. TAB 4: RADIO & MUSIC
 // ==========================================
-async function loadSettings() {
-  try {
-    const res = await fetch('/api/settings');
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success && data.settings) {
-        settingsData = data.settings;
-        populateSettingsUI();
-        return;
-      }
-    }
-    throw new Error('API settings unavailable');
-  } catch (err) {
-    try {
-      const res = await fetch('data/settings.json');
-      if (res.ok) {
-        settingsData = await res.json();
-        populateSettingsUI();
-      }
-    } catch (fbErr) {
-      console.error('Settings fallback error:', fbErr);
-    }
-  }
-}
-
-function populateSettingsUI() {
-  if (!settingsData) return;
-
-  // General
-  const bldName = document.getElementById('setting-bld-name');
-  const bldCity = document.getElementById('setting-bld-city');
-  const customTicker = document.getElementById('setting-custom-ticker');
-  const resSelect = document.getElementById('setting-resolution');
-  const tickerSpeed = document.getElementById('setting-ticker-speed');
-  const rssSource = document.getElementById('setting-rss-source');
-  const slideDuration = document.getElementById('setting-slide-duration');
-
-  if (bldName) bldName.value = settingsData.building?.name || 'הירדן 5';
-  if (bldCity) bldCity.value = settingsData.building?.city || 'חדרה';
-  if (customTicker) customTicker.value = settingsData.display?.customTickerText || '';
-  if (resSelect) resSelect.value = settingsData.display?.resolution || 'auto';
-  if (tickerSpeed) tickerSpeed.value = settingsData.display?.tickerSpeed || 'slow';
-  if (rssSource) rssSource.value = settingsData.display?.newsSource || 'ynet';
-  if (slideDuration) slideDuration.value = settingsData.display?.slideDurationSeconds || 12;
-
-  // Left Backlight Compensation & Layout
-  const leftBurnComp = document.getElementById('setting-left-burn-comp');
-  const burnCompLabel = document.getElementById('burn-comp-val-label');
-  const highContrastSide = document.getElementById('setting-high-contrast-side');
-  const layoutSide = document.getElementById('setting-layout-side');
-
-  const compVal = settingsData.display?.leftBurnCompensation !== undefined ? settingsData.display.leftBurnCompensation : 45;
-  if (leftBurnComp) leftBurnComp.value = compVal;
-  if (burnCompLabel) burnCompLabel.textContent = `${compVal}%`;
-  if (highContrastSide) highContrastSide.checked = Boolean(settingsData.display?.highContrastSideCards);
-  if (layoutSide) layoutSide.value = settingsData.display?.layoutSide || 'left';
-
-  // Contacts & Toggles
-  const showElevBarToggle = document.getElementById('toggle-show-elevator-bar');
-  const showContactsSlideToggle = document.getElementById('toggle-show-contacts-slide');
-  if (showElevBarToggle) showElevBarToggle.checked = settingsData.display?.showElevatorBar !== false;
-  if (showContactsSlideToggle) showContactsSlideToggle.checked = settingsData.display?.showContactsSlide !== false;
-
-  const contacts = settingsData.contacts || [];
-  const elev = contacts.find(c => c.isPrimaryElevator || c.name.includes('מעלית')) || contacts[0];
-  const city = contacts.find(c => c.name.includes('עירייה') || c.name.includes('מוקד'));
-  const vaad = contacts.find(c => c.name.includes('ועד') || c.name.includes('ניהול'));
-
-  if (elev) {
-    const eName = document.getElementById('contact-elevator-name');
-    const ePhone = document.getElementById('contact-elevator-phone');
-    const eDesc = document.getElementById('contact-elevator-desc');
-    const eEnabled = document.getElementById('contact-elevator-enabled');
-    if (eName) eName.value = elev.name;
-    if (ePhone) ePhone.value = elev.phone;
-    if (eDesc) eDesc.value = elev.desc || '';
-    if (eEnabled) eEnabled.checked = elev.enabled !== false;
-  }
-  if (city) {
-    const cPhone = document.getElementById('contact-city-phone');
-    const cEnabled = document.getElementById('contact-city-enabled');
-    if (cPhone) cPhone.value = city.phone;
-    if (cEnabled) cEnabled.checked = city.enabled !== false;
-  }
-  if (vaad) {
-    const vPhone = document.getElementById('contact-vaad-phone');
-    const vEnabled = document.getElementById('contact-vaad-enabled');
-    if (vPhone) vPhone.value = vaad.phone;
-    if (vEnabled) vEnabled.checked = vaad.enabled !== false;
-  }
-
-  // Radio
-  const radioEnabled = document.getElementById('radio-enabled');
-  const radioStation = document.getElementById('radio-station-select');
-  const radioStart = document.getElementById('radio-start-time');
-  const radioEnd = document.getElementById('radio-end-time');
-  const radioVol = document.getElementById('radio-volume');
-  const volLabel = document.getElementById('vol-label');
-
-  if (radioEnabled) radioEnabled.checked = Boolean(settingsData.radio?.enabled);
-  if (radioStation) radioStation.value = settingsData.radio?.currentStation || 'galgalatz';
-  if (radioStart) radioStart.value = settingsData.radio?.startHour || '08:00';
-  if (radioEnd) radioEnd.value = settingsData.radio?.endHour || '21:00';
-  if (radioVol) radioVol.value = settingsData.radio?.volume || 0.4;
-  if (volLabel) volLabel.textContent = `${Math.round((settingsData.radio?.volume || 0.4) * 100)}%`;
-
-  // Themes
-  const themeMode = settingsData.display?.theme || 'auto';
-  const radioInputs = document.querySelectorAll('input[name="theme-mode"]');
-  radioInputs.forEach(r => r.checked = (r.value === themeMode));
-  const customTheme = document.getElementById('custom-theme-select');
-  if (customTheme) customTheme.value = settingsData.display?.customTheme || 'modern-dark';
-}
-
 function setupRadioControls() {
   const volInput = document.getElementById('radio-volume');
   const volLabel = document.getElementById('vol-label');
@@ -699,7 +514,7 @@ function setupRadioControls() {
         testAudio.volume = volInput ? parseFloat(volInput.value) : 0.4;
         testAudio.play().then(() => {
           testBtn.innerHTML = '<span>⏹️</span><span>עצור בדיקה</span>';
-          if (testStatus) testStatus.textContent = `משמיע כעת: ${st.name}`;
+          if (testStatus) testStatus.textContent = `משמיע: ${st.name}`;
         }).catch(err => {
           alert('שגיאה בהשמעה: ' + err.message);
         });
@@ -716,73 +531,42 @@ function setupRadioControls() {
       const updatedSettings = {
         radio: {
           ...settingsData?.radio,
-          enabled: document.getElementById('radio-enabled').checked,
-          currentStation: document.getElementById('radio-station-select').value,
-          startHour: document.getElementById('radio-start-time').value,
-          endHour: document.getElementById('radio-end-time').value,
+          enabled: document.getElementById('radio-enabled')?.checked || false,
+          currentStation: document.getElementById('radio-station-select')?.value || 'galgalatz',
+          startHour: document.getElementById('radio-start-time')?.value || '08:00',
+          endHour: document.getElementById('radio-end-time')?.value || '21:00',
           volume: volInput ? parseFloat(volInput.value) : 0.4
         }
       };
-      await saveSettingsToServer(updatedSettings, 'הגדרות הרדיו נשמרו בהצלחה!');
+      await saveSettingsToServer(updatedSettings, 'הגדרות הרדיו והמוזיקה נשמרו!');
     });
   }
 }
 
-function setupThemeControls() {
-  const saveBtn = document.getElementById('save-theme-btn');
-  if (saveBtn) {
-    saveBtn.addEventListener('click', async () => {
-      const selectedMode = document.querySelector('input[name="theme-mode"]:checked').value;
-      const customTheme = document.getElementById('custom-theme-select').value;
-
-      const updatedSettings = {
-        display: {
-          ...settingsData?.display,
-          theme: selectedMode,
-          customTheme
-        }
-      };
-      await saveSettingsToServer(updatedSettings, 'הגדרות הנושא והחגים עודכנו!');
-    });
-  }
-}
-
+// ==========================================
+// 7. TAB 5: SYSTEM & SECURITY
+// ==========================================
 function setupGeneralSettings() {
   const saveBtn = document.getElementById('save-settings-btn');
-  const burnCompInput = document.getElementById('setting-left-burn-comp');
-  const burnCompLabel = document.getElementById('burn-comp-val-label');
-
-  if (burnCompInput && burnCompLabel) {
-    burnCompInput.addEventListener('input', () => {
-      burnCompLabel.textContent = `${burnCompInput.value}%`;
-    });
-  }
 
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
-      const newPin = document.getElementById('setting-new-pin').value.trim();
+      const newPin = document.getElementById('setting-new-pin')?.value.trim();
 
       const updatedSettings = {
         building: {
           ...settingsData?.building,
-          name: document.getElementById('setting-bld-name').value.trim(),
-          city: document.getElementById('setting-bld-city').value.trim()
+          name: document.getElementById('setting-bld-name')?.value.trim() || 'הירדן 5',
+          city: document.getElementById('setting-bld-city')?.value.trim() || 'חדרה'
         },
         display: {
           ...settingsData?.display,
-          resolution: document.getElementById('setting-resolution').value,
-          tickerSpeed: document.getElementById('setting-ticker-speed').value,
-          customTickerText: document.getElementById('setting-custom-ticker').value.trim(),
-          newsSource: document.getElementById('setting-rss-source').value,
-          slideDurationSeconds: parseInt(document.getElementById('setting-slide-duration').value, 10) || 12,
-          leftBurnCompensation: parseInt(document.getElementById('setting-left-burn-comp').value, 10) || 0,
-          highContrastSideCards: document.getElementById('setting-high-contrast-side').checked,
-          layoutSide: document.getElementById('setting-layout-side').value
+          newsSource: document.getElementById('setting-rss-source')?.value || 'ynet'
         },
         ...(newPin ? { newPin } : {})
       };
 
-      const ok = await saveSettingsToServer(updatedSettings, 'ההגדרות הכלליות עודכנו בהצלחה!');
+      const ok = await saveSettingsToServer(updatedSettings, 'הגדרות המערכת נשמרו בהצלחה!');
       if (ok && newPin) {
         currentPin = newPin;
         sessionStorage.setItem('admin_pin', newPin);
@@ -790,6 +574,146 @@ function setupGeneralSettings() {
       }
     });
   }
+}
+
+// ==========================================
+// 8. DATA LOADING & STATE MANAGEMENT
+// ==========================================
+async function loadSettings() {
+  try {
+    const res = await fetch('/api/settings');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.settings) {
+        settingsData = data.settings;
+        populateSettingsUI();
+        return;
+      }
+    }
+    throw new Error('API settings unavailable');
+  } catch (err) {
+    try {
+      const res = await fetch('data/settings.json');
+      if (res.ok) {
+        settingsData = await res.json();
+      }
+    } catch (fbErr) {}
+  }
+
+  // Merge localStorage settings
+  try {
+    const local = JSON.parse(localStorage.getItem('smart_lobby_settings') || 'null');
+    if (local) {
+      settingsData = { ...settingsData, ...local };
+    }
+  } catch (e) {}
+
+  populateSettingsUI();
+}
+
+function populateSettingsUI() {
+  if (!settingsData) return;
+
+  // Header Title
+  const headerBld = document.getElementById('admin-header-bld-name');
+  if (headerBld && settingsData.building?.name) {
+    headerBld.textContent = `${settingsData.building.name}, ${settingsData.building.city || 'חדרה'}`;
+  }
+
+  // Tab 2: Display & Background Opacity
+  const bgOpacity = settingsData.display?.bgOpacity !== undefined ? settingsData.display.bgOpacity : 85;
+  const bgOpInput = document.getElementById('setting-bg-opacity');
+  const bgOpLabel = document.getElementById('bg-opacity-label');
+  if (bgOpInput) bgOpInput.value = bgOpacity;
+  if (bgOpLabel) bgOpLabel.textContent = `${bgOpacity}%`;
+
+  const leftBurn = settingsData.display?.leftBurnCompensation !== undefined ? settingsData.display.leftBurnCompensation : 45;
+  const burnInput = document.getElementById('setting-left-burn-comp');
+  const burnLabel = document.getElementById('burn-comp-val-label');
+  if (burnInput) burnInput.value = leftBurn;
+  if (burnLabel) burnLabel.textContent = `${leftBurn}%`;
+
+  const highContrast = document.getElementById('setting-high-contrast-side');
+  if (highContrast) highContrast.checked = Boolean(settingsData.display?.highContrastSideCards);
+
+  const layoutSide = document.getElementById('setting-layout-side');
+  if (layoutSide) layoutSide.value = settingsData.display?.layoutSide || 'left';
+
+  const slideDuration = document.getElementById('setting-slide-duration');
+  if (slideDuration) slideDuration.value = settingsData.display?.slideDurationSeconds || 12;
+
+  const tickerSpeed = document.getElementById('setting-ticker-speed');
+  if (tickerSpeed) tickerSpeed.value = settingsData.display?.tickerSpeed || 'slow';
+
+  const resolution = document.getElementById('setting-resolution');
+  if (resolution) resolution.value = settingsData.display?.resolution || 'auto';
+
+  const customTicker = document.getElementById('setting-custom-ticker');
+  if (customTicker) customTicker.value = settingsData.display?.customTickerText || '';
+
+  // Theme
+  const themeMode = settingsData.display?.theme || 'auto';
+  const radioInputs = document.querySelectorAll('input[name="theme-mode"]');
+  radioInputs.forEach(r => r.checked = (r.value === themeMode));
+
+  const customTheme = document.getElementById('custom-theme-select');
+  if (customTheme) customTheme.value = settingsData.display?.customTheme || 'modern-dark';
+
+  // Tab 3: Contacts
+  const showElevBarToggle = document.getElementById('toggle-show-elevator-bar');
+  const showContactsSlideToggle = document.getElementById('toggle-show-contacts-slide');
+  if (showElevBarToggle) showElevBarToggle.checked = settingsData.display?.showElevatorBar !== false;
+  if (showContactsSlideToggle) showContactsSlideToggle.checked = settingsData.display?.showContactsSlide !== false;
+
+  const contacts = settingsData.contacts || [];
+  const elev = contacts.find(c => c.isPrimaryElevator || c.name.includes('מעלית')) || contacts[0];
+  const city = contacts.find(c => c.name.includes('עירייה') || c.name.includes('מוקד'));
+  const vaad = contacts.find(c => c.name.includes('ועד') || c.name.includes('ניהול'));
+
+  if (elev) {
+    const eName = document.getElementById('contact-elevator-name');
+    const ePhone = document.getElementById('contact-elevator-phone');
+    const eEnabled = document.getElementById('contact-elevator-enabled');
+    if (eName) eName.value = elev.name;
+    if (ePhone) ePhone.value = elev.phone;
+    if (eEnabled) eEnabled.checked = elev.enabled !== false;
+  }
+  if (city) {
+    const cPhone = document.getElementById('contact-city-phone');
+    const cEnabled = document.getElementById('contact-city-enabled');
+    if (cPhone) cPhone.value = city.phone;
+    if (cEnabled) cEnabled.checked = city.enabled !== false;
+  }
+  if (vaad) {
+    const vPhone = document.getElementById('contact-vaad-phone');
+    const vEnabled = document.getElementById('contact-vaad-enabled');
+    if (vPhone) vPhone.value = vaad.phone;
+    if (vEnabled) vEnabled.checked = vaad.enabled !== false;
+  }
+
+  // Tab 4: Radio
+  const radioEnabled = document.getElementById('radio-enabled');
+  const radioStation = document.getElementById('radio-station-select');
+  const radioStart = document.getElementById('radio-start-time');
+  const radioEnd = document.getElementById('radio-end-time');
+  const radioVol = document.getElementById('radio-volume');
+  const volLabel = document.getElementById('vol-label');
+
+  if (radioEnabled) radioEnabled.checked = Boolean(settingsData.radio?.enabled);
+  if (radioStation) radioStation.value = settingsData.radio?.currentStation || 'galgalatz';
+  if (radioStart) radioStart.value = settingsData.radio?.startHour || '08:00';
+  if (radioEnd) radioEnd.value = settingsData.radio?.endHour || '21:00';
+  if (radioVol) radioVol.value = settingsData.radio?.volume || 0.4;
+  if (volLabel) volLabel.textContent = `${Math.round((settingsData.radio?.volume || 0.4) * 100)}%`;
+
+  // Tab 5: General & PIN
+  const bldName = document.getElementById('setting-bld-name');
+  const bldCity = document.getElementById('setting-bld-city');
+  const rssSource = document.getElementById('setting-rss-source');
+
+  if (bldName) bldName.value = settingsData.building?.name || 'הירדן 5';
+  if (bldCity) bldCity.value = settingsData.building?.city || 'חדרה';
+  if (rssSource) rssSource.value = settingsData.display?.newsSource || 'ynet';
 }
 
 async function saveSettingsToServer(newSettings, successMessage) {
