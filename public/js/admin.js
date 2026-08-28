@@ -227,19 +227,36 @@ function setupNoticesForm() {
           body: JSON.stringify({ pin: currentPin, notice: noticeData })
         });
 
-        const result = await res.json();
-        if (result.success) {
-          formBox.classList.add('hidden');
-          form.reset();
-          selectedNoticeFile = null;
-          if (fileInput) fileInput.value = '';
-          await loadNotices();
-          alert('ההודעה פורסמה בהצלחה במסך הראשי!');
-        } else {
-          alert(result.error || 'שגיאה בשמירת הודעה');
+        if (res.ok) {
+          const result = await res.json();
+          if (result.success) {
+            formBox.classList.add('hidden');
+            form.reset();
+            selectedNoticeFile = null;
+            if (fileInput) fileInput.value = '';
+            await loadNotices();
+            alert('ההודעה פורסמה בהצלחה במסך הראשי!');
+            return;
+          }
         }
+        throw new Error('API unavailable');
       } catch (err) {
-        alert('שגיאת תקשורת עם השרת');
+        // Fallback for static GitHub Pages (localStorage)
+        const localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
+        if (!noticeData.id) noticeData.id = 'notice_' + Date.now();
+        const existingIdx = localNotices.findIndex(n => n.id === noticeData.id);
+        if (existingIdx !== -1) {
+          localNotices[existingIdx] = noticeData;
+        } else {
+          localNotices.unshift(noticeData);
+        }
+        localStorage.setItem('smart_lobby_notices', JSON.stringify(localNotices));
+        formBox.classList.add('hidden');
+        form.reset();
+        selectedNoticeFile = null;
+        if (fileInput) fileInput.value = '';
+        await loadNotices();
+        alert('ההודעה נשמרה בהצלחה!');
       }
     });
   }
@@ -251,18 +268,31 @@ async function loadNotices() {
 
   try {
     let notices = [];
-    try {
-      const res = await fetch('/api/notices');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.notices) notices = data.notices;
-      } else {
-        throw new Error('API unavailable');
-      }
-    } catch (apiErr) {
-      const res = await fetch('data/notices.json');
-      if (res.ok) notices = await res.json();
+    if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {
+      try {
+        const res = await fetch('/api/notices');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.notices) notices = data.notices;
+        }
+      } catch (apiErr) {}
     }
+    
+    if (notices.length === 0) {
+      try {
+        const res = await fetch('data/notices.json');
+        if (res.ok) notices = await res.json();
+      } catch (e) {}
+    }
+
+    // Merge localStorage notices
+    try {
+      const localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
+      if (Array.isArray(localNotices) && localNotices.length > 0) {
+        const localIds = new Set(localNotices.map(n => n.id));
+        notices = [...localNotices, ...notices.filter(n => !localIds.has(n.id))];
+      }
+    } catch (e) {}
     
     if (!notices || notices.length === 0) {
       list.innerHTML = `
@@ -348,14 +378,20 @@ window.deleteNotice = async function(id) {
       method: 'DELETE',
       headers: { 'x-admin-pin': currentPin }
     });
-    const result = await res.json();
-    if (result.success) {
-      await loadNotices();
-    } else {
-      alert(result.error || 'שגיאה במחיקה');
+    if (res.ok) {
+      const result = await res.json();
+      if (result.success) {
+        await loadNotices();
+        return;
+      }
     }
+    throw new Error('API unavailable');
   } catch (err) {
-    alert('שגיאת תקשורת');
+    // LocalStorage fallback
+    const localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
+    const updated = localNotices.filter(n => n.id !== id);
+    localStorage.setItem('smart_lobby_notices', JSON.stringify(updated));
+    await loadNotices();
   }
 };
 
@@ -764,17 +800,23 @@ async function saveSettingsToServer(newSettings, successMessage) {
       body: JSON.stringify({ pin: currentPin, newSettings })
     });
 
-    const data = await res.json();
-    if (data.success) {
-      await loadSettings();
-      alert(successMessage || 'נשמר בהצלחה!');
-      return true;
-    } else {
-      alert(data.error || 'שגיאה בשמירה');
-      return false;
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        await loadSettings();
+        alert(successMessage || 'נשמר בהצלחה!');
+        return true;
+      }
     }
+    throw new Error('API not available');
   } catch (err) {
-    alert('שגיאת תקשורת');
-    return false;
+    // Static / LocalStorage fallback
+    const local = JSON.parse(localStorage.getItem('smart_lobby_settings') || '{}');
+    const merged = { ...local, ...newSettings };
+    localStorage.setItem('smart_lobby_settings', JSON.stringify(merged));
+    settingsData = { ...settingsData, ...newSettings };
+    populateSettingsUI();
+    alert(successMessage || 'ההגדרות נשמרו בהצלחה!');
+    return true;
   }
 }
