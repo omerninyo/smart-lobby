@@ -395,9 +395,9 @@ class BuildingSignageApp {
         }
       } catch (e) {}
     }
-    // 2. Static GitHub Pages fallback
+    // 2. Static GitHub Pages fallback with cache buster
     try {
-      const res = await fetch('data/settings.json');
+      const res = await fetch('data/settings.json?v=' + Date.now());
       if (res.ok) {
         this.settings = await res.json();
       }
@@ -409,7 +409,22 @@ class BuildingSignageApp {
     try {
       const localSettings = JSON.parse(localStorage.getItem('smart_lobby_settings') || 'null');
       if (localSettings) {
-        this.settings = { ...this.settings, ...localSettings };
+        this.settings = {
+          ...this.settings,
+          ...localSettings,
+          display: {
+            ...(this.settings?.display || {}),
+            ...(localSettings.display || {})
+          },
+          building: {
+            ...(this.settings?.building || {}),
+            ...(localSettings.building || {})
+          },
+          radio: {
+            ...(this.settings?.radio || {}),
+            ...(localSettings.radio || {})
+          }
+        };
       }
     } catch (e) {}
 
@@ -938,7 +953,7 @@ class BuildingSignageApp {
     // Static fallback: load data/notices.json
     if (list.length === 0) {
       try {
-        const res = await fetch('data/notices.json');
+        const res = await fetch('data/notices.json?v=' + Date.now());
         if (res.ok) {
           list = await res.json();
         }
