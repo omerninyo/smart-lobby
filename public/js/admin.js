@@ -34,6 +34,7 @@ function getStationById(id) {
 document.addEventListener('DOMContentLoaded', () => {
   setupAuth();
   setupTabs();
+  setupHeaderQuickActions();
   setupNoticesForm();
   setupDisplayControls();
   setupContactsManager();
@@ -85,8 +86,7 @@ function setupAuth() {
       const testRes = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin, newSettings: {} })
-      });
+        body: JSON.stringify({ pin, newSettings: {} })\n      });
 
       if (testRes.ok) {
         const testData = await testRes.json();
@@ -337,8 +337,7 @@ async function loadNotices() {
         const localIds = new Set(localNotices.map(n => n.id));
         notices = [...localNotices, ...notices.filter(n => !localIds.has(n.id))];
       }
-    } catch (e) {}
-    
+    } catch (e) {}\n    
     if (!notices || notices.length === 0) {
       list.innerHTML = `
         <div class="admin-card p-6 text-center text-gray-400">
@@ -860,6 +859,70 @@ function populateSettingsUI() {
   if (bldName) bldName.value = settingsData.building?.name || 'הירדן 5';
   if (bldCity) bldCity.value = settingsData.building?.city || 'חדרה';
   if (rssSource) rssSource.value = settingsData.display?.newsSource || 'ynet';
+
+  // Update Header Quick Radio Button State
+  updateHeaderRadioStatus(Boolean(settingsData.radio?.enabled));
+}
+
+// ==========================================
+// 8. HEADER QUICK CONTROLS (Radio & Emergency Refresh)
+// ==========================================
+function setupHeaderQuickActions() {
+  const radioBtn = document.getElementById('header-quick-radio-btn');
+  const refreshBtn = document.getElementById('header-refresh-screen-btn');
+
+  if (radioBtn) {
+    radioBtn.addEventListener('click', async () => {
+      if (!settingsData) return;
+      const isCurrentlyEnabled = Boolean(settingsData.radio?.enabled);
+      const newEnabledState = !isCurrentlyEnabled;
+
+      const updatedRadio = {
+        ...(settingsData.radio || {}),
+        enabled: newEnabledState
+      };
+
+      const ok = await saveSettingsToServer(
+        { radio: updatedRadio },
+        newEnabledState ? '🔊 הרדיו הופעל בהצלחה!' : '🔇 הרדיו הושתק בהצלחה!'
+      );
+      if (ok) {
+        updateHeaderRadioStatus(newEnabledState);
+      }
+    });
+  }
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => {
+      const now = Date.now();
+      localStorage.setItem('smart_lobby_force_reload', now.toString());
+
+      try {
+        window.dispatchEvent(new Event('storage'));
+      } catch (e) {}
+
+      showAdminToast('🔄 אות רענון נשלח למסך השילוט!', '🚀');
+    });
+  }
+}
+
+function updateHeaderRadioStatus(isEnabled) {
+  const radioBtn = document.getElementById('header-quick-radio-btn');
+  const radioIcon = document.getElementById('header-radio-icon');
+  const radioText = document.getElementById('header-radio-text');
+  if (!radioBtn) return;
+
+  if (isEnabled) {
+    radioBtn.className = 'bg-emerald-950 bg-opacity-70 hover:bg-emerald-900 border border-emerald-600 text-emerald-300 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm';
+    if (radioIcon) radioIcon.textContent = '🔊';
+    if (radioText) radioText.textContent = 'רדיו פועל';
+    radioBtn.title = 'לחץ להשתקת הרדיו';
+  } else {
+    radioBtn.className = 'bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm';
+    if (radioIcon) radioIcon.textContent = '🔇';
+    if (radioText) radioText.textContent = 'רדיו מושתק';
+    radioBtn.title = 'לחץ להפעלת הרדיו';
+  }
 }
 
 async function saveSettingsToServer(newSettings, successMessage) {
