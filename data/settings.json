@@ -27,7 +27,6 @@
     "headerBrandPosition": "left",
     "headerShabbatPosition": "center",
     "sideColumnWidth": "normal",
-    "showNewsTicker": true,
     "showStageArrows": true,
     "newsSource": "ynet",
     "customTickerText": "ועד הבית מאחל יום נעים ובטוח לכל הדיירים והאורחים!"
@@ -92,6 +91,31 @@
         "id": "glz",
         "name": "גלי צה\"ל (GLZ)",
         "url": "https://glzwizzlv.bynetcdn.com/glz_mp3"
+      },
+      {
+        "id": "kan_88",
+        "name": "כאן 88 (Kan 88)",
+        "url": "https://kanliveicy.media.kan.org.il/icy/kan88_mp3"
+      },
+      {
+        "id": "kan_gimmel",
+        "name": "כאן גימל (מוזיקה ישראלית)",
+        "url": "https://kanliveicy.media.kan.org.il/icy/kangimmel_mp3"
+      },
+      {
+        "id": "kan_kol_hamusica",
+        "name": "קול המוסיקה (קלאסית ורוגע)",
+        "url": "https://kanliveicy.media.kan.org.il/icy/kankolhamusica_mp3"
+      },
+      {
+        "id": "eco99",
+        "name": "Eco 99 FM",
+        "url": "https://eco01.livecdn.biz/ecolive/99fm_aac/icecast.audio"
+      },
+      {
+        "id": "radios100fm",
+        "name": "רדיוס 100FM",
+        "url": "https://radios100fm.livecdn.biz/radios100fm"
       },
       {
         "id": "chillhop",
