@@ -270,8 +270,7 @@ function setupNoticesForm() {
         const res = await fetch('/api/notices', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin: currentPin, notice: noticeData })
-        });
+          body: JSON.stringify({ pin: currentPin, notice: noticeData })\n        });
 
         if (res.ok) {
           const result = await res.json();
@@ -474,11 +473,11 @@ function setupDisplayControls() {
         display: {
           ...settingsData?.display,
           bgOpacity: parseInt(bgOpacityInput?.value || '85', 10),
-          leftBurnCompensation: parseInt(burnCompInput?.value || '45', 10),
+          leftBurnCompensation: parseInt(burnCompInput?.value || '0', 10),
           highContrastSideCards: document.getElementById('setting-high-contrast-side')?.checked || false,
           layoutSide: document.getElementById('setting-layout-side')?.value || 'left',
-          headerClockPosition: document.getElementById('setting-pos-clock')?.value || 'right',
-          headerBrandPosition: document.getElementById('setting-pos-brand')?.value || 'left',
+          headerClockPosition: document.getElementById('setting-pos-clock')?.value || 'left',
+          headerBrandPosition: document.getElementById('setting-pos-brand')?.value || 'right',
           headerShabbatPosition: document.getElementById('setting-pos-shabbat')?.value || 'center',
           sideColumnWidth: document.getElementById('setting-side-width')?.value || 'normal',
           showNewsTicker: document.getElementById('setting-show-news-ticker')?.checked !== false,
@@ -758,7 +757,7 @@ function populateSettingsUI() {
   if (bgOpInput) bgOpInput.value = bgOpacity;
   if (bgOpLabel) bgOpLabel.textContent = `${bgOpacity}%`;
 
-  const leftBurn = settingsData.display?.leftBurnCompensation !== undefined ? settingsData.display.leftBurnCompensation : 45;
+  const leftBurn = settingsData.display?.leftBurnCompensation !== undefined ? settingsData.display.leftBurnCompensation : 0;
   const burnInput = document.getElementById('setting-left-burn-comp');
   const burnLabel = document.getElementById('burn-comp-val-label');
   if (burnInput) burnInput.value = leftBurn;
@@ -771,10 +770,10 @@ function populateSettingsUI() {
   if (layoutSide) layoutSide.value = settingsData.display?.layoutSide || 'left';
 
   const posClock = document.getElementById('setting-pos-clock');
-  if (posClock) posClock.value = settingsData.display?.headerClockPosition || 'right';
+  if (posClock) posClock.value = settingsData.display?.headerClockPosition || 'left';
 
   const posBrand = document.getElementById('setting-pos-brand');
-  if (posBrand) posBrand.value = settingsData.display?.headerBrandPosition || 'left';
+  if (posBrand) posBrand.value = settingsData.display?.headerBrandPosition || 'right';
 
   const posShabbat = document.getElementById('setting-pos-shabbat');
   if (posShabbat) posShabbat.value = settingsData.display?.headerShabbatPosition || 'center';
