@@ -375,9 +375,14 @@ class BuildingSignageApp {
   // =========================================================
   // 3. DATA FETCHING & HOLIDAY IMAGERY (Static + API Support)
   // =========================================================
+  isLocalServer() {
+    return window.location.protocol.startsWith('http') &&
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port === '3000');
+  }
+
   async fetchSettings() {
     // 1. If running on Node.js server (localhost / custom backend), try API
-    if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {
+    if (this.isLocalServer()) {
       try {
         const res = await fetch('/api/settings');
         if (res.ok) {
@@ -440,12 +445,12 @@ class BuildingSignageApp {
     document.documentElement.style.setProperty('--bg-layer-opacity', layerOpacity);
     document.documentElement.style.setProperty('--bg-overlay-opacity', overlayDim);
 
-    // Left-Side Backlight Burn Compensation (Luminance Boost)
-    const leftBoostPct = this.settings.display?.leftBurnCompensation !== undefined ? this.settings.display.leftBurnCompensation : 40;
+    // Left-Side Backlight Burn Compensation (Luminance Boost - 0% default)
+    const leftBoostPct = this.settings.display?.leftBurnCompensation !== undefined ? this.settings.display.leftBurnCompensation : 0;
     const boostOpacity = (leftBoostPct / 100) * 0.75;
     document.documentElement.style.setProperty('--left-boost', boostOpacity);
 
-    // High-Contrast Light Side Cards
+    // High-Contrast Light Side Cards (false default)
     const isHighContrast = Boolean(this.settings.display?.highContrastSideCards);
     document.body.classList.toggle('high-contrast-side', isHighContrast);
 
@@ -460,14 +465,14 @@ class BuildingSignageApp {
     document.body.classList.remove('side-width-compact', 'side-width-normal', 'side-width-wide');
     document.body.classList.add(`side-width-${sideWidth}`);
 
-    // Advanced Layout - Header Clock & Weather Position (right / left)
-    const clockPos = this.settings.display?.headerClockPosition || 'right';
-    document.body.classList.toggle('header-clock-left', clockPos === 'left');
+    // Advanced Layout - Header Clock & Weather Position (left / right)
+    const clockPos = this.settings.display?.headerClockPosition || 'left';
+    document.body.classList.toggle('header-clock-right', clockPos === 'right');
 
-    // Advanced Layout - Header Brand Position (left / right / hidden)
-    const brandPos = this.settings.display?.headerBrandPosition || 'left';
+    // Advanced Layout - Header Brand Position (right / left / hidden)
+    const brandPos = this.settings.display?.headerBrandPosition || 'right';
     document.body.classList.toggle('header-brand-hidden', brandPos === 'hidden');
-    document.body.classList.toggle('header-brand-right', brandPos === 'right');
+    document.body.classList.toggle('header-brand-left', brandPos === 'left');
 
     // Advanced Layout - Header Shabbat Position (center / hidden)
     const shabbatPos = this.settings.display?.headerShabbatPosition || 'center';
@@ -512,7 +517,7 @@ class BuildingSignageApp {
   }
 
   async fetchWeather() {
-    if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {
+    if (this.isLocalServer()) {
       try {
         const res = await fetch('/api/weather');
         if (res.ok) {
@@ -737,6 +742,7 @@ class BuildingSignageApp {
         let themeImages = HOLIDAY_COLLECTIONS.default;
 
         // 1. Match Jewish Holidays from Hebcal
+        let jewishHolidayEvent = null;
         if (holidays.length > 0) {
           const hTitle = holidays[0].title;
           const hLower = hTitle.toLowerCase();
@@ -744,100 +750,100 @@ class BuildingSignageApp {
           if (hLower.includes('ראש השנה')) {
             recommendedTheme = 'rosh-hashanah';
             themeImages = HOLIDAY_COLLECTIONS['rosh-hashanah'];
-            activeEvent = { title: 'ראש השנה', customGreeting: 'שנה טובה ומתוקה!', subtitle: 'ועד הבית מאחל לכל הדיירים ובני ביתם שנה של שגשוג, בריאות, שלום והתחדשות', icon: '🍎' };
+            jewishHolidayEvent = { title: 'ראש השנה', customGreeting: 'שנה טובה ומתוקה!', subtitle: 'ועד הבית מאחל לכל הדיירים ובני ביתם שנה של שגשוג, בריאות, שלום והתחדשות', icon: '🍎' };
           } else if (hLower.includes('כיפור')) {
             recommendedTheme = 'yom-kippur';
             themeImages = HOLIDAY_COLLECTIONS['yom-kippur'];
-            activeEvent = { title: 'יום הכיפורים', customGreeting: 'גמר חתימה טובה!', subtitle: 'צום קל ומועיל לכל הדיירים והצמים • שנת סליחה ושלום', icon: '🕍' };
+            jewishHolidayEvent = { title: 'יום הכיפורים', customGreeting: 'גמר חתימה טובה!', subtitle: 'צום קל ומועיל לכל הדיירים והצמים • שנת סליחה ושלום', icon: '🕍' };
           } else if (hLower.includes('שמחת תורה') || hLower.includes('שמיני עצרת')) {
             recommendedTheme = 'simchat-torah';
             themeImages = HOLIDAY_COLLECTIONS['simchat-torah'];
-            activeEvent = { title: 'שמחת תורה', customGreeting: 'חג שמחת תורה שמח!', subtitle: 'מועדים לשמחה וחגים וזמנים לששון לכל דיירי הבניין', icon: '📜' };
+            jewishHolidayEvent = { title: 'שמחת תורה', customGreeting: 'חג שמחת תורה שמח!', subtitle: 'מועדים לשמחה וחגים וזמנים לששון לכל דיירי הבניין', icon: '📜' };
           } else if (hLower.includes('סוכות') || hLower.includes('הושענא')) {
             recommendedTheme = 'sukkot';
             themeImages = HOLIDAY_COLLECTIONS['sukkot'];
-            activeEvent = { title: 'חג הסוכות', customGreeting: 'חג סוכות שמח!', subtitle: 'ועד הבית מאחל חג סוכות מבורך, שמחה ואושפיזין מבורכים', icon: '⛺' };
+            jewishHolidayEvent = { title: 'חג הסוכות', customGreeting: 'חג סוכות שמח!', subtitle: 'ועד הבית מאחל חג סוכות מבורך, שמחה ואושפיזין מבורכים', icon: '⛺' };
           } else if (hLower.includes('חנוכה')) {
             recommendedTheme = 'hanukkah';
             themeImages = HOLIDAY_COLLECTIONS['hanukkah'];
-            activeEvent = { title: 'חנוכה', customGreeting: 'חג חנוכה שמח ומאיר!', subtitle: 'חג של אור, שמחה, ניסים ונפלאות לכל המשפחות', icon: '🕎' };
+            jewishHolidayEvent = { title: 'חנוכה', customGreeting: 'חג חנוכה שמח ומאיר!', subtitle: 'חג של אור, שמחה, ניסים ונפלאות לכל המשפחות', icon: '🕎' };
           } else if (hLower.includes('ט״ו בשבט') || hLower.includes('טו בשבט')) {
             recommendedTheme = 'tu-bishvat';
             themeImages = HOLIDAY_COLLECTIONS['tu-bishvat'];
-            activeEvent = { title: 'ט"ו בשבט', customGreeting: 'חג לאילנות שמח!', subtitle: 'חג צמיחה, פריחה והתחדשות הטבע לכל דיירי הבניין', icon: '🌳' };
+            jewishHolidayEvent = { title: 'ט"ו בשבט', customGreeting: 'חג לאילנות שמח!', subtitle: 'חג צמיחה, פריחה והתחדשות הטבע לכל דיירי הבניין', icon: '🌳' };
           } else if (hLower.includes('פורים') || hLower.includes('אסתר')) {
             recommendedTheme = 'purim';
             themeImages = HOLIDAY_COLLECTIONS['purim'];
-            activeEvent = { title: 'פורים', customGreeting: 'חג פורים שמח ומבדח!', subtitle: 'ליהודים הייתה אורה ושמחה וששון ויקר • חג מלא צהלה', icon: '🎭' };
+            jewishHolidayEvent = { title: 'פורים', customGreeting: 'חג פורים שמח ומבדח!', subtitle: 'ליהודים הייתה אורה ושמחה וששון ויקר • חג מלא צהלה', icon: '🎭' };
           } else if (hLower.includes('פסח')) {
             recommendedTheme = 'pesach';
             themeImages = HOLIDAY_COLLECTIONS['pesach'];
-            activeEvent = { title: 'פסח', customGreeting: 'חג פסח כשר ושמח!', subtitle: 'חג אביב וחרות מלבלב, שקט ושלווה לכל דיירי הבניין', icon: '🍷' };
+            jewishHolidayEvent = { title: 'פסח', customGreeting: 'חג פסח כשר ושמח!', subtitle: 'חג אביב וחרות מלבלב, שקט ושלווה לכל דיירי הבניין', icon: '🍷' };
           } else if (hLower.includes('שואה')) {
             recommendedTheme = 'memorial';
             themeImages = HOLIDAY_COLLECTIONS['memorial'];
-            activeEvent = { title: 'יום הזיכרון לשואה ולגבורה', customGreeting: 'יום הזיכרון לשואה ולגבורה', subtitle: 'נזכור ולא נשכח • מרכינים ראש לזכר ששת המיליונים', icon: '🕯️' };
+            jewishHolidayEvent = { title: 'יום הזיכרון לשואה ולגבורה', customGreeting: 'יום הזיכרון לשואה ולגבורה', subtitle: 'נזכור ולא נשכח • מרכינים ראש לזכר ששת המיליונים', icon: '🕯️' };
           } else if (hLower.includes('הזיכרון') || hLower.includes('חללי')) {
             recommendedTheme = 'memorial';
             themeImages = HOLIDAY_COLLECTIONS['memorial'];
-            activeEvent = { title: 'יום הזיכרון לחללי מערכות ישראל', customGreeting: 'יום הזיכרון לחללי מערכות ישראל ופעולות האיבה', subtitle: 'במותם ציוו לנו את החיים • יהי זכרם ברוך ונצור בליבנו תמיד', icon: '🇮🇱' };
+            jewishHolidayEvent = { title: 'יום הזיכרון לחללי מערכות ישראל', customGreeting: 'יום הזיכרון לחללי מערכות ישראל ופעולות האיבה', subtitle: 'במותם ציוו לנו את החיים • יהי זכרם ברוך ונצור בליבנו תמיד', icon: '🇮🇱' };
           } else if (hLower.includes('עצמאות')) {
             recommendedTheme = 'israel';
             themeImages = HOLIDAY_COLLECTIONS['israel'];
-            activeEvent = { title: 'יום העצמאות', customGreeting: 'חג עצמאות שמח למדינת ישראל!', subtitle: 'חג שמח ומלא גאווה לאומית לכל דיירי הבניין ועם ישראל', icon: '🇮🇱' };
+            jewishHolidayEvent = { title: 'יום העצמאות', customGreeting: 'חג עצמאות שמח למדינת ישראל!', subtitle: 'חג שמח ומלא גאווה לאומית לכל דיירי הבניין ועם ישראל', icon: '🇮🇱' };
           } else if (hLower.includes('עומר') || hLower.includes('ל״ג')) {
             recommendedTheme = 'lag-baomer';
             themeImages = HOLIDAY_COLLECTIONS['lag-baomer'];
-            activeEvent = { title: 'ל"ג בעומר', customGreeting: 'ל"ג בעומר שמח!', subtitle: 'חג שמח ומאיר לכל המשפחות והילדים', icon: '🔥' };
+            jewishHolidayEvent = { title: 'ל"ג בעומר', customGreeting: 'ל"ג בעומר שמח!', subtitle: 'חג שמח ומאיר לכל המשפחות והילדים', icon: '🔥' };
           } else if (hLower.includes('ירושלים')) {
             recommendedTheme = 'jerusalem';
             themeImages = HOLIDAY_COLLECTIONS['jerusalem'];
-            activeEvent = { title: 'יום ירושלים', customGreeting: 'יום ירושלים שמח!', subtitle: 'שמחי ירושלים וגילו בה כל אוהביה', icon: '🦁' };
+            jewishHolidayEvent = { title: 'יום ירושלים', customGreeting: 'יום ירושלים שמח!', subtitle: 'שמחי ירושלים וגילו בה כל אוהביה', icon: '🦁' };
           } else if (hLower.includes('שבועות')) {
             recommendedTheme = 'shavuot';
             themeImages = HOLIDAY_COLLECTIONS['shavuot'];
-            activeEvent = { title: 'שבועות', customGreeting: 'חג שבועות שמח!', subtitle: 'חג מתן תורה, חג הקציר והביכורים לכל הדיירים', icon: '🌾' };
+            jewishHolidayEvent = { title: 'שבועות', customGreeting: 'חג שבועות שמח!', subtitle: 'חג מתן תורה, חג הקציר והביכורים לכל הדיירים', icon: '🌾' };
           } else if (hLower.includes('ט״ו באב') || hLower.includes('טו באב')) {
             recommendedTheme = 'tu-baav';
             themeImages = HOLIDAY_COLLECTIONS['tu-baav'];
-            activeEvent = { title: 'ט"ו באב', customGreeting: 'יום אהבה עברי שמח!', subtitle: 'שמחה, אהבה ואחווה בקרב כל משפחות הבניין', icon: '❤️' };
-          } else {
-            activeEvent = { title: hTitle, customGreeting: `${hTitle} שמח!`, subtitle: 'ועד הבית מברך את כל דיירי ואורחי הבניין בברכת חג שמח ומבורך', icon: '✨' };
+            jewishHolidayEvent = { title: 'ט"ו באב', customGreeting: 'יום אהבה עברי שמח!', subtitle: 'שמחה, אהבה ואחווה בקרב כל משפחות הבניין', icon: '❤️' };
           }
         }
 
-        // 2. Check Civil & National Special Calendar Dates
-        if (!activeEvent) {
-          // Back to School (August 27 - September 3)
-          if ((month === 7 && dateOfMonth >= 27) || (month === 8 && dateOfMonth <= 3)) {
-            recommendedTheme = 'back-to-school';
-            themeImages = HOLIDAY_COLLECTIONS['back-to-school'];
-            activeEvent = {
-              title: 'פתיחת שנת הלימודים',
-              customGreeting: 'שלום כיתה א\' ושנת לימודים מוצלחת!',
-              subtitle: 'ועד הבית מברך את כל ילדי ותלמידי הבניין בשנת לימודים פורייה, מהנה ובטוחה',
-              icon: '🎒'
-            };
-          }
-          // New Year / Silvester (Dec 30 - Jan 2)
-          else if ((month === 11 && dateOfMonth >= 30) || (month === 0 && dateOfMonth <= 2)) {
-            recommendedTheme = 'new-year';
-            themeImages = HOLIDAY_COLLECTIONS['new-year'];
-            activeEvent = {
-              title: 'שנה אזרחית חדשה',
-              customGreeting: 'שנה אזרחית טובה ומבורכת! Happy New Year',
-              subtitle: 'ועד הבניין מאחל שנה של הצלחה, בריאות והתחלות חדשות וטובות',
-              icon: '🎆'
-            };
-          }
-          // Shabbat
-          else if (isShabbatActive) {
-            recommendedTheme = 'shabbat';
-            themeImages = HOLIDAY_COLLECTIONS['shabbat'];
-          }
-        } else if (isShabbatActive && recommendedTheme === 'default') {
+        // 2. Determine Final Theme & Active Event
+        // Priority 1: Major Jewish Holiday
+        if (jewishHolidayEvent) {
+          activeEvent = jewishHolidayEvent;
+        }
+        // Priority 2: Shabbat (Thursday evening through Saturday night)
+        else if (isShabbatActive) {
           recommendedTheme = 'shabbat';
           themeImages = HOLIDAY_COLLECTIONS['shabbat'];
+          activeEvent = null; // Clean Shabbat mode - no conflicting badges
+        }
+        // Priority 3: Civil Dates (Weekdays only)
+        else if ((month === 7 && dateOfMonth >= 27) || (month === 8 && dateOfMonth <= 3)) {
+          recommendedTheme = 'back-to-school';
+          themeImages = HOLIDAY_COLLECTIONS['back-to-school'];
+          activeEvent = {
+            title: 'פתיחת שנת הלימודים',
+            customGreeting: 'שלום כיתה א\' ושנת לימודים מוצלחת!',
+            subtitle: 'ועד הבית מברך את כל ילדי ותלמידי הבניין בשנת לימודים פורייה, מהנה ובטוחה',
+            icon: '🎒'
+          };
+        } else if ((month === 11 && dateOfMonth >= 30) || (month === 0 && dateOfMonth <= 2)) {
+          recommendedTheme = 'new-year';
+          themeImages = HOLIDAY_COLLECTIONS['new-year'];
+          activeEvent = {
+            title: 'שנה אזרחית חדשה',
+            customGreeting: 'שנה אזרחית טובה ומבורכת! Happy New Year',
+            subtitle: 'ועד הבניין מאחל שנה של הצלחה, בריאות והתחלות חדשות וטובות',
+            icon: '🎆'
+          };
+        } else {
+          recommendedTheme = 'default';
+          themeImages = HOLIDAY_COLLECTIONS['default'];
+          activeEvent = null;
         }
 
         this.shabbatData = {
@@ -846,7 +852,7 @@ class BuildingSignageApp {
           candleLighting,
           havdalah,
           holidays,
-          activeHoliday: activeEvent || holidays[0] || null,
+          activeHoliday: activeEvent,
           recommendedTheme,
           themeImage: themeImages[0],
           themeImages
@@ -887,7 +893,7 @@ class BuildingSignageApp {
 
     let html = '';
 
-    // Active Holiday Banner
+    // Active Holiday Banner (If special holiday)
     if (this.shabbatData.activeHoliday) {
       html += `
         <div class="special-badge">
@@ -917,7 +923,7 @@ class BuildingSignageApp {
 
   async fetchNotices() {
     let list = [];
-    if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {
+    if (this.isLocalServer()) {
       try {
         const res = await fetch('/api/notices');
         if (res.ok) {
@@ -956,7 +962,7 @@ class BuildingSignageApp {
   }
 
   async fetchPhotos() {
-    if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {
+    if (this.isLocalServer()) {
       try {
         const res = await fetch('/api/photos');
         if (res.ok) {
@@ -981,7 +987,7 @@ class BuildingSignageApp {
   }
 
   async fetchNews() {
-    if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {
+    if (this.isLocalServer()) {
       try {
         const source = this.settings?.display?.newsSource || 'ynet';
         const res = await fetch(`/api/news?source=${source}`);
