@@ -67,20 +67,38 @@
 
 ---
 
-## 🚀 4. הוראות הפעלה והרצה
+## 🚀 4. אפשרויות פריסה והפעלה (Deployment Options)
 
-### הרצה מקומית:
+המערכת פותחה בארכיטקטורה מודולרית התומכת בשלוש דרכי הפעלה:
+
+### א. GitHub Pages (אפס עלות • 100% חינם • אוטונומי):
+* פריסה אוטומטית מתוך ה-GitHub דרך GitHub Actions (`deploy.yml`).
+* הדפדפן מושך נתוני מזג אוויר וזמני שבת ישירות מ-Open-Meteo ו-Hebcal.
+* תמיכה מובנית בתעודת SSL/HTTPS חינמית ובדומיין אישי.
+
+### ב. Cloudflare Pages & Workers (ביצועים מקסימליים • שרת מקומי בתל אביב):
+* אחסון קבצים סטטיים ב-Cloudflare Pages עם זמני טעינה של אלפיות שניה בישראל.
+* אפשרות ל-Serverless API מבוסס Cloudflare Workers ו-KV/D1 לשמירת הודעות הוועד בענן.
+
+### ג. שרת Node.js מקומי / שרת ענן (Self-Hosted / VPS):
 ```bash
-cd "yarden"
 npm install
-node server.js
+npm start
 ```
 * **מסך ראשי לתצוגה בלובי:** `http://localhost:3000`
 * **ממשק ניהול לוועד הבית:** `http://localhost:3000/admin`
 
 ---
 
-## 📁 5. מבנה הקבצים בפרויקט
+## 🌐 5. חיבור דומיין אישי (Custom Domain)
+1. **בהגדרות GitHub Pages:** הזנת הדומיין (למשל `lobby.yourdomain.co.il`).
+2. **ברשם הדומיינים (Hover / Cloudflare):**
+   * יצירת רשומת `CNAME` המפנה ל-`omerninyo.github.io`.
+   * במידה ומנוהל ב-Cloudflare: וידוא שמצב SSL מוגדר על **Full / Full (strict)**.
+
+---
+
+## 📁 6. מבנה הקבצים בפרויקט
 ```
 yarden/
 ├── server.js               # שרת Node.js, ניתוב API, משיכת RSS, מזג אוויר וזמני שבת

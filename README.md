@@ -3,8 +3,15 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT%20with%20Attribution-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Web%20%7C%20Android%207%2B%20Kiosk-brightgreen.svg)]()
+[![Live Demo](https://img.shields.io/badge/Live_Demo-GitHub_Pages-success.svg)](https://omerninyo.github.io/smart-lobby/)
 [![Author](https://img.shields.io/badge/Author-Omer%20Ninyo-orange.svg)](https://github.com/omerninyo)
 [![UI: TailwindCSS](https://img.shields.io/badge/UI-TailwindCSS%20%2B%20Modern%20Glassmorphism-38bdf8.svg)]()
+
+---
+
+## 🌐 Live Kiosk & Demo Links
+* 🖥️ **Live Lobby Kiosk Display:** [https://omerninyo.github.io/smart-lobby/](https://omerninyo.github.io/smart-lobby/)
+* 📱 **Mobile / iPhone Admin Panel:** [https://omerninyo.github.io/smart-lobby/admin.html](https://omerninyo.github.io/smart-lobby/admin.html) (Default PIN: `1234`)
 
 ---
 
@@ -75,23 +82,57 @@ graph TD
 
 ---
 
-## 🚀 Quickstart & Local Deployment
+## 🚀 Deployment Pathways & Hosting Options
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/omerninyo/smart-lobby.git
-cd smart-lobby
-```
+Smart Lobby is engineered to run seamlessly across three different hosting architectures, depending on your building's budget and complexity:
 
-### 2. Install dependencies & Run
-```bash
-npm install
-npm start
-```
+### 1️⃣ Option A: GitHub Pages (Zero Server • 100% Free • Recommended for Portfolios)
+* **How it works:** Pure client-side static hosting powered by GitHub's global CDN and automated via `.github/workflows/deploy.yml`.
+* **API Handling:** Fetches live weather directly from Open-Meteo, Jewish calendar from Hebcal, and news feeds via CORS-friendly RSS.
+* **Setup:**
+  1. In your GitHub repo: Go to **Settings** → **Pages**.
+  2. Under **Build and deployment** → **Source**, select **GitHub Actions**.
+  3. The workflow builds and deploys `public/` automatically!
 
-### 3. Access URLs
-* **Kiosk Main Display:** `http://localhost:3000/`
-* **Admin Management Panel:** `http://localhost:3000/admin` (Default PIN: `1234`)
+### 2️⃣ Option B: Cloudflare Pages & Workers (Edge Serverless • Sub-10ms Tel Aviv Latency)
+* **How it works:** Ultra-fast static assets deployed to Cloudflare's Edge Network (with local servers in Tel Aviv, Israel).
+* **Serverless Backend:** Optional Cloudflare Worker with **Cloudflare KV** or **D1 SQL Database** for CRUD operations and photo uploads without paying for a traditional virtual server.
+* **Setup:**
+  1. Connect your repository to **Cloudflare Pages** via the Cloudflare Dashboard.
+  2. Set build directory to `public`.
+
+### 3️⃣ Option C: Self-Hosted Node.js / Docker (Local Raspberry Pi, Mini PC or VPS)
+* **How it works:** Full standalone Node.js Express server with local JSON file storage (`data/`) and local image uploads (`public/uploads/`).
+* **Run:**
+  ```bash
+  npm install
+  npm start
+  ```
+
+---
+
+## 🌐 Custom Domain & DNS Configuration
+
+You can easily bind your own custom domain (e.g. `lobby.yourdomain.com` or `hayarden5.co.il`):
+
+### In GitHub Pages:
+1. Navigate to **Settings** → **Pages** → **Custom domain**.
+2. Enter your domain (e.g. `lobby.yourdomain.co.il`) and click **Save**.
+
+### In your DNS Provider:
+
+#### 🔹 Option 1: Hover / Direct Registrar
+* Add a `CNAME` record:
+  * **Type:** `CNAME`
+  * **Hostname:** `lobby` (or subdomain)
+  * **Target:** `omerninyo.github.io`
+
+#### 🔹 Option 2: Cloudflare (Recommended for Tel Aviv Edge Caching)
+* Add a `CNAME` record:
+  * **Name:** `lobby` (or `@` for root domain with CNAME Flattening)
+  * **Target:** `omerninyo.github.io`
+  * **Proxy status:** `Proxied (Orange Cloud ☁️)`
+* ⚠️ **Important SSL Setting in Cloudflare:** Set **SSL/TLS Encryption Mode** to **Full** or **Full (strict)** to prevent infinite redirect loops.
 
 ---
 
