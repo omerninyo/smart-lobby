@@ -436,9 +436,36 @@ class BuildingSignageApp {
     const isHighContrast = Boolean(this.settings.display?.highContrastSideCards);
     document.body.classList.toggle('high-contrast-side', isHighContrast);
 
-    // Layout Flip (Side column on left or right)
-    const isFlipped = this.settings.display?.layoutSide === 'right';
-    document.body.classList.toggle('layout-flipped', isFlipped);
+    // Advanced Layout - Side Column Position (left / right / hidden)
+    const layoutSide = this.settings.display?.layoutSide || 'left';
+    document.body.classList.remove('layout-side-left', 'layout-side-right', 'layout-side-hidden', 'layout-flipped');
+    document.body.classList.add(`layout-side-${layoutSide}`);
+    if (layoutSide === 'right') document.body.classList.add('layout-flipped');
+
+    // Advanced Layout - Side Column Width (normal / compact / wide)
+    const sideWidth = this.settings.display?.sideColumnWidth || 'normal';
+    document.body.classList.remove('side-width-compact', 'side-width-normal', 'side-width-wide');
+    document.body.classList.add(`side-width-${sideWidth}`);
+
+    // Advanced Layout - Header Clock & Weather Position (right / left)
+    const clockPos = this.settings.display?.headerClockPosition || 'right';
+    document.body.classList.toggle('header-clock-left', clockPos === 'left');
+
+    // Advanced Layout - Header Brand Position (left / right / hidden)
+    const brandPos = this.settings.display?.headerBrandPosition || 'left';
+    document.body.classList.toggle('header-brand-hidden', brandPos === 'hidden');
+    document.body.classList.toggle('header-brand-right', brandPos === 'right');
+
+    // Advanced Layout - Header Shabbat Position (center / hidden)
+    const shabbatPos = this.settings.display?.headerShabbatPosition || 'center';
+    document.body.classList.toggle('header-shabbat-hidden', shabbatPos === 'hidden');
+
+    // Advanced Layout - News Ticker & Stage Navigation Toggles
+    const showTicker = this.settings.display?.showNewsTicker !== false;
+    document.body.classList.toggle('hide-ticker', !showTicker);
+
+    const showArrows = this.settings.display?.showStageArrows !== false;
+    document.body.classList.toggle('hide-arrows', !showArrows);
 
     // Elevator bar
     this.updateSideContact();
