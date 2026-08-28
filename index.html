@@ -4,219 +4,208 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>שילוט דיגיטלי - הירדן 5 חדרה</title>
   
-  <link rel="stylesheet" href="css/style.css?v=2026">
+  <link rel="stylesheet" href="css/style.css?v=20260828d">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏢</text></svg>">
 </head>
 <body class="theme-default res-auto">
 
   <div id="kiosk-container">
-    <!-- 1. Background Layers -->
-    <div id="background-layer"></div>
+    <!-- Background Wallpaper Layer (Real Holiday / Shabbat Photos + Dynamic Architecture) -->
+    <div id="background-layer" style="background-image: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=80');"></div>
     <div id="background-overlay"></div>
-    <!-- Left Screen Backlight Burn Compensator -->
     <div id="left-burn-compensator"></div>
 
-    <!-- 2. UI Overlay Layer -->
-    <div id="ui-layer">
+    <!-- UI Overlay Layer -->
+    <main id="ui-layer">
       
-      <!-- HEADER BAR -->
+      <!-- 1. Top Header Bar (Right: Clock & Weather | Center: Shabbat | Left: Building Brand) -->
       <header class="header-bar">
-        <!-- Building Brand & Identity (Top Right) -->
-        <div class="building-brand">
-          <div class="building-logo-badge">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z"/>
-            </svg>
-          </div>
-          <div class="building-info">
-            <h1 id="building-name">הירדן 5</h1>
-            <div class="city-tag">
-              <span id="building-city">חדרה</span>
-              <span>•</span>
-              <span>לובי חכם</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Center Shabbat & Holiday / Special Events Banner -->
-        <div class="header-center" id="header-center-widget">
-          <div class="shabbat-badge" id="header-shabbat-badge">
-            <span class="shabbat-icon">🕯️</span>
-            <span id="header-shabbat-text">זמני שבת מתעדכנים...</span>
-          </div>
-        </div>
-
-        <!-- Header Left: Weather & Digital Clock -->
+        <!-- Right (Bright Functional Side): Weather Widget + Live Dual Clock (Long press on clock to Mute/Unmute Radio) -->
         <div class="header-stats">
-          <!-- Weather Widget (Touch Interactive) -->
-          <div class="weather-widget touch-interactive" id="weather-touch-widget" title="לחץ לתחזית שבועית מורחבת">
-            <span class="weather-icon-emoji" id="weather-icon">☀️</span>
-            <div class="weather-info">
-              <div class="weather-temp" id="weather-temp">28°</div>
-              <div class="weather-desc" id="weather-desc">בהיר ונאה</div>
-            </div>
-          </div>
-
-          <!-- Live Clock Widget (Touch Interactive: Long-press toggles radio mute) -->
-          <div class="clock-widget touch-interactive" id="clock-touch-widget" title="לחיצה ארוכה להשתקת/הפעלת רדיו">
+          <div class="clock-widget touch-interactive" id="clock-touch-widget" title="שעון - לחיצה ארוכה להשתקה או הפעלה של הרדיו">
             <div class="clock-time" id="clock-time">00:00:00</div>
             <div class="clock-date-container">
-              <span id="clock-date-greg">טוען תאריך...</span>
+              <div class="clock-date-greg" id="clock-date-greg">טוען תאריך...</div>
+              <div class="clock-date-heb" id="clock-date-heb">טוען תאריך עברי...</div>
             </div>
           </div>
+          
+          <div class="weather-widget touch-interactive" id="weather-widget">
+            <div class="weather-icon" id="weather-icon">☀️</div>
+            <div class="weather-info">
+              <div class="weather-temp" id="weather-temp">--°</div>
+              <div class="weather-desc" id="weather-desc">טוען מזג אוויר...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center: Shabbat Times & Parasha or Major Holiday Indicator -->
+        <div class="header-center" id="header-center-widget">
+          <!-- Injected dynamically by screen.js -->
+        </div>
+
+        <!-- Left: Building Brand & Address -->
+        <div class="building-brand">
+          <div class="building-brand-text">
+            <h1 class="building-title" id="building-name">הירדן 5</h1>
+            <p class="building-subtitle" id="building-city">חדרה</p>
+          </div>
+          <div class="building-logo">🏢</div>
         </div>
       </header>
 
-      <!-- MAIN DASHBOARD GRID (Stage 63% + Side Widgets 37%) -->
-      <main class="main-dashboard-grid" id="main-grid">
+      <!-- 2. Main Stage & Side Information Grid -->
+      <div class="main-dashboard-grid">
         
-        <!-- DYNAMIC MAIN STAGE -->
-        <section class="stage-container" id="stage-container">
-          <!-- Progress bar for slideshow timing -->
-          <div class="stage-progress-bar">
-            <div class="stage-progress-fill" id="stage-progress-fill"></div>
+        <!-- Center/Right Primary Showcase Stage -->
+        <section class="stage-container" id="stage-showcase">
+          <!-- Left & Right Arrow Tap Navigation for Touchscreens -->
+          <button class="stage-nav-arrow stage-arrow-prev" id="stage-prev-btn" title="שקופית קודמת">
+            <span>◀</span>
+          </button>
+          <button class="stage-nav-arrow stage-arrow-next" id="stage-next-btn" title="שקופית הבאה">
+            <span>▶</span>
+          </button>
+
+          <div id="slides-container" class="slides-wrapper">
+            <!-- Dynamic Slides rendered by screen.js -->
           </div>
 
-          <!-- Touch Navigation Arrows (Large clickable targets for simple touchscreens) -->
-          <button class="stage-nav-arrow stage-nav-prev" id="stage-prev-btn" aria-label="הקודם">&#10095;</button>
-          <button class="stage-nav-arrow stage-nav-next" id="stage-next-btn" aria-label="הבא">&#10094;</button>
-
-          <!-- Dynamic Slides Container -->
-          <div id="slides-container" style="position: relative; width: 100%; height: 100%;">
-            <!-- Default Initial Slide (Notice) -->
-            <div class="slide-card active" id="initial-slide">
-              <div class="stage-notice-layout">
-                <div class="notice-header-row">
-                  <span class="notice-type-badge urgent">⚠️ הודעה דחופה</span>
-                  <span class="notice-author-tag">ועד הבית</span>
-                </div>
-                <div class="stage-notice-body">
-                  <div class="stage-notice-title-row">
-                    <span style="font-size: 2.2rem;">📢</span>
-                    <h2 class="stage-notice-title">ברוכים הבאים ללובי הבניין</h2>
-                  </div>
-                  <div class="stage-notice-content">מערכת השילוט הדיגיטלי פעילה ומספקת עדכונים שוטפים, זמני שבת, הודעות ועד ותחזית מזג אוויר בזמן אמת.</div>
-                </div>
-                <div class="stage-notice-footer">
-                  <span>הירדן 5, חדרה</span>
-                  <span>לוח מודעות דיגיטלי</span>
-                </div>
-              </div>
-            </div>
+          <!-- Stage Progress Bar for Active Slide Duration -->
+          <div class="stage-progress-bar">
+            <div class="stage-progress-fill" id="slide-progress-fill"></div>
           </div>
         </section>
 
-        <!-- SIDE COLUMN (2 Active Cards Max + Environmental Stats) -->
-        <aside class="side-column" id="side-column">
+        <!-- Left Side Column (Notice Cards, Environmental Indicators, Elevator Contact) -->
+        <aside class="side-column" id="side-column-area">
           
-          <!-- Card 1: Active Notices Feed (Touch-To-Jump) -->
-          <div class="side-widget-card" id="side-notices-card">
+          <!-- Notices Quick Feed -->
+          <div class="side-widget-card notices-feed-card">
             <div class="side-widget-header">
-              <h3>
-                <span>📋</span>
-                <span>הודעות ועד פעילות</span>
-              </h3>
-              <span class="badge-count" id="notices-count-badge">2 הודעות</span>
+              <div class="side-header-title">
+                <span class="side-header-icon">📋</span>
+                <h3>לוח מודעות</h3>
+              </div>
+              <span class="side-badge" id="notices-count-badge">0</span>
             </div>
-            <div class="side-notices-container" id="side-notices-feed">
-              <!-- Loaded via screen.js -->
+            
+            <div class="side-notices-feed" id="side-notices-feed">
+              <!-- Injected by screen.js -->
             </div>
           </div>
 
-          <!-- Card 2: Environmental Stats Widget (Humidity, Sunrise, Sunset) -->
-          <div class="side-widget-card touch-interactive" id="env-touch-card" title="לחץ למידע סביבתי ומזג אוויר">
+          <!-- Environmental & Building Stats -->
+          <div class="side-widget-card env-stats-card">
             <div class="side-widget-header">
-              <h3>
-                <span>🌿</span>
-                <span>מדדים וסביבה</span>
-              </h3>
-              <span style="font-size: 0.75rem; color: #38bdf8; font-weight: 700;">חדרה</span>
+              <div class="side-header-title">
+                <span class="side-header-icon">🌿</span>
+                <h3>תנאי סביבה</h3>
+              </div>
+              <span class="side-time-label" id="env-time-label">עכשיו</span>
             </div>
-            <div class="env-widget-grid">
+            
+            <div class="env-stats-grid">
               <div class="env-stat-box">
-                <span class="env-stat-label">לחות</span>
-                <span class="env-stat-value" id="env-humidity">65%</span>
+                <span class="env-stat-icon">💧</span>
+                <div class="env-stat-info">
+                  <span class="env-stat-value" id="env-humidity">--%</span>
+                  <span class="env-stat-label">לחות</span>
+                </div>
               </div>
               <div class="env-stat-box">
-                <span class="env-stat-label">זריחה</span>
-                <span class="env-stat-value" id="env-sunrise">06:15</span>
+                <span class="env-stat-icon">🌅</span>
+                <div class="env-stat-info">
+                  <span class="env-stat-value" id="env-sunrise">--:--</span>
+                  <span class="env-stat-label">זריחה</span>
+                </div>
               </div>
               <div class="env-stat-box">
-                <span class="env-stat-label">שקיעה</span>
-                <span class="env-stat-value" id="env-sunset">19:15</span>
+                <span class="env-stat-icon">🌇</span>
+                <div class="env-stat-info">
+                  <span class="env-stat-value" id="env-sunset">--:--</span>
+                  <span class="env-stat-label">שקיעה</span>
+                </div>
+              </div>
+              <div class="env-stat-box">
+                <span class="env-stat-icon">🌡️</span>
+                <div class="env-stat-info">
+                  <span class="env-stat-value" id="env-feels-like">--°</span>
+                  <span class="env-stat-label">מורגש</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Card 3: Quick Elevator Emergency Bar -->
-          <div class="side-widget-card touch-interactive" id="side-elevator-card" title="לחץ לחיוג ופרטי חירום">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 1.3rem;">🛗</span>
-                <span style="font-weight: 700; font-size: 0.9rem;" id="side-elevator-name">שירות מעליות:</span>
+          <!-- Emergency & Elevator Contact Pill Card -->
+          <div class="side-widget-card elevator-card" id="side-elevator-card">
+            <div class="side-elevator-content">
+              <div class="side-elevator-icon">🛗</div>
+              <div class="side-elevator-text">
+                <span class="side-elevator-label" id="side-elevator-name">שירות מעליות:</span>
+                <span class="side-elevator-phone" id="side-elevator-phone">*5555</span>
               </div>
-              <span style="font-family: var(--font-heading); font-weight: 800; color: #38bdf8; font-size: 1.05rem;" id="side-elevator-phone">*5555</span>
             </div>
           </div>
 
         </aside>
-      </main>
 
-      <!-- BOTTOM FOOTER & NEWS TICKER -->
-      <footer class="footer-bar" id="footer-bar">
-        <div class="ticker-badge touch-interactive" id="ticker-badge-btn" title="לחץ לקריאת המבזקים">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-          </svg>
+      </div>
+
+      <!-- 3. Bottom News Ticker Bar & Radio Indicator -->
+      <footer class="bottom-ticker-bar" id="ticker-bar">
+        <div class="ticker-badge">
+          <span class="pulse-dot"></span>
           <span>מבזקים</span>
         </div>
         
-        <div class="ticker-scroll-wrapper touch-interactive" id="ticker-scroll-wrapper">
-          <div class="ticker-content" id="ticker-content">
-            <span class="ticker-item">טוען מבזקי חדשות ועדכונים מהוועד...</span>
+        <div class="ticker-marquee-track">
+          <div class="ticker-marquee-content" id="ticker-content">
+            <span class="ticker-item">טוען מבזקי חדשות ועדכונים מהארץ והעולם...</span>
           </div>
         </div>
 
-        <!-- Radio Indicator in footer (Touch Interactive) -->
-        <div class="radio-indicator touch-interactive" id="radio-indicator" title="לחץ להשתקה / הפעלה" style="display: none;">
-          <span>📻</span>
-          <span id="radio-station-name">גלגלצ</span>
-          <div class="radio-waves">
-            <span class="radio-wave-bar"></span>
-            <span class="radio-wave-bar"></span>
-            <span class="radio-wave-bar"></span>
-          </div>
+        <div class="ticker-radio-indicator touch-interactive" id="radio-indicator" title="לחץ להשתקה/השמעת רדיו">
+          <span class="radio-waves"><span></span><span></span><span></span></span>
+          <span class="radio-label" id="radio-station-name">גלגלצ</span>
         </div>
       </footer>
 
-    </div>
-  </div>
-
-  <!-- FLOATING TOUCH TOAST NOTIFICATION -->
-  <div id="touch-toast" class="touch-toast hidden">
-    <span id="touch-toast-icon">🔊</span>
-    <span id="touch-toast-text">מוזיקת רקע הופעלה</span>
-  </div>
-
-  <!-- INTERACTIVE MODAL BACKDROP (For Weather, Shabbat, Contacts, News) -->
-  <div id="interactive-modal" class="modal-backdrop hidden">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 class="modal-title" id="modal-title">כותרת חלונית</h3>
-        <button class="modal-close-btn" id="modal-close-btn" aria-label="סגור">✕</button>
+      <!-- Full Notice Pop-up Modal on Tap -->
+      <div class="touch-modal-overlay" id="notice-modal">
+        <div class="touch-modal-card">
+          <div class="touch-modal-header">
+            <div class="touch-modal-badge" id="modal-badge">📢 הודעת ועד</div>
+            <button class="touch-modal-close" id="modal-close-btn">&times;</button>
+          </div>
+          <div class="touch-modal-body">
+            <h2 class="touch-modal-title" id="modal-title"></h2>
+            <div class="touch-modal-meta" id="modal-meta"></div>
+            <div class="touch-modal-content" id="modal-content"></div>
+            <div class="touch-modal-image-wrap" id="modal-image-wrap">
+              <img id="modal-image" src="" alt="תמונה מצורפת" />
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="modal-body" id="modal-body">
-        <!-- Injected via screen.js -->
+
+      <!-- User Interaction Audio Unlock Prompt -->
+      <div id="audio-unmute-prompt" class="audio-prompt-overlay" style="display: none;">
+        <div class="audio-prompt-card">
+          <span>🔊 לחץ כאן להפעלת מוזיקת רקע ורדיו בלובי</span>
+        </div>
       </div>
-    </div>
+
+    </main>
   </div>
 
   <!-- Background Radio Audio Player -->
   <audio id="radio-audio" preload="auto"></audio>
 
   <!-- Screen Controller Script -->
-  <script src="js/screen.js?v=20260828c"></script>
+  <script src="js/screen.js?v=20260828d"></script>
 </body>
 </html>
