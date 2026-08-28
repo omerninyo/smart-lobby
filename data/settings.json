@@ -88,6 +88,11 @@
         "url": "https://glzwizzlv.bynetcdn.com/glglz_mp3"
       },
       {
+        "id": "103fm",
+        "name": "103FM (רדיו ללא הפסקה)",
+        "url": "https://cdn.cybercdn.live/103FM/Live/icecast.audio"
+      },
+      {
         "id": "glz",
         "name": "גלי צה\"ל (GLZ)",
         "url": "https://glzwizzlv.bynetcdn.com/glz_mp3"
