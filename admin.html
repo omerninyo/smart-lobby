@@ -2,18 +2,26 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>ניהול שילוט דיגיטלי - הירדן 5 חדרה</title>
   
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
   <link rel="stylesheet" href="css/style.css">
   
   <style>
-    body {
+    html, body {
+      height: auto !important;
+      min-height: 100% !important;
+      overflow-x: hidden !important;
       overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      user-select: auto !important;
+      -webkit-user-select: auto !important;
       background: #090d16;
       color: #f8fafc;
       font-family: 'Assistant', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      padding-bottom: 2rem;
     }
     .admin-card {
       background: rgba(22, 30, 49, 0.75);
@@ -46,11 +54,28 @@
       width: 100%;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
+      font-size: 16px; /* Prevents auto zoom on iOS Safari */
+    }
+    @media (min-width: 640px) {
+      .input-field {
+        font-size: 14px;
+      }
     }
     .input-field:focus {
       border-color: #38bdf8;
       box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
     }
+    
+    /* Strict LTR for Time, Dates, Phone Numbers and PIN inputs to prevent flipped RTL rendering */
+    input[type="time"],
+    input[type="datetime-local"],
+    input[type="tel"],
+    input.force-ltr {
+      direction: ltr !important;
+      text-align: center !important;
+      unicode-bidi: isolate !important;
+    }
+
     .slider-styled {
       -webkit-appearance: none;
       height: 8px;
@@ -68,13 +93,41 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.5);
       border: 2px solid #ffffff;
     }
+    
+    /* Hide scrollbars for tabs */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Mobile Save Toast Notification */
+    #admin-toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
+      z-index: 100;
+    }
+    #admin-toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
   </style>
 </head>
 <body class="p-3 sm:p-6 max-w-4xl mx-auto">
 
+  <!-- Mobile Toast Alert -->
+  <div id="admin-toast" class="opacity-0 pointer-events-none bg-blue-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 font-bold text-sm border border-blue-400">
+    <span id="toast-icon" class="text-lg">✅</span>
+    <span id="toast-msg">ההגדרות נשמרו בהצלחה!</span>
+  </div>
+
   <!-- PIN Modal Screen -->
-  <div id="pin-modal" class="fixed inset-0 bg-black bg-opacity-85 flex items-center justify-center z-50 p-4">
-    <div class="admin-card p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl">
+  <div id="pin-modal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+    <div class="admin-card p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl border border-gray-700">
       <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
@@ -83,56 +136,56 @@
       <h2 class="text-2xl font-bold mb-1">ניהול שילוט דיגיטלי</h2>
       <p class="text-gray-400 text-xs mb-6">הירדן 5, חדרה • נא להזין קוד גישה</p>
       
-      <input type="password" id="pin-input" class="input-field text-center text-3xl tracking-widest mb-4 font-mono" placeholder="••••" maxlength="6" autofocus />
-      <button id="pin-submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition">כניסה למערכת</button>
+      <input type="password" id="pin-input" class="input-field force-ltr text-center text-3xl tracking-widest mb-4 font-mono" placeholder="••••" maxlength="6" autofocus />
+      <button id="pin-submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-3 rounded-xl shadow-lg transition">כניסה למערכת</button>
       <p id="pin-error" class="text-red-400 text-xs mt-3 hidden">קוד PIN שגוי (ברירת המחדל: 1234)</p>
     </div>
   </div>
 
   <!-- Admin Main App -->
-  <div id="admin-app" class="hidden space-y-5">
+  <div id="admin-app" class="hidden space-y-4 sm:space-y-5">
     
     <!-- Top Header -->
-    <header class="flex items-center justify-between admin-card p-4">
-      <div class="flex items-center gap-3">
-        <div class="w-11 h-11 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-xl shadow-md">🏢</div>
-        <div>
-          <h1 class="text-lg sm:text-xl font-bold" id="admin-header-bld-name">הירדן 5, חדרה</h1>
-          <p class="text-xs text-gray-400">לוח שילוט חכם ופאנל ניהול ועד בית</p>
+    <header class="flex items-center justify-between admin-card p-3 sm:p-4 gap-2">
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div class="w-10 h-10 sm:w-11 sm:h-11 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-lg sm:text-xl shadow-md shrink-0">🏢</div>
+        <div class="min-w-0">
+          <h1 class="text-base sm:text-xl font-bold truncate" id="admin-header-bld-name">הירדן 5, חדרה</h1>
+          <p class="text-[11px] sm:text-xs text-gray-400 truncate">לוח שילוט חכם ופאנל ניהול ועד בית</p>
         </div>
       </div>
-      <div class="flex items-center gap-2">
-        <a href="/" target="_blank" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-xs sm:text-sm px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition">
+      <div class="flex items-center gap-2 shrink-0">
+        <a href="/" target="_blank" class="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-xs sm:text-sm px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95">
           <span>🖥️</span>
           <span class="hidden sm:inline">צפה במסך</span>
         </a>
-        <button id="logout-btn" class="bg-red-950 bg-opacity-60 hover:bg-red-900 border border-red-800 text-red-300 text-xs sm:text-sm px-3.5 py-2 rounded-xl transition">יציאה</button>
+        <button id="logout-btn" class="bg-red-950 bg-opacity-60 hover:bg-red-900 border border-red-800 text-red-300 text-xs sm:text-sm px-3 py-2 rounded-xl transition active:scale-95">יציאה</button>
       </div>
     </header>
 
-    <!-- Navigation Tabs (5 Streamlined Categories) -->
-    <nav class="flex overflow-x-auto gap-2 pb-1">
-      <button class="tab-btn active px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5" data-tab="notices">
+    <!-- Navigation Tabs (Touch Friendly Mobile Scroll) -->
+    <nav class="flex overflow-x-auto gap-2 pb-1.5 no-scrollbar">
+      <button class="tab-btn active shrink-0 px-3.5 sm:px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5" data-tab="notices">
         <span>📢</span>
         <span>הודעות ומודעות</span>
       </button>
-      <button class="tab-btn px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5" data-tab="display">
+      <button class="tab-btn shrink-0 px-3.5 sm:px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5" data-tab="display">
         <span>🎨</span>
         <span>תצוגה, רקע וחגים</span>
       </button>
-      <button class="tab-btn px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5" data-tab="contacts">
+      <button class="tab-btn shrink-0 px-3.5 sm:px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5" data-tab="contacts">
         <span>📞</span>
         <span>אנשי קשר ומעלית</span>
       </button>
-      <button class="tab-btn px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5" data-tab="radio">
+      <button class="tab-btn shrink-0 px-3.5 sm:px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5" data-tab="radio">
         <span>📻</span>
         <span>מוזיקה ורדיו</span>
       </button>
-      <button class="tab-btn px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5" data-tab="settings">
+      <button class="tab-btn shrink-0 px-3.5 sm:px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5" data-tab="settings">
         <span>⚙️</span>
         <span>הגדרות ואבטחה</span>
       </button>
-      <button class="tab-btn px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5" data-tab="help">
+      <button class="tab-btn shrink-0 px-3.5 sm:px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap flex items-center gap-1.5" data-tab="help">
         <span>💡</span>
         <span>עזרה ומדריך מגע</span>
       </button>
@@ -142,18 +195,18 @@
     <section id="tab-notices" class="tab-content space-y-4">
       <div class="flex justify-between items-center">
         <div>
-          <h2 class="text-lg font-bold">הודעות הוועד בלוח</h2>
+          <h2 class="text-base sm:text-lg font-bold">הודעות הוועד בלוח</h2>
           <p class="text-xs text-gray-400">הודעות פעילות המוצגות במסך הראשי ובעמודת המידע</p>
         </div>
-        <button id="add-notice-btn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-lg transition">
+        <button id="add-notice-btn" class="bg-blue-600 hover:bg-blue-700 active:scale-95 px-3.5 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-lg transition">
           <span>➕</span>
           <span>הודעה חדשה</span>
         </button>
       </div>
 
       <!-- Add/Edit Notice Form Modal / Box -->
-      <div id="notice-form-box" class="admin-card p-5 hidden border-blue-500/40">
-        <h3 id="form-title" class="font-bold text-base mb-4 text-blue-400">יצירת הודעה חדשה לוועד</h3>
+      <div id="notice-form-box" class="admin-card p-4 sm:p-5 hidden border-blue-500/40">
+        <h3 id="form-title" class="font-bold text-sm sm:text-base mb-4 text-blue-400">יצירת הודעה חדשה לוועד</h3>
         <form id="notice-form" class="space-y-4">
           <input type="hidden" id="notice-id" />
           <input type="hidden" id="notice-image-url" />
@@ -169,9 +222,9 @@
           </div>
 
           <!-- Notice Image Attachment -->
-          <div class="bg-gray-900 bg-opacity-80 p-4 rounded-xl border border-gray-700 space-y-2">
+          <div class="bg-gray-900 bg-opacity-80 p-3 sm:p-4 rounded-xl border border-gray-700 space-y-2">
             <label class="block text-xs font-bold text-gray-200">🖼️ צירוף תמונה / פלייר (אופציונלי):</label>
-            <p class="text-xs text-gray-400">תומך בבחירת תמונה מהאייפון/אנדרואיד, מצלמה או קובץ מהמחשב (תחלק את המסך ל-50% תמונה ו-50% טקסט)</p>
+            <p class="text-[11px] sm:text-xs text-gray-400">תומך בבחירת תמונה מהטלפון, מצלמה או קובץ (יוצג כפלייר או בעימוד מפוצל)</p>
             <input 
               type="file" 
               id="notice-file-input" 
@@ -180,33 +233,33 @@
             />
             <div id="notice-img-preview-box" class="hidden flex items-center gap-3 pt-2">
               <img id="notice-img-preview" src="" alt="תצוגה מקדימה" class="h-20 rounded-lg object-contain border border-gray-600 bg-black/60" />
-              <button type="button" id="notice-remove-img-btn" class="px-3 py-1 bg-red-900 bg-opacity-70 hover:bg-opacity-100 text-red-200 rounded-lg text-xs font-bold">
+              <button type="button" id="notice-remove-img-btn" class="px-3 py-1.5 bg-red-900 bg-opacity-70 hover:bg-opacity-100 text-red-200 rounded-lg text-xs font-bold">
                 🗑️ הסר תמונה
               </button>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label class="block text-xs text-gray-300 font-bold mb-1">חתימת ההודעה</label>
               <input type="text" id="notice-author" class="input-field" value="ועד הבית" />
             </div>
             <div>
               <label class="block text-xs text-gray-300 font-bold mb-1">תאריך תפוגה אוטומטי (אופציונלי)</label>
-              <input type="datetime-local" id="notice-expires" class="input-field text-xs" />
+              <input type="datetime-local" id="notice-expires" dir="ltr" class="input-field force-ltr text-xs" />
             </div>
           </div>
 
           <div class="flex items-center gap-3 bg-red-950 bg-opacity-30 p-3 rounded-xl border border-red-800 border-opacity-50">
-            <input type="checkbox" id="notice-urgent" class="w-5 h-5 text-red-600 rounded cursor-pointer" />
+            <input type="checkbox" id="notice-urgent" class="w-5 h-5 text-red-600 rounded cursor-pointer shrink-0" />
             <label for="notice-urgent" class="text-xs sm:text-sm font-bold cursor-pointer text-red-300">
               ⚠️ סמן כהודעה דחופה (תוצג עם תגית אדומה מודגשת)
             </label>
           </div>
 
-          <div class="flex justify-end gap-2 pt-2">
-            <button type="button" id="cancel-notice-btn" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-xs font-bold">ביטול</button>
-            <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-xs font-bold shadow-lg">שמור ופרסם במסך</button>
+          <div class="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
+            <button type="button" id="cancel-notice-btn" class="w-full sm:w-auto px-4 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-xl text-xs font-bold">ביטול</button>
+            <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-xs font-bold shadow-lg">שמור ופרסם במסך</button>
           </div>
         </form>
       </div>
@@ -218,47 +271,47 @@
     </section>
 
     <!-- TAB 2: DISPLAY, THEME & BACKGROUND -->
-    <section id="tab-display" class="tab-content hidden space-y-5">
-      <div class="admin-card p-5 space-y-6">
+    <section id="tab-display" class="tab-content hidden space-y-4 sm:space-y-5">
+      <div class="admin-card p-4 sm:p-5 space-y-5 sm:space-y-6">
         <div>
-          <h2 class="text-lg font-bold mb-1">🎨 תצוגה, שקיפות רקע וערכות נושא</h2>
+          <h2 class="text-base sm:text-lg font-bold mb-1">🎨 תצוגה, שקיפות רקע וערכות נושא</h2>
           <p class="text-xs text-gray-400">שליטה על בהירות הרקע, חגי ישראל, זמני שבת והתאמה למסך</p>
         </div>
 
         <!-- Background Opacity / Brightness Slider -->
-        <div class="bg-gray-900 bg-opacity-70 p-4 rounded-xl border border-gray-700 space-y-3">
+        <div class="bg-gray-900 bg-opacity-70 p-3.5 sm:p-4 rounded-xl border border-gray-700 space-y-3">
           <div class="flex justify-between items-center">
             <div>
-              <span class="text-sm font-bold text-white block">🖼️ עוצמת ובהירות תמונת הרקע</span>
-              <span class="text-xs text-gray-400">כוון את רמת הבהירות והנראות של תמונות האדריכלות והחגים</span>
+              <span class="text-xs sm:text-sm font-bold text-white block">🖼️ עוצמת ובהירות תמונת הרקע</span>
+              <span class="text-[11px] sm:text-xs text-gray-400">רמת הנראות של תמונות האדריכלות והחגים</span>
             </div>
-            <span id="bg-opacity-label" class="font-bold text-blue-400 text-base font-mono bg-blue-950 px-3 py-1 rounded-lg border border-blue-800">85%</span>
+            <span id="bg-opacity-label" class="font-bold text-blue-400 text-sm sm:text-base font-mono bg-blue-950 px-2.5 py-1 rounded-lg border border-blue-800">85%</span>
           </div>
           <input type="range" id="setting-bg-opacity" min="20" max="100" step="5" value="85" class="w-full slider-styled cursor-pointer" />
-          <div class="flex justify-between text-xs text-gray-500">
-            <span>20% (כהה ומעומעם)</span>
-            <span>85% (מומלץ - תמונות חדות וברורות)</span>
-            <span>100% (רקע מלא)</span>
+          <div class="flex justify-between text-[11px] text-gray-500 font-medium">
+            <span>20% (כהה)</span>
+            <span>85% (מומלץ)</span>
+            <span>100% (מלא)</span>
           </div>
         </div>
 
         <!-- Shabbat & Holiday Theme Selection -->
         <div class="space-y-3">
-          <label class="block text-sm font-bold text-white">✨ מצב ערכת נושא וחגים:</label>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label class="flex items-center gap-3 p-3.5 bg-gray-900 bg-opacity-80 rounded-xl border border-gray-700 cursor-pointer hover:border-blue-500 transition">
-              <input type="radio" name="theme-mode" value="auto" checked class="w-4 h-4 text-blue-600" />
+          <label class="block text-xs sm:text-sm font-bold text-white">✨ מצב ערכת נושא וחגים:</label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+            <label class="flex items-center gap-3 p-3 sm:p-3.5 bg-gray-900 bg-opacity-80 rounded-xl border border-gray-700 cursor-pointer hover:border-blue-500 transition">
+              <input type="radio" name="theme-mode" value="auto" checked class="w-4 h-4 text-blue-600 shrink-0" />
               <div>
-                <span class="font-bold block text-sm text-yellow-400">✨ אוטומטי מלא (מומלץ)</span>
-                <span class="text-xs text-gray-400">מתחלף אוטומטית לשבתות (נרות וחלות) ולכל מועדי ישראל</span>
+                <span class="font-bold block text-xs sm:text-sm text-yellow-400">✨ אוטומטי מלא (מומלץ)</span>
+                <span class="text-[11px] sm:text-xs text-gray-400 block">מתחלף אוטומטית לשבתות ולכל מועדי ישראל</span>
               </div>
             </label>
 
-            <label class="flex items-center gap-3 p-3.5 bg-gray-900 bg-opacity-80 rounded-xl border border-gray-700 cursor-pointer hover:border-blue-500 transition">
-              <input type="radio" name="theme-mode" value="manual" class="w-4 h-4 text-blue-600" />
+            <label class="flex items-center gap-3 p-3 sm:p-3.5 bg-gray-900 bg-opacity-80 rounded-xl border border-gray-700 cursor-pointer hover:border-blue-500 transition">
+              <input type="radio" name="theme-mode" value="manual" class="w-4 h-4 text-blue-600 shrink-0" />
               <div>
-                <span class="font-bold block text-sm text-gray-200">🎨 בחירה קבועה</span>
-                <span class="text-xs text-gray-400">קיבוע ערכת נושא ורקע קבועים לבחירתך</span>
+                <span class="font-bold block text-xs sm:text-sm text-gray-200">🎨 בחירה קבועה</span>
+                <span class="text-[11px] sm:text-xs text-gray-400 block">קיבוע ערכת נושא ורקע קבועים לבחירתך</span>
               </div>
             </label>
           </div>
@@ -280,12 +333,12 @@
         </div>
 
         <!-- Left Screen Backlight Burn Compensation -->
-        <div class="bg-blue-950 bg-opacity-40 border border-blue-800 p-4 rounded-xl space-y-3">
+        <div class="bg-blue-950 bg-opacity-40 border border-blue-800 p-3.5 sm:p-4 rounded-xl space-y-3">
           <div class="flex items-center gap-2">
-            <span class="text-lg">💡</span>
+            <span class="text-lg shrink-0">💡</span>
             <div>
-              <h3 class="font-bold text-sm text-blue-200">פיצוי תאורה לצד שמאל (מסך עם לדים שרופים/חלשים)</h3>
-              <p class="text-xs text-gray-300">מעלה באופן הדרגתי את הבהירות והגאמא בצד שמאל של המסך.</p>
+              <h3 class="font-bold text-xs sm:text-sm text-blue-200">פיצוי תאורה לצד שמאל (מסך עם לדים שרופים/חלשים)</h3>
+              <p class="text-[11px] sm:text-xs text-gray-300">מעלה באופן הדרגתי את הבהירות והגאמא בצד שמאל של המסך</p>
             </div>
           </div>
 
@@ -297,22 +350,22 @@
             <input type="range" id="setting-left-burn-comp" min="0" max="100" step="5" value="45" class="w-full slider-styled cursor-pointer" />
           </div>
 
-          <div class="pt-2">
+          <div class="pt-1">
             <label class="flex items-center gap-2 text-xs text-gray-200 cursor-pointer bg-gray-900 p-2.5 rounded-lg border border-gray-700">
-              <input type="checkbox" id="setting-high-contrast-side" class="w-4 h-4 text-blue-600 rounded" />
+              <input type="checkbox" id="setting-high-contrast-side" class="w-4 h-4 text-blue-600 rounded shrink-0" />
               <span>כרטיסיות צד בהירות (High Contrast לקריאות מקסימלית)</span>
             </label>
           </div>
         </div>
 
         <!-- Advanced Layout Customization Section -->
-        <div class="bg-gray-900 bg-opacity-70 border border-gray-700 rounded-xl p-4 space-y-4">
+        <div class="bg-gray-900 bg-opacity-70 border border-gray-700 rounded-xl p-3.5 sm:p-4 space-y-3.5">
           <div class="flex items-center justify-between border-b border-gray-800 pb-2">
             <div class="flex items-center gap-2">
-              <span class="text-xl">⚙️</span>
+              <span class="text-lg sm:text-xl shrink-0">⚙️</span>
               <div>
-                <h3 class="font-bold text-sm text-white">התאמת מיקומים ופריסת מסך מתקדמת (Layout Customization)</h3>
-                <p class="text-xs text-gray-400">שליטה מלאה במיקום כל רכיב במסך (שעון, מזג אוויר, זמני שבת, עמודת מודעות ובמה)</p>
+                <h3 class="font-bold text-xs sm:text-sm text-white">התאמת מיקומים ופריסת מסך מתקדמת (Layout Customization)</h3>
+                <p class="text-[11px] sm:text-xs text-gray-400">שליטה מלאה במיקום כל רכיב במסך (שעון, מזג אוויר, זמני שבת, עמודת מודעות ובמה)</p>
               </div>
             </div>
           </div>
@@ -376,42 +429,15 @@
               <label class="block text-xs font-bold text-gray-200">🔘 רכיבי ניווט ומבזקים</label>
               <div class="space-y-1.5 pt-1">
                 <label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                  <input type="checkbox" id="setting-show-news-ticker" class="w-4 h-4 text-blue-600 rounded" checked />
+                  <input type="checkbox" id="setting-show-news-ticker" class="w-4 h-4 text-blue-600 rounded shrink-0" checked />
                   <span>הצג פס מבזקי חדשות תחתון</span>
                 </label>
                 <label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
-                  <input type="checkbox" id="setting-show-stage-arrows" class="w-4 h-4 text-blue-600 rounded" checked />
+                  <input type="checkbox" id="setting-show-stage-arrows" class="w-4 h-4 text-blue-600 rounded shrink-0" checked />
                   <span>הצג חצי העברת שקופיות במגע</span>
                 </label>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- Timing & Ticker Speed -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">משך זמן שקופית</label>
-            <div class="flex items-center gap-2">
-              <input type="number" id="setting-slide-duration" class="input-field" value="12" min="5" max="60" />
-              <span class="text-xs text-gray-400">שניות</span>
-            </div>
-          </div>
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">מהירות פס מבזקים</label>
-            <select id="setting-ticker-speed" class="input-field">
-              <option value="slow">איטי (קריאה נוחה)</option>
-              <option value="normal">רגיל</option>
-              <option value="fast">מהיר</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">רזולוציה</label>
-            <select id="setting-resolution" class="input-field">
-              <option value="auto">אוטומטי (Auto)</option>
-              <option value="1080p">1080p (Full HD)</option>
-              <option value="720p">720p (HD)</option>
-            </select>
           </div>
         </div>
 
@@ -420,39 +446,42 @@
           <input type="text" id="setting-custom-ticker" class="input-field" placeholder="ועד הבית מאחל יום נעים ובטוח לכל הדיירים והאורחים!" />
         </div>
 
-        <button id="save-display-btn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-xl font-bold text-sm shadow-lg transition">שמור הגדרות תצוגה ורקע</button>
+        <button id="save-display-btn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 active:scale-95 px-8 py-3 rounded-xl font-bold text-sm shadow-lg transition flex items-center justify-center gap-2">
+          <span>💾</span>
+          <span>שמור הגדרות תצוגה ורקע</span>
+        </button>
       </div>
     </section>
 
     <!-- TAB 3: CONTACTS & ELEVATORS -->
     <section id="tab-contacts" class="tab-content hidden space-y-4">
-      <div class="admin-card p-5 space-y-5">
+      <div class="admin-card p-4 sm:p-5 space-y-4 sm:space-y-5">
         <div>
-          <h2 class="text-lg font-bold mb-1">📞 מספרי חירום, מעלית ושירותי בניין</h2>
+          <h2 class="text-base sm:text-lg font-bold mb-1">📞 מספרי חירום, מעלית ושירותי בניין</h2>
           <p class="text-xs text-gray-400">הגדרת מספרי טלפון שימושיים המוצגים בפס המהיר ובשקופית הטלפונים</p>
         </div>
 
         <!-- Master Toggles -->
-        <div class="space-y-2 bg-gray-900 bg-opacity-70 p-4 rounded-xl border border-gray-700">
+        <div class="space-y-2 bg-gray-900 bg-opacity-70 p-3.5 sm:p-4 rounded-xl border border-gray-700">
           <label class="flex items-center justify-between cursor-pointer p-1.5 hover:bg-gray-800 rounded-lg">
-            <span class="text-xs sm:text-sm">🛗 הצג פס מוקד מעלית קבוע בעמודת המידע</span>
-            <input type="checkbox" id="toggle-show-elevator-bar" class="w-5 h-5 text-blue-600 rounded" checked />
+            <span class="text-xs sm:text-sm font-medium">🛗 הצג פס מוקד מעלית קבוע בעמודת המידע</span>
+            <input type="checkbox" id="toggle-show-elevator-bar" class="w-5 h-5 text-blue-600 rounded shrink-0" checked />
           </label>
           <label class="flex items-center justify-between cursor-pointer p-1.5 hover:bg-gray-800 rounded-lg border-t border-gray-800 pt-2">
-            <span class="text-xs sm:text-sm">📋 הצג שקופית מדריך מספרי חירום וטלפונים בסבב הראשי</span>
-            <input type="checkbox" id="toggle-show-contacts-slide" class="w-5 h-5 text-blue-600 rounded" checked />
+            <span class="text-xs sm:text-sm font-medium">📋 הצג שקופית מדריך מספרי חירום וטלפונים בסבב הראשי</span>
+            <input type="checkbox" id="toggle-show-contacts-slide" class="w-5 h-5 text-blue-600 rounded shrink-0" checked />
           </label>
         </div>
 
         <!-- Elevator Phone Box -->
-        <div class="bg-blue-950 bg-opacity-30 border border-blue-800 p-4 rounded-xl space-y-3">
+        <div class="bg-blue-950 bg-opacity-30 border border-blue-800 p-3.5 sm:p-4 rounded-xl space-y-3">
           <div class="flex items-center justify-between">
-            <h3 class="font-bold text-sm text-blue-300 flex items-center gap-2">
+            <h3 class="font-bold text-xs sm:text-sm text-blue-300 flex items-center gap-2">
               <span>🛗</span>
               <span>מוקד שירות ותקלות מעלית</span>
             </h3>
             <label class="flex items-center gap-1.5 text-xs text-blue-200 cursor-pointer">
-              <input type="checkbox" id="contact-elevator-enabled" checked class="w-4 h-4 text-blue-600 rounded" />
+              <input type="checkbox" id="contact-elevator-enabled" checked class="w-4 h-4 text-blue-600 rounded shrink-0" />
               <span>פעיל</span>
             </label>
           </div>
@@ -463,124 +492,144 @@
             </div>
             <div>
               <label class="block text-xs text-gray-400 mb-1">מספר טלפון למוקד</label>
-              <input type="text" id="contact-elevator-phone" class="input-field text-sm font-mono" value="*5555 / 03-5555555" />
+              <input type="text" id="contact-elevator-phone" dir="ltr" class="input-field force-ltr text-sm font-mono" value="*5555 / 03-5555555" />
             </div>
           </div>
         </div>
 
         <!-- Municipal 106 & Committee -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="bg-gray-900 p-4 rounded-xl border border-gray-700 space-y-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div class="bg-gray-900 p-3.5 sm:p-4 rounded-xl border border-gray-700 space-y-2">
             <div class="flex items-center justify-between">
               <label class="block text-xs font-bold text-gray-200">🏛️ מוקד עיריית חדרה (106)</label>
               <label class="flex items-center gap-1 text-xs text-gray-400 cursor-pointer">
-                <input type="checkbox" id="contact-city-enabled" checked class="w-4 h-4 text-blue-600 rounded" />
+                <input type="checkbox" id="contact-city-enabled" checked class="w-4 h-4 text-blue-600 rounded shrink-0" />
                 <span>פעיל</span>
               </label>
             </div>
-            <input type="text" id="contact-city-phone" class="input-field text-sm font-mono" value="106" />
+            <input type="text" id="contact-city-phone" dir="ltr" class="input-field force-ltr font-mono" value="106" />
           </div>
 
-          <div class="bg-gray-900 p-4 rounded-xl border border-gray-700 space-y-2">
+          <div class="bg-gray-900 p-3.5 sm:p-4 rounded-xl border border-gray-700 space-y-2">
             <div class="flex items-center justify-between">
-              <label class="block text-xs font-bold text-gray-200">🏢 פניות ועד הבית / ניהול</label>
+              <label class="block text-xs font-bold text-gray-200">🏢 טלפון ועד בית / ניהול</label>
               <label class="flex items-center gap-1 text-xs text-gray-400 cursor-pointer">
-                <input type="checkbox" id="contact-vaad-enabled" checked class="w-4 h-4 text-blue-600 rounded" />
+                <input type="checkbox" id="contact-vaad-enabled" checked class="w-4 h-4 text-blue-600 rounded shrink-0" />
                 <span>פעיל</span>
               </label>
             </div>
-            <input type="text" id="contact-vaad-phone" class="input-field text-sm font-mono" value="050-1234567" />
+            <input type="text" id="contact-vaad-phone" dir="ltr" class="input-field force-ltr font-mono" value="050-1234567" />
           </div>
         </div>
 
-        <button id="save-contacts-btn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-xl font-bold text-sm shadow-lg transition">שמור הגדרות אנשי קשר</button>
+        <button id="save-contacts-btn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 active:scale-95 px-8 py-3 rounded-xl font-bold text-sm shadow-lg transition flex items-center justify-center gap-2">
+          <span>💾</span>
+          <span>שמור אנשי קשר ומעלית</span>
+        </button>
       </div>
     </section>
 
     <!-- TAB 4: RADIO & MUSIC -->
     <section id="tab-radio" class="tab-content hidden space-y-4">
-      <div class="admin-card p-5 space-y-5">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-lg font-bold mb-1">📻 מוזיקת רקע ותחנות רדיו</h2>
-            <p class="text-xs text-gray-400">השמעת תחנות רדיו ישראליות ומוזיקת לאונג' נעימה בלובי לפי שעות קבועות</p>
-          </div>
-          <span class="text-xs bg-blue-900 text-blue-200 px-2.5 py-1 rounded-lg border border-blue-700 font-semibold">אוטונומי</span>
+      <div class="admin-card p-4 sm:p-5 space-y-4 sm:space-y-5">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold mb-1">📻 רדיו ומוזיקת רקע במסך</h2>
+          <p class="text-xs text-gray-400">השמעת מוזיקה נעימה או תחנות רדיו ישראליות ברקע (לחיצה כפולה על הלוגו במסך משתיקה)</p>
         </div>
 
-        <!-- Master Radio Switch -->
-        <div class="bg-gray-900 bg-opacity-70 p-4 rounded-xl border border-gray-700 flex items-center justify-between">
+        <!-- Master Radio Toggle Card -->
+        <div class="flex items-center justify-between p-3.5 sm:p-4 bg-gray-900 rounded-xl border border-gray-700 gap-3">
           <div>
-            <span class="font-bold text-sm text-white block">הפעל השמעת רדיו ברקע</span>
-            <span class="text-xs text-gray-400">המוזיקה תתנגן ברקע המסך לפי לוח השעות המוגדר מראש</span>
+            <span class="font-bold text-xs sm:text-sm block text-white">הפעלת מוזיקת רקע במסך</span>
+            <span class="text-[11px] sm:text-xs text-gray-400">משמיע אודיו בשעות הפעילות המוגדרות</span>
           </div>
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" id="radio-enabled" class="sr-only peer">
-            <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
+          <input type="checkbox" id="radio-enabled" class="w-6 h-6 text-blue-600 rounded cursor-pointer shrink-0" />
         </div>
 
-        <!-- Station Selection & Volume -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs text-gray-300 font-bold mb-1">בחר תחנת רדיו פעילה:</label>
-            <select id="radio-station-select" class="input-field text-sm">
-              <option value="galgalatz">גלגלצ (Galgalatz)</option>
-              <option value="glz">גלי צה"ל (GLZ)</option>
-              <option value="chillhop">Chillout / Lofi Lounge (מוזיקה נעימה 24/7)</option>
-              <option value="dance">I Love Dance & Hits</option>
-            </select>
-          </div>
+        <!-- Station Selector -->
+        <div>
+          <label class="block text-xs font-bold text-gray-300 mb-1.5">בחר תחנת רדיו / ערוץ מוזיקה:</label>
+          <select id="radio-station-select" class="input-field text-sm font-semibold">
+            <option value="galgalatz">📻 גלגלצ (Galgalatz)</option>
+            <option value="glz">📻 גלי צה"ל (GLZ)</option>
+            <option value="kan_88">🎵 כאן 88 (איכותי ומגוון)</option>
+            <option value="kan_gimmel">🇮🇱 כאן גימל (מוזיקה ישראלית)</option>
+            <option value="kan_kol_hamusica">🎻 קול המוסיקה (קלאסית ורוגע)</option>
+            <option value="eco99">🌿 Eco 99 FM (מוזיקה מעולה)</option>
+            <option value="radios100fm">📻 רדיוס 100FM</option>
+            <option value="chillhop">☕ Chillout & Lofi Lounge (מוזיקה נעימה 24/7 ללא דיבורים)</option>
+            <option value="dance">🕺 I Love Dance & Hits (להיטים וקצב)</option>
+          </select>
+        </div>
 
-          <div>
-            <div class="flex justify-between items-center mb-1">
-              <label class="text-xs text-gray-300 font-bold">עוצמת שמע (ווליום):</label>
-              <span id="vol-label" class="text-xs text-blue-400 font-mono font-bold">40%</span>
+        <!-- Live Audio Test Player inside Admin -->
+        <div class="p-3.5 sm:p-4 bg-gray-900 rounded-xl border border-gray-700 space-y-3">
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div id="test-audio-icon" class="w-9 h-9 rounded-xl bg-gray-800 flex items-center justify-center text-lg shrink-0 border border-gray-700">📻</div>
+              <div class="min-w-0">
+                <span class="font-bold block text-xs sm:text-sm text-white">בדיקת השמעה ישירה:</span>
+                <span id="test-audio-status" class="text-xs text-gray-400 truncate block">מוכן לבדיקה</span>
+              </div>
             </div>
-            <input type="range" id="radio-volume" min="0" max="1" step="0.05" value="0.4" class="w-full slider-styled cursor-pointer" />
+            <button type="button" id="test-audio-btn" class="w-full sm:w-auto px-5 py-2.5 bg-green-700 hover:bg-green-600 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-lg transition">
+              <span>▶️</span>
+              <span>השמע בדיקה עכשיו</span>
+            </button>
           </div>
-        </div>
-
-        <!-- Broadcast Schedule Hours -->
-        <div class="bg-gray-900 bg-opacity-70 p-4 rounded-xl border border-gray-700 space-y-3">
-          <h3 class="font-bold text-xs text-gray-300">⏰ שעות פעילות יומיות:</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs text-gray-400 mb-1">שעת התחלה (בוקר):</label>
-              <input type="time" id="radio-start-time" class="input-field text-sm font-mono" value="08:00" />
-            </div>
-            <div>
-              <label class="block text-xs text-gray-400 mb-1">שעת סיום (לילה):</label>
-              <input type="time" id="radio-end-time" class="input-field text-sm font-mono" value="21:00" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Audio Player Test -->
-        <div class="flex items-center justify-between bg-gray-950 p-3 rounded-xl border border-gray-800">
-          <button type="button" id="test-audio-btn" class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition">
-            <span>▶️</span>
-            <span>השמע בדיקה בנייד</span>
-          </button>
-          <span id="test-audio-status" class="text-xs text-gray-400">בדיקת ניגון שמע</span>
           <audio id="admin-test-audio" preload="none"></audio>
         </div>
 
-        <button id="save-radio-btn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-xl font-bold text-sm shadow-lg transition">שמור הגדרות מוזיקה</button>
+        <!-- Operating Hours (Fixed Direction & Formatted) -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-bold text-gray-300">🕒 שעות פעילות יומית (פורמט 24 שעות):</label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="bg-gray-900 p-3 rounded-xl border border-gray-700 space-y-1">
+              <span class="text-[11px] text-gray-400 block font-semibold">⏰ שעת התחלה יומית:</span>
+              <input type="time" id="radio-start-time" dir="ltr" class="input-field force-ltr font-mono font-bold text-center text-base sm:text-lg" value="08:00" />
+              <span class="text-[10px] text-gray-500 block text-center">לדוגמה: 08:00 (שמונה בבוקר)</span>
+            </div>
+            <div class="bg-gray-900 p-3 rounded-xl border border-gray-700 space-y-1">
+              <span class="text-[11px] text-gray-400 block font-semibold">🌙 שעת סיום יומית:</span>
+              <input type="time" id="radio-end-time" dir="ltr" class="input-field force-ltr font-mono font-bold text-center text-base sm:text-lg" value="21:00" />
+              <span class="text-[10px] text-gray-500 block text-center">לדוגמה: 21:00 (תשע בערב)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Volume Controls with Quick Presets -->
+        <div class="bg-gray-900 p-3.5 sm:p-4 rounded-xl border border-gray-700 space-y-2.5">
+          <div class="flex justify-between items-center text-xs sm:text-sm text-gray-300">
+            <span class="font-bold text-white">🔊 עוצמת שמע (ווליום):</span>
+            <span id="vol-label" class="font-bold text-blue-400 font-mono text-sm bg-blue-950 px-2.5 py-0.5 rounded-lg border border-blue-800">40%</span>
+          </div>
+          <input type="range" id="radio-volume" min="0" max="1" step="0.05" value="0.4" class="w-full slider-styled cursor-pointer" />
+          <div class="flex justify-between items-center gap-1 pt-1">
+            <button type="button" onclick="window.setVolumePreset(0.2)" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg text-[11px] font-semibold text-gray-300">20% (שקט)</button>
+            <button type="button" onclick="window.setVolumePreset(0.4)" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg text-[11px] font-semibold text-gray-300">40% (מומלץ)</button>
+            <button type="button" onclick="window.setVolumePreset(0.6)" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg text-[11px] font-semibold text-gray-300">60%</button>
+            <button type="button" onclick="window.setVolumePreset(0.8)" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 rounded-lg text-[11px] font-semibold text-gray-300">80% (חזק)</button>
+          </div>
+        </div>
+
+        <button id="save-radio-btn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 active:scale-95 px-8 py-3 rounded-xl font-bold text-sm shadow-lg transition flex items-center justify-center gap-2">
+          <span>💾</span>
+          <span>שמור הגדרות רדיו</span>
+        </button>
       </div>
     </section>
 
-    <!-- TAB 5: GENERAL SETTINGS & SECURITY -->
+    <!-- TAB 5: SYSTEM & SECURITY -->
     <section id="tab-settings" class="tab-content hidden space-y-4">
-      <div class="admin-card p-5 space-y-5">
+      <div class="admin-card p-4 sm:p-5 space-y-4 sm:space-y-5">
         <div>
-          <h2 class="text-lg font-bold mb-1">⚙️ הגדרות מערכת ואבטחה</h2>
-          <p class="text-xs text-gray-400">שם הבניין, מקור מבזקי חדשות ושינוי קוד PIN לניהול</p>
+          <h2 class="text-base sm:text-lg font-bold mb-1">⚙️ הגדרות בניין ואבטחה</h2>
+          <p class="text-xs text-gray-400">פרטי הבניין, מקור החדשות ושינוי קוד PIN</p>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <label class="block text-xs text-gray-300 font-bold mb-1">שם הבניין</label>
+            <label class="block text-xs text-gray-300 font-bold mb-1">שם הבניין / כתובת</label>
             <input type="text" id="setting-bld-name" class="input-field" value="הירדן 5" />
           </div>
           <div>
@@ -589,112 +638,112 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs text-gray-300 font-bold mb-1">מקור מבזקי חדשות (RSS)</label>
-            <select id="setting-rss-source" class="input-field text-sm">
-              <option value="ynet">Ynet חדשות</option>
-              <option value="kan">כאן חדשות</option>
-              <option value="walla">וואלה! חדשות</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs text-gray-300 font-bold mb-1">שינוי קוד PIN מנהל (השאר ריק ללא שינוי)</label>
-            <input type="password" id="setting-new-pin" class="input-field font-mono" placeholder="קוד חדש (לדוגמה 1234)" maxlength="6" />
-          </div>
+        <div>
+          <label class="block text-xs text-gray-300 font-bold mb-1">מקור מבזקי חדשות (RSS)</label>
+          <select id="setting-rss-source" class="input-field">
+            <option value="ynet">Ynet ידיעות אחרונות</option>
+            <option value="kan">כאן חדשות</option>
+            <option value="walla">וואלה! חדשות</option>
+          </select>
         </div>
 
-        <button id="save-settings-btn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-xl font-bold text-sm shadow-lg transition">שמור הגדרות מערכת</button>
+        <div class="pt-4 border-t border-gray-700 space-y-2">
+          <label class="block text-xs text-gray-300 font-bold">שינוי קוד PIN לכניסה לאדמין</label>
+          <p class="text-xs text-gray-400">הזן קוד חדש בן 4 עד 6 ספרות (השאר ריק אם אינך רוצה לשנות)</p>
+          <input type="password" id="setting-new-pin" dir="ltr" class="input-field force-ltr max-w-xs font-mono text-center tracking-widest" placeholder="הזן PIN חדש..." maxlength="6" />
+        </div>
+
+        <button id="save-settings-btn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 active:scale-95 px-8 py-3 rounded-xl font-bold text-sm shadow-lg transition flex items-center justify-center gap-2">
+          <span>💾</span>
+          <span>שמור את כל ההגדרות</span>
+        </button>
       </div>
     </section>
 
-    <!-- TAB 6: HELP & INTERACTIVE TOUCH CHEAT SHEET -->
-    <section id="tab-help" class="tab-content hidden space-y-5">
+    <!-- TAB 6: HELP & TOUCH CHEAT SHEET -->
+    <section id="tab-help" class="tab-content hidden space-y-4 sm:space-y-6">
       
-      <!-- Interactive Touch Cheat Sheet -->
-      <div class="admin-card p-5 sm:p-6 space-y-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-xl shadow-md">👆</div>
-            <div>
-              <h2 class="text-lg sm:text-xl font-bold">מפת אזורי מגע ומחוות במסך (Touch Cheat Sheet)</h2>
-              <p class="text-xs text-gray-400">כל אזור מגע במסך הלובי ומטרתו - מדריך שימושי לוועד ולדיירים</p>
-            </div>
+      <!-- Screen Touch Map Cheat Sheet -->
+      <div class="admin-card p-4 sm:p-6 space-y-4 sm:space-y-5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-xl shadow-md shrink-0">📱</div>
+          <div>
+            <h2 class="text-base sm:text-xl font-bold">מפת אזורי מגע ומחוות מסך (Touch Cheat Sheet)</h2>
+            <p class="text-xs text-gray-400">מדריך מפורט לכל נקודות המגע האינטראקטיביות במסך המגע בלובי</p>
           </div>
-          <span class="text-xs bg-indigo-950 border border-indigo-700 text-indigo-300 px-3 py-1 rounded-full font-mono">8 אזורי מגע</span>
         </div>
 
-        <!-- Zones Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+        <!-- Touch Map Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 pt-2">
           
-          <!-- Zone 1: Dual Clock & Secret Admin -->
-          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-4 transition space-y-2">
+          <!-- Zone 1: Clock & Secret Admin -->
+          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-3.5 sm:p-4 transition space-y-2">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-sm text-white flex items-center gap-2">
-                <span class="text-lg">🕒</span>
-                <span>שעון ותאריך (למעלה בימין)</span>
+              <span class="font-bold text-xs sm:text-sm text-white flex items-center gap-2">
+                <span class="text-base sm:text-lg">🕒</span>
+                <span>שעון ותאריך (פינה עליונה)</span>
               </span>
-              <span class="text-xs bg-red-900 bg-opacity-60 text-red-300 px-2 py-0.5 rounded-md font-semibold">5 נגיעות 🔐</span>
+              <span class="text-[11px] bg-blue-900 bg-opacity-60 text-blue-300 px-2 py-0.5 rounded-md font-semibold">שעון ותאריך</span>
             </div>
             <ul class="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
-              <li><strong class="text-white">5 לחיצות רצופות:</strong> פותחות את חלון הזנת קוד PIN למסך הניהול ישירות על גבי מסך הלובי ללא צורך במחשב.</li>
-              <li>מציג שעה מדויקת, תאריך לועזי ותאריך עברי מלא.</li>
+              <li><strong class="text-white">לחיצה בודדת:</strong> פותחת חלון תחזית מזג אוויר וסביבה מורחבת.</li>
+              <li><strong class="text-amber-300">5 לחיצות מהירות רצופות:</strong> פותחת חלון גישה סודי לניהול ישירות על גבי המסך.</li>
             </ul>
           </div>
 
-          <!-- Zone 2: Building Logo & Secret Mute -->
-          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-4 transition space-y-2">
+          <!-- Zone 2: Logo Secret Mute -->
+          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-3.5 sm:p-4 transition space-y-2">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-sm text-white flex items-center gap-2">
-                <span class="text-lg">🏢</span>
-                <span>שם ולוגו הבניין (למעלה בשמאל)</span>
+              <span class="font-bold text-xs sm:text-sm text-white flex items-center gap-2">
+                <span class="text-base sm:text-lg">🏢</span>
+                <span>לוגו ושם הבניין (פינה שמאלית עליונה)</span>
               </span>
-              <span class="text-xs bg-purple-900 bg-opacity-60 text-purple-300 px-2 py-0.5 rounded-md font-semibold">לחיצה כפולה 🔇</span>
+              <span class="text-[11px] bg-purple-900 bg-opacity-60 text-purple-300 px-2 py-0.5 rounded-md font-semibold">השתקה חשאית</span>
             </div>
             <ul class="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
-              <li><strong class="text-white">לחיצה כפולה (Double-Tap):</strong> מחווה סודית להשתקה או הפעלה מיידית של שידור הרדיו/המוזיקה.</li>
-              <li>הסתרת פונקציונליות השתקה מילדים או עוברים ושבים.</li>
+              <li><strong class="text-amber-300">לחיצה כפולה מהירה (Double-Tap):</strong> השתקה / הפעלה חשאית של מוזיקת הרקע והרדיו ללא כניסה לאדמין.</li>
+              <li>מופיעה הודעת חיווי מהירה בפינת המסך (🔊 / 🔇).</li>
             </ul>
           </div>
 
-          <!-- Zone 3: Weather & Forecast Widget -->
-          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-4 transition space-y-2">
+          <!-- Zone 3: Shabbat & Holidays Widget -->
+          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-3.5 sm:p-4 transition space-y-2">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-sm text-white flex items-center gap-2">
-                <span class="text-lg">☀️</span>
-                <span>מזג אוויר וטמפרטורה (כותרת)</span>
+              <span class="font-bold text-xs sm:text-sm text-white flex items-center gap-2">
+                <span class="text-base sm:text-lg">🕯️</span>
+                <span>זמני שבת ומועדים (מרכז עליון)</span>
               </span>
-              <span class="text-xs bg-blue-900 bg-opacity-60 text-blue-300 px-2 py-0.5 rounded-md font-semibold">נגיעה בודדת 🌦️</span>
+              <span class="text-[11px] bg-yellow-900 bg-opacity-60 text-yellow-300 px-2 py-0.5 rounded-md font-semibold">מרכז ראש</span>
             </div>
             <ul class="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
-              <li><strong class="text-white">לחיצה בודדת:</strong> פותחת חלון תחזית מורחבת ל-4 הימים הקרובים, כולל שעות זריחה/שקיעה ואחוזי לחות.</li>
-              <li>מתעדכן אוטומטית כל 15 דקות.</li>
+              <li><strong class="text-white">לחיצה בודדת:</strong> פותחת כרטיסיית זמני שבת וחג מלאים, שעת כניסה ויציאה ופרשת השבוע.</li>
+              <li>המערכת מזהה אוטומטית שבתות וחגים ומציגה ברכה וצילומי אווירה ייעודיים.</li>
             </ul>
           </div>
 
-          <!-- Zone 4: Shabbat & Holiday Widget -->
-          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-4 transition space-y-2">
+          <!-- Zone 4: Weather & Environment -->
+          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-3.5 sm:p-4 transition space-y-2">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-sm text-white flex items-center gap-2">
-                <span class="text-lg">🕯️</span>
-                <span>זמני שבת וחג (מרכז הכותרת)</span>
+              <span class="font-bold text-xs sm:text-sm text-white flex items-center gap-2">
+                <span class="text-base sm:text-lg">🌤️</span>
+                <span>מזג אוויר וסביבה (ראש ימין וסרגל תחתון)</span>
               </span>
-              <span class="text-xs bg-yellow-900 bg-opacity-60 text-yellow-300 px-2 py-0.5 rounded-md font-semibold">לוח זמנים 📜</span>
+              <span class="text-[11px] bg-cyan-900 bg-opacity-60 text-cyan-300 px-2 py-0.5 rounded-md font-semibold">תחזית וסביבה</span>
             </div>
             <ul class="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
-              <li><strong class="text-white">לחיצה בודדת:</strong> פותחת חלון מפורט עם זמני כניסת ויציאת שבת/חג, פרשת שבוע וברכת חג של הוועד.</li>
-              <li>זמנים מחושבים אוטונומית לעיר חדרה (Hebcal).</li>
+              <li><strong class="text-white">לחיצה בודדת:</strong> פותחת תחזית מזג אוויר מורחבת ל-4 ימים קדימה, לחות יחסית, עומס חום ושעות זריחה/שקיעה.</li>
+              <li>הנתונים מתעדכנים אוטומטית כל 10 דקות משירות Open-Meteo.</li>
             </ul>
           </div>
 
-          <!-- Zone 5: Main Stage & Touch Gestures -->
-          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-4 transition space-y-2">
+          <!-- Zone 5: Main Stage Slides & Swiping -->
+          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-3.5 sm:p-4 transition space-y-2">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-sm text-white flex items-center gap-2">
-                <span class="text-lg">🖼️</span>
+              <span class="font-bold text-xs sm:text-sm text-white flex items-center gap-2">
+                <span class="text-base sm:text-lg">🖼️</span>
                 <span>במת השקופיות הראשית (מרכז המסך)</span>
               </span>
-              <span class="text-xs bg-emerald-900 bg-opacity-60 text-emerald-300 px-2 py-0.5 rounded-md font-semibold">מחוות מגע</span>
+              <span class="text-[11px] bg-emerald-900 bg-opacity-60 text-emerald-300 px-2 py-0.5 rounded-md font-semibold">מחוות מגע</span>
             </div>
             <ul class="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
               <li><strong class="text-white">החלקה ימינה / שמאלה (Swipe):</strong> מעבר ידני בין מודעות ועד, פליירים, תחזית ומספרי חירום.</li>
@@ -704,13 +753,13 @@
           </div>
 
           <!-- Zone 6: Side Column Feed -->
-          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-4 transition space-y-2">
+          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-3.5 sm:p-4 transition space-y-2">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-sm text-white flex items-center gap-2">
-                <span class="text-lg">📢</span>
+              <span class="font-bold text-xs sm:text-sm text-white flex items-center gap-2">
+                <span class="text-base sm:text-lg">📢</span>
                 <span>עמודת מודעות הוועד (צד המסך)</span>
               </span>
-              <span class="text-xs bg-amber-900 bg-opacity-60 text-amber-300 px-2 py-0.5 rounded-md font-semibold">קפיצה להודעה</span>
+              <span class="text-[11px] bg-amber-900 bg-opacity-60 text-amber-300 px-2 py-0.5 rounded-md font-semibold">קפיצה להודעה</span>
             </div>
             <ul class="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
               <li><strong class="text-white">לחיצה על כרטיסיית מודעה:</strong> מקפיצה מיידית את המודעה המלאה לבמה הראשית ומשהה את המסך לקריאה.</li>
@@ -719,13 +768,13 @@
           </div>
 
           <!-- Zone 7: Elevator & Emergency Contacts -->
-          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-4 transition space-y-2">
+          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-3.5 sm:p-4 transition space-y-2">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-sm text-white flex items-center gap-2">
-                <span class="text-lg">🛗</span>
+              <span class="font-bold text-xs sm:text-sm text-white flex items-center gap-2">
+                <span class="text-base sm:text-lg">🛗</span>
                 <span>סרגל מעלית וחירום (למטה)</span>
               </span>
-              <span class="text-xs bg-rose-900 bg-opacity-60 text-rose-300 px-2 py-0.5 rounded-md font-semibold">מדריך טלפונים</span>
+              <span class="text-[11px] bg-rose-900 bg-opacity-60 text-rose-300 px-2 py-0.5 rounded-md font-semibold">מדריך טלפונים</span>
             </div>
             <ul class="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
               <li><strong class="text-white">לחיצה על הסרגל:</strong> פותחת מודאל מספרי טלפון מלא: שירות מעליות, מוקד 106, ועד בית, מד"א וכיבוי אש.</li>
@@ -734,13 +783,13 @@
           </div>
 
           <!-- Zone 8: News Ticker -->
-          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-4 transition space-y-2">
+          <div class="bg-gray-900 bg-opacity-70 border border-gray-700 hover:border-blue-500 rounded-2xl p-3.5 sm:p-4 transition space-y-2">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-sm text-white flex items-center gap-2">
-                <span class="text-lg">📰</span>
+              <span class="font-bold text-xs sm:text-sm text-white flex items-center gap-2">
+                <span class="text-base sm:text-lg">📰</span>
                 <span>מבזקי חדשות Ynet (תחתית המסך)</span>
               </span>
-              <span class="text-xs bg-red-900 bg-opacity-60 text-red-300 px-2 py-0.5 rounded-md font-semibold">מבזקים בלייב</span>
+              <span class="text-[11px] bg-red-900 bg-opacity-60 text-red-300 px-2 py-0.5 rounded-md font-semibold">מבזקים בלייב</span>
             </div>
             <ul class="text-xs text-gray-300 space-y-1.5 list-disc list-inside">
               <li><strong class="text-white">לחיצה על הפס הנגלל או על תג "מבזקים":</strong> פותחת חלון 8 המבזקים האחרונים לקריאה מלאה ונוחה.</li>
@@ -752,16 +801,16 @@
       </div>
 
       <!-- Committee Guide & Tips -->
-      <div class="admin-card p-5 sm:p-6 space-y-5">
+      <div class="admin-card p-4 sm:p-6 space-y-4 sm:space-y-5">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-xl shadow-md">📋</div>
+          <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-xl shadow-md shrink-0">📋</div>
           <div>
-            <h2 class="text-lg sm:text-xl font-bold">מדריך פעולות מהיר לוועד הבית</h2>
+            <h2 class="text-base sm:text-xl font-bold">מדריך פעולות מהיר לוועד הבית</h2>
             <p class="text-xs text-gray-400">איך לבצע פעולות נפוצות במהירות ובקלות</p>
           </div>
         </div>
 
-        <div class="space-y-4 pt-1 text-xs sm:text-sm text-gray-300">
+        <div class="space-y-3.5 pt-1 text-xs sm:text-sm text-gray-300">
           
           <div class="border-b border-gray-800 pb-3">
             <h3 class="font-bold text-white mb-1 flex items-center gap-1.5">
@@ -792,49 +841,16 @@
               <span>4️⃣</span>
               <span>הגדרת רדיו ומוזיקת רקע אוטומטית</span>
             </h3>
-            <p>גש ללשונית <strong>📻 מוזיקה ורדיו</strong> ⬅️ סמן <strong>"הפעל השמעת רדיו ברקע"</strong> ⬅️ בחר תחנה (גלגלצ, גלי צה"ל, Chillout Lounge) ⬅️ הגדר שעות פעילות (לדוגמה 08:00 עד 21:00) ⬅️ שמור. המוזיקה תופעל ותיעצר אוטומטית לפי השעות שהוגדרו.</p>
+            <p>גש ללשונית <strong>📻 מוזיקה ורדיו</strong> ⬅️ סמן <strong>"הפעל מוזיקת רקע במסך"</strong> ⬅️ בחר תחנה (גלגלצ, גלי צה"ל, כאן 88, Chillout Lounge) ⬅️ הגדר שעות פעילות (לדוגמה 08:00 עד 21:00) ⬅️ שמור. המוזיקה תופעל ותיעצר אוטומטית לפי השעות שהוגדרו.</p>
           </div>
 
-        </div>
-      </div>
-
-      <!-- FAQ & Troubleshooting -->
-      <div class="admin-card p-5 sm:p-6 space-y-4">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-amber-600 rounded-xl flex items-center justify-center text-xl shadow-md">🛠️</div>
-          <div>
-            <h2 class="text-lg sm:text-xl font-bold">שאלות נפוצות ופתרון תקלות (FAQ)</h2>
-            <p class="text-xs text-gray-400">תשובות לשאלות טכניות נפוצות</p>
-          </div>
-        </div>
-
-        <div class="space-y-3 pt-2 text-xs sm:text-sm">
-          <details class="bg-gray-900 bg-opacity-60 border border-gray-800 rounded-xl p-3 cursor-pointer">
-            <summary class="font-bold text-white">🔊 למה הרדיו לא מתחיל לנגן לבד כשהמסך נפתח?</summary>
-            <p class="text-gray-300 mt-2 text-xs leading-relaxed">דפדפנים מודרניים (כרום, ספארי וכו') חוסמים השמעת אודיו אוטומטית ללא אינטראקציה ראשונית של משתמש. נגיעה ראשונה בודדת בכל מקום במסך (או לחיצה על כפתור הפעלת הרדיו) משחררת את הנעילה והמוזיקה תנגן כרגיל.</p>
-          </details>
-
-          <details class="bg-gray-900 bg-opacity-60 border border-gray-800 rounded-xl p-3 cursor-pointer">
-            <summary class="font-bold text-white">🔄 מתי המסך מרענן את עצמו?</summary>
-            <p class="text-gray-300 mt-2 text-xs leading-relaxed">המערכת כוללת מנגנון Watchdog שקט שמבצע ריענון תחזוקה אוטומטי בכל לילה בשעה <strong>04:00 לפנות בוקר</strong> כדי לרענן את זיכרון הדפדפן ולהבטיח יציבות של 100% 24/7 ללא תקיעות.</p>
-          </details>
-
-          <details class="bg-gray-900 bg-opacity-60 border border-gray-800 rounded-xl p-3 cursor-pointer">
-            <summary class="font-bold text-white">🌐 מה קורה אם חיבור האינטרנט בבניין מתנתק זמנית?</summary>
-            <p class="text-gray-300 mt-2 text-xs leading-relaxed">המערכת בנויה בארכיטקטורת Offline Resilience מלאה. כל ההודעות, ההגדרות, זמני השבת והרקעים נשמרים בזיכרון המקומי (Cache) והמסך ממשיך לפעול בצורה חלקה גם ללא אינטרנט עד שהחיבור מתחדש.</p>
-          </details>
-
-          <details class="bg-gray-900 bg-opacity-60 border border-gray-800 rounded-xl p-3 cursor-pointer">
-            <summary class="font-bold text-white">🔑 מהו קוד ה-PIN ואיך משנים אותו?</summary>
-            <p class="text-gray-300 mt-2 text-xs leading-relaxed">קוד ה-PIN המוגדר כברירת מחדל הוא <strong>1234</strong>. ניתן לשנות אותו בכל עת בלשונית <strong>⚙️ הגדרות ואבטחה</strong> בשדה "שינוי קוד PIN".</p>
-          </details>
         </div>
       </div>
 
       <!-- Quick Action Footer -->
-      <div class="admin-card p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400">
+      <div class="admin-card p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400">
         <div>
-          <span>שילוט דיגיטלי חכם • הירדן 5 חדרה | גרסה 2.5</span>
+          <span>שילוט דיגיטלי חכם • הירדן 5 חדרה | גרסה 2.6</span>
         </div>
         <div class="flex items-center gap-2">
           <a href="/" target="_blank" class="text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1">
