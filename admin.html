@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ניהול שילוט דיגיטלי - הירדן 5 חדרה</title>
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+  <link rel="stylesheet" href="css/style.css">
+  
+  <style>
+    body {
+      overflow-y: auto !important;
+      background: #0f172a;
+      color: #f8fafc;
+    }
+    .admin-card {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+    }
+    .tab-btn.active {
+      background: #0284c7;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+    }
+    .input-field {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      border-radius: 10px;
+      padding: 10px 14px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-field:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-6 max-w-4xl mx-auto">
+
+  <!-- PIN Modal Screen -->
+  <div id="pin-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+    <div class="admin-card p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl">
+      <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+      </div>
+      <h2 class="text-2xl font-bold mb-2">ניהול שילוט דיגיטלי</h2>
+      <p class="text-gray-400 text-sm mb-6">הירדן 5, חדרה • נא להזין קוד גישה</p>
+      
+      <input type="password" id="pin-input" class="input-field text-center text-2xl tracking-widest mb-4" placeholder="••••" maxlength="6" autofocus />
+      <button id="pin-submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition">כניסה למערכת</button>
+      <p id="pin-error" class="text-red-400 text-sm mt-3 hidden">קוד PIN שגוי. ברירת המחדל היא 1234</p>
+    </div>
+  </div>
+
+  <!-- Admin Main App -->
+  <div id="admin-app" class="hidden">
+    
+    <!-- Top Header -->
+    <header class="flex items-center justify-between mb-6 admin-card p-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold">🏢</div>
+        <div>
+          <h1 class="text-xl font-bold">הירדן 5, חדרה</h1>
+          <p class="text-xs text-gray-400">ממשק ניהול ועד בית</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <a href="index.html" target="_blank" class="bg-gray-700 hover:bg-gray-600 text-xs sm:text-sm px-3 py-2 rounded-lg flex items-center gap-1">
+          <span>🖥️</span>
+          <span>צפה במסך הראשי</span>
+        </a>
+        <button id="logout-btn" class="bg-red-900 bg-opacity-50 hover:bg-opacity-80 text-red-200 text-xs sm:text-sm px-3 py-2 rounded-lg">יציאה</button>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="flex overflow-x-auto gap-2 mb-6 pb-2">
+      <button class="tab-btn active px-4 py-2.5 rounded-xl font-semibold text-sm whitespace-nowrap" data-tab="notices">📝 הודעות ועד</button>
+      <button class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm whitespace-nowrap" data-tab="photos">📸 פליירים וגלריה</button>
+      <button class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm whitespace-nowrap" data-tab="contacts">📞 אנשי קשר ומעלית</button>
+      <button class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm whitespace-nowrap" data-tab="themes">🎨 ערכות נושא וחגים</button>
+      <button class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm whitespace-nowrap" data-tab="radio">📻 מוזיקה ורדיו</button>
+      <button class="tab-btn px-4 py-2.5 rounded-xl font-semibold text-sm whitespace-nowrap" data-tab="settings">⚙️ הגדרות כלליות</button>
+    </nav>
+
+    <!-- TAB 1: NOTICES (With Image Attachment Support) -->
+    <section id="tab-notices" class="tab-content">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-bold">הודעות פעילות במסך</h2>
+        <button id="add-notice-btn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1 shadow">
+          <span>➕</span>
+          <span>הודעה חדשה</span>
+        </button>
+      </div>
+
+      <!-- Add/Edit Notice Form -->
+      <div id="notice-form-box" class="admin-card p-5 mb-6 hidden">
+        <h3 id="form-title" class="font-bold text-md mb-4 text-blue-400">יצירת הודעה חדשה לוועד</h3>
+        <form id="notice-form" class="space-y-4">
+          <input type="hidden" id="notice-id" />
+          <input type="hidden" id="notice-image-url" />
+          
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">כותרת ההודעה *</label>
+            <input type="text" id="notice-title" class="input-field" placeholder="לדוגמה: בדיקת מערכות גילוי עשן" required />
+          </div>
+
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">תוכן ההודעה המלא *</label>
+            <textarea id="notice-content" class="input-field h-24" placeholder="פרטי ההודעה, תאריכים חשובים והנחיות לדיירים..." required></textarea>
+          </div>
+
+          <!-- Notice Image Attachment (Native HTML5 File Input for Mobile & Desktop) -->
+          <div class="bg-gray-800 bg-opacity-70 p-4 rounded-xl border border-gray-700 space-y-2">
+            <label class="block text-xs font-bold text-gray-200">🖼️ צירוף תמונה / פלייר להודעה (אופציונלי):</label>
+            <p class="text-xs text-gray-400">ניתן לצלם תמונה מהנייד או לבחור מגלריית האייפון / מחשב</p>
+            <input 
+              type="file" 
+              id="notice-file-input" 
+              accept="image/*"
+              class="block w-full text-xs sm:text-sm text-gray-300 bg-gray-900 border border-gray-600 rounded-xl cursor-pointer p-2.5 file:ml-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-500" 
+            />
+            <div id="notice-img-preview-box" class="hidden flex items-center gap-3 pt-2">
+              <img id="notice-img-preview" src="" alt="תצוגה מקדימה" class="h-24 rounded-lg object-contain border border-gray-600 bg-black/50" />
+              <button type="button" id="notice-remove-img-btn" class="px-3 py-1.5 bg-red-900 bg-opacity-60 hover:bg-opacity-90 text-red-200 rounded-lg text-xs font-bold">
+                🗑️ הסר תמונה
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">חתימת ההודעה</label>
+              <input type="text" id="notice-author" class="input-field" value="ועד הבית" />
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">תאריך תפוגה אוטומטי (אופציונלי)</label>
+              <input type="datetime-local" id="notice-expires" class="input-field" />
+              <p class="text-xs text-gray-400 mt-1">ההודעה תימחק מהמסך אוטומטית בתאריך זה</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 bg-red-900 bg-opacity-20 p-3 rounded-xl border border-red-800 border-opacity-40">
+            <input type="checkbox" id="notice-urgent" class="w-5 h-5 text-red-600 rounded cursor-pointer" />
+            <label for="notice-urgent" class="text-sm font-semibold cursor-pointer text-red-300">
+              ⚠️ סמן כהודעה דחופה / חשובה (תודגש באדום)
+            </label>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" id="cancel-notice-btn" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm">ביטול</button>
+            <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-xl text-sm font-bold shadow">שמור ופרסם במסך</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Notices List -->
+      <div id="notices-list" class="space-y-3">
+        <p class="text-gray-400 text-sm">טוען הודעות...</p>
+      </div>
+    </section>
+
+    <!-- TAB 2: PHOTOS & FLYERS (100% Reliable Native File Picker) -->
+    <section id="tab-photos" class="tab-content hidden">
+      <div class="admin-card p-5 mb-6 space-y-4">
+        <div>
+          <h2 class="text-lg font-bold mb-1">📸 העלאת תמונות ופליירים לגלריה</h2>
+          <p class="text-sm text-gray-400">תמונות אלו מוצגות כשקופיות פלייר בגודל מלא בסבב השקופיות הראשי במסך הלובי.</p>
+        </div>
+
+        <div class="bg-gray-800 bg-opacity-80 p-5 rounded-2xl border border-gray-700 text-center space-y-3">
+          <div class="text-4xl">📸</div>
+          <p class="font-bold text-white text-base">בחירת תמונה או פלייר</p>
+          <p class="text-xs text-gray-400">תומך בגלריית תמונות מהאייפון/אנדרואיד, מצלמה או קבצים מהמחשב</p>
+          
+          <div class="max-w-md mx-auto pt-2">
+            <input 
+              type="file" 
+              id="gallery-file-input" 
+              accept="image/*"
+              class="block w-full text-xs sm:text-sm text-gray-300 bg-gray-900 border border-gray-600 rounded-xl cursor-pointer p-3 file:ml-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-500" 
+            />
+          </div>
+
+          <div id="gallery-preview-container" class="mt-4 hidden">
+            <img id="gallery-preview-img" class="h-40 mx-auto rounded-xl object-contain border border-blue-400 bg-black/50 shadow-lg" />
+            <p id="gallery-file-name" class="text-xs text-blue-300 mt-2 font-bold"></p>
+          </div>
+        </div>
+
+        <button type="button" id="gallery-upload-btn" class="w-full bg-green-600 hover:bg-green-700 py-3 rounded-xl text-sm font-bold shadow flex items-center justify-center gap-2 transition">
+          <span>📤</span>
+          <span>שמור והעלה למסך הראשי</span>
+        </button>
+      </div>
+
+      <h3 class="text-md font-bold mb-3">תמונות ופליירים פעילים במסך</h3>
+      <div id="photos-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <!-- Injected dynamically -->
+      </div>
+    </section>
+
+    <!-- TAB 3: CONTACTS & ELEVATORS (With Visibility Toggles) -->
+    <section id="tab-contacts" class="tab-content hidden">
+      <div class="admin-card p-5 space-y-6">
+        <div>
+          <h2 class="text-lg font-bold mb-1">📞 עריכת מספרי חירום ושירותי בניין</h2>
+          <p class="text-sm text-gray-400">הגדר באילו אזורים יופיעו מספרי החירום והמעלית, או כבה אותם לחלוטין.</p>
+        </div>
+
+        <!-- Master Toggles -->
+        <div class="space-y-3 bg-gray-800 bg-opacity-70 p-4 rounded-xl border border-gray-700">
+          <h3 class="font-bold text-sm text-gray-200">⚙️ אפשרויות תצוגה במסך:</h3>
+          
+          <label class="flex items-center justify-between cursor-pointer p-2 hover:bg-gray-700 rounded-lg">
+            <span class="text-sm">🛗 הצג פס מוקד מעלית קבוע בצד המסך</span>
+            <input type="checkbox" id="toggle-show-elevator-bar" class="w-5 h-5 text-blue-600 rounded" checked />
+          </label>
+
+          <label class="flex items-center justify-between cursor-pointer p-2 hover:bg-gray-700 rounded-lg border-t border-gray-700 pt-2">
+            <span class="text-sm">📋 הצג שקופית מדריך מספרי חירום וטלפונים בסבב הראשי</span>
+            <input type="checkbox" id="toggle-show-contacts-slide" class="w-5 h-5 text-blue-600 rounded" checked />
+          </label>
+        </div>
+
+        <!-- Elevator Phone Box -->
+        <div class="bg-blue-900 bg-opacity-20 border border-blue-800 p-4 rounded-xl space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-blue-300 flex items-center gap-2">
+              <span>🛗</span>
+              <span>פרטי מוקד מעלית</span>
+            </h3>
+            <label class="flex items-center gap-2 text-xs text-blue-200 cursor-pointer">
+              <input type="checkbox" id="contact-elevator-enabled" checked class="w-4 h-4 text-blue-600 rounded" />
+              <span>פעיל</span>
+            </label>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">שם חברת המעליות</label>
+              <input type="text" id="contact-elevator-name" class="input-field" value="שירות ותקלות מעלית" />
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">מספר טלפון למוקד מעליות</label>
+              <input type="text" id="contact-elevator-phone" class="input-field" value="*5555 / 03-5555555" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">הערות / שם הדגם</label>
+            <input type="text" id="contact-elevator-desc" class="input-field" value="חברת מעליות שינדלר/אלקטרה" />
+          </div>
+        </div>
+
+        <!-- Municipal 106 & Committee -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="bg-gray-800 p-3.5 rounded-xl border border-gray-700 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-gray-200">🏛️ מוקד עירוני (106)</label>
+              <label class="flex items-center gap-1 text-xs text-gray-400 cursor-pointer">
+                <input type="checkbox" id="contact-city-enabled" checked class="w-4 h-4 text-blue-600 rounded" />
+                <span>פעיל</span>
+              </label>
+            </div>
+            <input type="text" id="contact-city-phone" class="input-field" value="106" />
+          </div>
+
+          <div class="bg-gray-800 p-3.5 rounded-xl border border-gray-700 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-gray-200">🏢 טלפון ועד בית / ניהול</label>
+              <label class="flex items-center gap-1 text-xs text-gray-400 cursor-pointer">
+                <input type="checkbox" id="contact-vaad-enabled" checked class="w-4 h-4 text-blue-600 rounded" />
+                <span>פעיל</span>
+              </label>
+            </div>
+            <input type="text" id="contact-vaad-phone" class="input-field" value="050-1234567" />
+          </div>
+        </div>
+
+        <button id="save-contacts-btn" class="bg-blue-600 hover:bg-blue-700 px-6 py-2.5 rounded-xl font-bold text-sm shadow">שמור הגדרות אנשי קשר ומעלית</button>
+      </div>
+    </section>
+
+    <!-- TAB 4: THEMES & HOLIDAYS -->
+    <section id="tab-themes" class="tab-content hidden">
+      <div class="admin-card p-5 space-y-6">
+        <div>
+          <h2 class="text-lg font-bold mb-1">ערכות נושא וחגי ישראל</h2>
+          <p class="text-sm text-gray-400">המערכת מזהה שבתות וחגים אוטומטית ומציגה תמונות אווירה מהודרות וזמני שבת.</p>
+        </div>
+
+        <div class="space-y-3">
+          <label class="block text-sm font-bold">מצב ערכת הנושא:</label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="flex items-center gap-3 p-3 bg-gray-800 rounded-xl border border-gray-700 cursor-pointer">
+              <input type="radio" name="theme-mode" value="auto" checked class="text-blue-600" />
+              <div>
+                <span class="font-bold block">✨ אוטומטי (מומלץ)</span>
+                <span class="text-xs text-gray-400">מתחלף לבד עם תמונות רקע בשבתות ומועדי ישראל</span>
+              </div>
+            </label>
+
+            <label class="flex items-center gap-3 p-3 bg-gray-800 rounded-xl border border-gray-700 cursor-pointer">
+              <input type="radio" name="theme-mode" value="manual" class="text-blue-600" />
+              <div>
+                <span class="font-bold block">🎨 בחירה ידנית קבועה</span>
+                <span class="text-xs text-gray-400">קיבוע ערכת נושא ספציפית לבחירתך</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div id="manual-theme-selector" class="space-y-3">
+          <label class="block text-sm font-bold">בחר ערכת נושא:</label>
+          <select id="custom-theme-select" class="input-field">
+            <option value="modern-dark">עיצוב יוקרתי מודרני (ברירת מחדל)</option>
+            <option value="shabbat">שבת שלום (תמונת נרות וזהב עמוק)</option>
+            <option value="rosh-hashanah">ראש השנה (רימונים, דבש ותפוחים)</option>
+            <option value="sukkot">חג הסוכות (סוכה וארבעת המינים)</option>
+            <option value="hanukkah">חנוכה (חנוכיית שמן מאירה)</option>
+            <option value="purim">פורים (חגיגי וססגוני)</option>
+            <option value="pesach">פסח ואביב (שולחן סדר ואביב)</option>
+            <option value="israel">יום העצמאות (דגלי ישראל)</option>
+            <option value="shavuot">שבועות (שדות חיטה וביכורים)</option>
+          </select>
+        </div>
+
+        <button id="save-theme-btn" class="bg-blue-600 hover:bg-blue-700 px-6 py-2.5 rounded-xl font-bold text-sm shadow">שמור הגדרות נושא</button>
+      </div>
+    </section>
+
+    <!-- TAB 5: RADIO & MUSIC -->
+    <section id="tab-radio" class="tab-content hidden">
+      <div class="admin-card p-5 space-y-5">
+        <div>
+          <h2 class="text-lg font-bold mb-1">נגן מוזיקה ורדיו אינטרנטי ברקע</h2>
+          <p class="text-sm text-gray-400">השמעת מוזיקה נעימה או תחנות רדיו ישראליות ברקע במסך הלובי.</p>
+        </div>
+
+        <div class="flex items-center justify-between p-3 bg-gray-800 rounded-xl">
+          <div>
+            <span class="font-bold block">הפעלת מוזיקת רקע במסך הלובי</span>
+            <span class="text-xs text-gray-400">מאפשר הזרמת אודיו ישירות מהמסך (לחיצה כפולה על הלוגו במסך משתיקה)</span>
+          </div>
+          <input type="checkbox" id="radio-enabled" class="w-6 h-6 text-blue-600 rounded cursor-pointer" />
+        </div>
+
+        <div class="space-y-3">
+          <label class="block text-sm font-bold">תחנת רדיו נבחרת:</label>
+          <select id="radio-station-select" class="input-field">
+            <option value="galgalatz">גלגלצ (Galgalatz)</option>
+            <option value="glz">גלי צה"ל (GLZ)</option>
+            <option value="chillhop">Chillout / Lofi Lounge (מוזיקה נעימה 24/7 ללא דיבורים)</option>
+            <option value="dance">I Love Dance & Hits</option>
+          </select>
+        </div>
+
+        <!-- Audio Test Player inside Admin -->
+        <div class="p-3 bg-gray-900 rounded-xl flex items-center justify-between border border-gray-700">
+          <div class="text-xs text-gray-300">
+            <span class="font-bold block">בדיקת השמעה כאן בדפדפן:</span>
+            <span id="test-audio-status">מוכן לבדיקה</span>
+          </div>
+          <button type="button" id="test-audio-btn" class="px-4 py-2 bg-green-700 hover:bg-green-600 text-white rounded-lg text-xs font-bold flex items-center gap-1">
+            <span>▶️</span>
+            <span>השמע בדיקה</span>
+          </button>
+        </div>
+        <audio id="admin-test-audio" preload="none"></audio>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">שעת התחלה יומית</label>
+            <input type="time" id="radio-start-time" class="input-field" value="08:00" />
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">שעת סיום יומית</label>
+            <input type="time" id="radio-end-time" class="input-field" value="21:00" />
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-xs text-gray-400">עוצמת שמע (ווליום): <span id="vol-label">40%</span></label>
+          <input type="range" id="radio-volume" min="0" max="1" step="0.05" value="0.4" class="w-full cursor-pointer" />
+        </div>
+
+        <button id="save-radio-btn" class="bg-blue-600 hover:bg-blue-700 px-6 py-2.5 rounded-xl font-bold text-sm shadow">שמור הגדרות רדיו</button>
+      </div>
+    </section>
+
+    <!-- TAB 6: GENERAL SETTINGS -->
+    <section id="tab-settings" class="tab-content hidden">
+      <div class="admin-card p-5 space-y-5">
+        <h2 class="text-lg font-bold">הגדרות כלליות לבניין</h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">שם הבניין / כתובת</label>
+            <input type="text" id="setting-bld-name" class="input-field" value="הירדן 5" />
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">עיר</label>
+            <input type="text" id="setting-bld-city" class="input-field" value="חדרה" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">הודעה אישית קבועה בפס המבזקים הרץ</label>
+          <input type="text" id="setting-custom-ticker" class="input-field" placeholder="ועד הבית מאחל יום נעים ובטוח!" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">התאמת רזולוציית מסך</label>
+            <select id="setting-resolution" class="input-field">
+              <option value="auto">אוטומטי (Auto Responsive)</option>
+              <option value="1080p">1920x1080 (Full HD)</option>
+              <option value="720p">1280x720 (HD Ready)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">מהירות פס מבזקים</label>
+            <select id="setting-ticker-speed" class="input-field">
+              <option value="slow">איטי (מומלץ לקריאה נוחה)</option>
+              <option value="normal">רגיל</option>
+              <option value="fast">מהיר</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">זמן שקופית (שניות)</label>
+            <input type="number" id="setting-slide-duration" class="input-field" value="12" min="5" max="60" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">מקור חדשות RSS</label>
+            <select id="setting-rss-source" class="input-field">
+              <option value="ynet">Ynet ידיעות אחרונות</option>
+              <option value="kan">כאן חדשות</option>
+              <option value="walla">וואלה! חדשות</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Backlight Burn Compensation Section -->
+        <div class="bg-blue-900 bg-opacity-30 border border-blue-700 p-4 rounded-xl space-y-4">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">💡</span>
+            <div>
+              <h3 class="font-bold text-sm text-blue-200">פיצוי תאורה לצד שמאל (עבור מסך עם לדים שרופים/חלשים)</h3>
+              <p class="text-xs text-gray-300">מעלה באופן הדרגתי ומלאכותי את הבהירות והגאמא בצד שמאל כדי לפצות על תאורה שרופה.</p>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs text-gray-300">
+              <span>עוצמת פיצוי בהירות צד שמאל:</span>
+              <span id="burn-comp-val-label" class="font-bold text-blue-300">45%</span>
+            </div>
+            <input type="range" id="setting-left-burn-comp" min="0" max="100" step="5" value="45" class="w-full cursor-pointer" />
+            <div class="flex justify-between text-xs text-gray-400">
+              <span>0% (ללא פיצוי)</span>
+              <span>50% (מומלץ)</span>
+              <span>100% (מקסימום בוסט)</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <label class="flex items-center gap-2 text-xs text-gray-200 cursor-pointer bg-gray-800 p-2.5 rounded-lg border border-gray-700">
+              <input type="checkbox" id="setting-high-contrast-side" class="w-4 h-4 text-blue-600 rounded" />
+              <span>כרטיסיות מוארות בצבע בהיר (High Contrast)</span>
+            </label>
+
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">מיקום עמודת המידע</label>
+              <select id="setting-layout-side" class="input-field text-xs">
+                <option value="left">צד שמאל (ברירת מחדל)</option>
+                <option value="right">צד ימין (היפוך צדדים)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-gray-700">
+          <label class="block text-xs text-gray-400 mb-1">שינוי קוד PIN לכניסה למערכת הניהול</label>
+          <input type="password" id="setting-new-pin" class="input-field max-w-xs" placeholder="הזן קוד חדש (4-6 ספרות)" />
+        </div>
+
+        <button id="save-settings-btn" class="bg-blue-600 hover:bg-blue-700 px-6 py-2.5 rounded-xl font-bold text-sm shadow">שמור את כל ההגדרות</button>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>
