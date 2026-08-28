@@ -86,7 +86,8 @@ function setupAuth() {
       const testRes = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin, newSettings: {} })\n      });
+        body: JSON.stringify({ pin, newSettings: {} })
+      });
 
       if (testRes.ok) {
         const testData = await testRes.json();
@@ -337,7 +338,8 @@ async function loadNotices() {
         const localIds = new Set(localNotices.map(n => n.id));
         notices = [...localNotices, ...notices.filter(n => !localIds.has(n.id))];
       }
-    } catch (e) {}\n    
+    } catch (e) {}
+    
     if (!notices || notices.length === 0) {
       list.innerHTML = `
         <div class="admin-card p-6 text-center text-gray-400">
