@@ -117,7 +117,7 @@ body.theme-israel {
   overflow: hidden;
 }
 
-/* Background Layers */
+/* Background Layers with Dynamic Opacity & Dimming */
 #background-layer {
   position: absolute;
   top: 0;
@@ -128,7 +128,7 @@ body.theme-israel {
   background-size: cover;
   background-position: center;
   transition: opacity 1.8s ease-in-out, transform 25s ease-out;
-  opacity: 0.55;
+  opacity: var(--bg-layer-opacity, 0.85);
   transform: scale(1);
   will-change: opacity, transform;
 }
@@ -144,8 +144,9 @@ body.theme-israel {
   width: 100%;
   height: 100%;
   z-index: 2;
-  background: radial-gradient(circle at center, rgba(7,10,18,0.35) 0%, rgba(7,10,18,0.85) 100%);
+  background: radial-gradient(circle at center, rgba(7,10,18,calc(var(--bg-overlay-opacity, 0.35) * 0.4)) 0%, rgba(7,10,18,var(--bg-overlay-opacity, 0.35)) 100%);
   pointer-events: none;
+  transition: background 0.3s ease;
 }
 
 /* Left-Side Backlight Burn Compensation Layer */
@@ -176,7 +177,7 @@ body.theme-israel {
 }
 
 /* =========================================================
-   1. HEADER SECTION (Compact & Fluid)
+   1. HEADER SECTION (Right: Clock/Weather | Center: Shabbat | Left: Brand)
    ========================================================= */
 .header-bar {
   display: flex;
@@ -184,15 +185,131 @@ body.theme-israel {
   justify-content: space-between;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   border-radius: 1rem;
   padding: 0.5rem 1.25rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
   flex-shrink: 0;
   height: clamp(3.8rem, 9vh, 5.2rem);
 }
 
+/* Right Side: Clock & Weather (Bright, functional zone) */
+.header-stats {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.clock-widget {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: right;
+}
+
+.clock-time {
+  font-family: var(--font-heading);
+  font-size: 1.85rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.clock-date-container {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  margin-top: 0.15rem;
+  font-weight: 700;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
+}
+
+.weather-widget {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.4rem 0.9rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.weather-icon-emoji {
+  font-size: 1.85rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+}
+
+.weather-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.weather-temp {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+.weather-desc {
+  font-size: 0.78rem;
+  color: #e2e8f0;
+  font-weight: 600;
+  white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+}
+
+/* Center Widget: Shabbat / Holiday Pill */
+.header-center {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.special-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  padding: 0.4rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 800;
+  font-size: 1rem;
+  animation: pulse-glow 3s infinite;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.2);
+}
+
+.shabbat-times {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  font-size: 0.92rem;
+  color: #f8fafc;
+  background: rgba(30, 27, 75, 0.85);
+  padding: 0.4rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.shabbat-times span {
+  font-weight: 800;
+  color: #fbbf24;
+}
+
+/* Left Side: Building Brand (Static, placed on dim side) */
 .building-brand {
   display: flex;
   align-items: center;
@@ -223,6 +340,7 @@ body.theme-israel {
   letter-spacing: -0.5px;
   color: #ffffff;
   line-height: 1.1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 .building-info .city-tag {
@@ -232,112 +350,6 @@ body.theme-israel {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-}
-
-/* Center Widget: Shabbat / Holiday Pill */
-.header-center {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.special-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #fbbf24;
-  padding: 0.35rem 0.9rem;
-  border-radius: 0.75rem;
-  font-weight: 700;
-  font-size: 0.95rem;
-  animation: pulse-glow 3s infinite;
-}
-
-.shabbat-times {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.88rem;
-  color: #f1f5f9;
-  background: rgba(255, 255, 255, 0.06);
-  padding: 0.35rem 0.85rem;
-  border-radius: 0.7rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.shabbat-times span {
-  font-weight: 700;
-  color: #fbbf24;
-}
-
-/* Left Stats: Weather & Dual Clock */
-.header-stats {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-.weather-widget {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0.35rem 0.85rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.weather-icon-emoji {
-  font-size: 1.8rem;
-  line-height: 1;
-}
-
-.weather-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.weather-temp {
-  font-family: var(--font-heading);
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: #ffffff;
-  line-height: 1;
-}
-
-.weather-desc {
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.clock-widget {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: left;
-}
-
-.clock-time {
-  font-family: var(--font-heading);
-  font-size: 1.85rem;
-  font-weight: 900;
-  color: #ffffff;
-  letter-spacing: 0.5px;
-  line-height: 1;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-}
-
-.clock-date-container {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-top: 0.15rem;
-  font-weight: 600;
 }
 
 /* =========================================================
@@ -364,6 +376,47 @@ body.layout-flipped .stage-container {
 
 body.layout-flipped .side-column {
   order: 1;
+}
+
+/* High-Contrast Light Cards for Dim Left Zone */
+body.high-contrast-side .side-widget-card {
+  background: rgba(248, 250, 252, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  color: #0f172a !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
+body.high-contrast-side .side-widget-header {
+  border-bottom-color: rgba(15, 23, 42, 0.15) !important;
+}
+
+body.high-contrast-side .side-widget-header h3,
+body.high-contrast-side .mini-notice-title,
+body.high-contrast-side .env-stat-value,
+body.high-contrast-side #side-contact-label span {
+  color: #0f172a !important;
+  font-weight: 800 !important;
+}
+
+body.high-contrast-side #side-elevator-phone {
+  color: #0284c7 !important;
+}
+
+body.high-contrast-side .mini-notice-snippet,
+body.high-contrast-side .env-stat-label,
+body.high-contrast-side #env-time-label {
+  color: #334155 !important;
+  font-weight: 600 !important;
+}
+
+body.high-contrast-side .mini-notice-item {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+}
+
+body.high-contrast-side .env-stat-box {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
 }
 
 /* Main Showcase Stage */
