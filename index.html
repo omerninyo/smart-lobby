@@ -7,35 +7,36 @@
   <meta name="mobile-web-app-capable" content="yes">
   <title>שילוט דיגיטלי - הירדן 5 חדרה</title>
   
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=2026_2">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏢</text></svg>">
 </head>
 <body class="theme-default res-auto">
 
   <div id="kiosk-container">
     <!-- Background Wallpaper Layer (Real Holiday / Shabbat Photos + Dynamic Architecture) -->
-    <div id="background-layer" style="background-image: url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=80');"></div>
+    <div id="background-layer" style="background-image: url('https://images.unsplash.com/photo-1511994298241-608e28f14fde?auto=format&fit=crop&w=1920&q=85');"></div>
     <div id="background-overlay"></div>
     <div id="left-burn-compensator"></div>
 
     <!-- UI Overlay Layer -->
     <main id="ui-layer">
       
-      <!-- 1. Top Header Bar -->
+      <!-- 1. Top Header Bar (Right: Clock & Weather | Center: Shabbat | Left: Building Brand) -->
       <header class="header-bar">
-        <!-- Right: Building Brand (Double-tap to Secret Mute/Unmute) -->
-        <div class="building-brand touch-interactive" id="brand-secret-mute" title="לחיצה כפולה להשתקת/הפעלת רדיו">
-          <div class="building-logo-badge">
-            <svg viewBox="0 0 24 24">
-              <path d="M19 2H9c-1.1 0-2 .9-2 2v3H5c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 16H9v-2h2v2zm0-4H9v-2h2v2zm0-4H9V8h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V8h2v2zm0-4h-2V4h2v2z"/>
-            </svg>
+        <!-- Right (Bright Functional Side): Weather Widget + Live Dual Clock (5-tap on clock opens on-screen admin) -->
+        <div class="header-stats">
+          <div class="clock-widget touch-interactive" id="clock-touch-widget" title="שעון - 5 לחיצות לפתיחת ניהול">
+            <div class="clock-time" id="clock-time">00:00:00</div>
+            <div class="clock-date-container">
+              <span class="clock-date-greg" id="clock-date-greg">טוען תאריך...</span>
+            </div>
           </div>
-          <div class="building-info">
-            <h1 id="building-name">הירדן 5</h1>
-            <div class="city-tag">
-              <span id="building-city">חדרה</span>
-              <span>•</span>
-              <span id="building-subtitle">לוח מודעות דיגיטלי</span>
+
+          <div class="weather-widget touch-interactive" id="weather-touch-widget" title="לחץ לתחזית מפורטת">
+            <span class="weather-icon-emoji" id="weather-icon">☀️</span>
+            <div class="weather-info">
+              <span class="weather-temp" id="weather-temp">28°</span>
+              <span class="weather-desc" id="weather-desc">טוען...</span>
             </div>
           </div>
         </div>
@@ -45,21 +46,20 @@
           <!-- Populated dynamically -->
         </div>
 
-        <!-- Left: Weather Widget + Live Dual Clock (5-tap on clock opens on-screen admin) -->
-        <div class="header-stats">
-          <div class="weather-widget touch-interactive" id="weather-touch-widget" title="לחץ לתחזית מפורטת">
-            <span class="weather-icon-emoji" id="weather-icon">☀️</span>
-            <div class="weather-info">
-              <span class="weather-temp" id="weather-temp">28°</span>
-              <span class="weather-desc" id="weather-desc">טוען...</span>
+        <!-- Left (Dim Side): Building Brand (Double-tap to Secret Mute/Unmute) -->
+        <div class="building-brand touch-interactive" id="brand-secret-mute" title="לחיצה כפולה להשתקת/הפעלת רדיו">
+          <div class="building-info">
+            <h1 id="building-name">הירדן 5</h1>
+            <div class="city-tag">
+              <span id="building-city">חדרה</span>
+              <span>•</span>
+              <span id="building-subtitle">לוח מודעות דיגיטלי</span>
             </div>
           </div>
-
-          <div class="clock-widget touch-interactive" id="clock-touch-widget" title="שעון">
-            <div class="clock-time" id="clock-time">00:00:00</div>
-            <div class="clock-date-container">
-              <span class="clock-date-greg" id="clock-date-greg">טוען תאריך...</span>
-            </div>
+          <div class="building-logo-badge">
+            <svg viewBox="0 0 24 24">
+              <path d="M19 2H9c-1.1 0-2 .9-2 2v3H5c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 16H9v-2h2v2zm0-4H9v-2h2v2zm0-4H9V8h2v2zm6 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V8h2v2zm0-4h-2V4h2v2z"/>
+            </svg>
           </div>
         </div>
       </header>
@@ -196,6 +196,6 @@
   <audio id="radio-audio" preload="auto"></audio>
 
   <!-- Screen Controller Script -->
-  <script src="js/screen.js?v=2026"></script>
+  <script src="js/screen.js?v=2026_2"></script>
 </body>
 </html>
