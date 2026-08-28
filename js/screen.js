@@ -1044,7 +1044,13 @@ class BuildingSignageApp {
       `;
     }
 
-    (this.newsItems || []).forEach(item => {
+    const items = (this.newsItems && this.newsItems.length > 0) ? this.newsItems : [
+      { title: 'ועד הבית מברך את כל דיירי ואורחי הבניין בברכת יום נעים, בריאות ושקט' },
+      { title: 'נא לוודא כי דלת הלובי הראשית והשער נסגרים כראוי לאחר כניסה ויציאה' },
+      { title: 'שמירה על ניקיון וסדר בשטחים המשותפים תורמת לאיכות החיים של כולנו' }
+    ];
+
+    items.forEach(item => {
       itemsHtml += `
         <span class="ticker-item">
           <span class="ticker-item-bullet">●</span>
@@ -1053,7 +1059,8 @@ class BuildingSignageApp {
       `;
     });
 
-    tickerContent.innerHTML = itemsHtml;
+    // Duplicate ticker items twice for seamless 100% continuous marquee loop
+    tickerContent.innerHTML = itemsHtml + itemsHtml;
   }
 
   // =========================================================
