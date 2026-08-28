@@ -1,0 +1,50 @@
+[
+  {
+    "id": "notice_1787924849942",
+    "type": "announcement",
+    "title": "עדכון מוועד הבית - הדברה תקופתית",
+    "content": "ביום חמישי הקרוב תתבצע הדברה של חדרי האשפה והמקלט. אין לשהות במקלט בשעות הערב.",
+    "author": "ועד הבית",
+    "isUrgent": false,
+    "imageUrl": null,
+    "bgColor": "from-slate-900/80 to-slate-950/90",
+    "createdAt": "2026-08-28T13:47:29.942Z",
+    "expiresAt": null
+  },
+  {
+    "id": "notice-1",
+    "type": "announcement",
+    "title": "ברוכים הבאים לבניין הירדן 5",
+    "content": "ועד הבית מברך את כל הדיירים והאורחים. לכל פנייה, שאלה או דיווח על תקלה ניתן לפנות לחברי הוועד.",
+    "author": "ועד הבית",
+    "isUrgent": false,
+    "imageUrl": "/uploads/img_1787928129872_IMG_1916.jpg",
+    "bgColor": "from-slate-900/80 to-slate-950/90",
+    "createdAt": "2026-08-28T14:42:09.913Z",
+    "expiresAt": null
+  },
+  {
+    "id": "notice-2",
+    "type": "maintenance",
+    "title": "בדיקת מערכות וכיבוי אש שנתית",
+    "content": "ביום שלישי הקרוב תתבצע בדיקת תקינות למערכות גילוי העשן והספרינקלרים בלובי ובקומות. תיתכן השמעת צופרים קצרים.",
+    "isUrgent": true,
+    "icon": "shield-alert",
+    "author": "חברת ניהול / ועד",
+    "createdAt": "2026-08-28T12:00:00.000Z",
+    "expiresAt": "2026-09-15T23:59:59.000Z",
+    "bgColor": "from-amber-950/70 to-orange-950/80"
+  },
+  {
+    "id": "notice-3",
+    "type": "reminder",
+    "title": "שמירה על ניקיון וסדר בשטחים המשותפים",
+    "content": "נא להקפיד על סגירת דלת הלובי הראשית, השלכת שקיות אשפה קשורות למכולה ואי חסימת המעבר לעגלות ואופניים.",
+    "isUrgent": false,
+    "icon": "sparkles",
+    "author": "ועד הבית",
+    "createdAt": "2026-08-28T12:00:00.000Z",
+    "expiresAt": null,
+    "bgColor": "from-blue-950/70 to-indigo-950/80"
+  }
+]

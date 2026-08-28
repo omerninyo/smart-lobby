@@ -1,0 +1,104 @@
+{
+  "building": {
+    "name": "הירדן 5",
+    "city": "חדרה",
+    "subtitle": "לוח מודעות דיגיטלי",
+    "lat": 32.434,
+    "lon": 34.9197
+  },
+  "display": {
+    "resolution": "auto",
+    "orientation": "landscape",
+    "slideDurationSeconds": 12,
+    "tickerSpeed": "slow",
+    "theme": "auto",
+    "customTheme": "modern-dark",
+    "showWeather": true,
+    "showShabbat": true,
+    "showNewsTicker": true,
+    "showSideWidgets": true,
+    "showElevatorBar": true,
+    "showContactsSlide": true,
+    "leftBurnCompensation": 45,
+    "highContrastSideCards": true,
+    "layoutSide": "left",
+    "newsSource": "ynet",
+    "customTickerText": "ועד הבית מאחל יום נעים ובטוח לכל הדיירים והאורחים!"
+  },
+  "contacts": [
+    {
+      "id": "c-1",
+      "name": "שירות ותקלות מעלית",
+      "phone": "*5555 / 03-5555555",
+      "icon": "🛗",
+      "desc": "חברת מעליות שינדלר/אלקטרה",
+      "isPrimaryElevator": true,
+      "enabled": true
+    },
+    {
+      "id": "c-2",
+      "name": "מוקד עיריית חדרה",
+      "phone": "106",
+      "icon": "🏛️",
+      "desc": "24/7 לדיווח על מפגעים עירוניים",
+      "enabled": true
+    },
+    {
+      "id": "c-3",
+      "name": "ועד הבית / ניהול",
+      "phone": "050-1234567",
+      "icon": "🏢",
+      "desc": "פניות ועד",
+      "enabled": true
+    },
+    {
+      "id": "c-4",
+      "name": "כיבוי והצלה",
+      "phone": "102",
+      "icon": "🚒",
+      "desc": "חירום",
+      "enabled": true
+    },
+    {
+      "id": "c-5",
+      "name": "עזרה ראשונה (מד\"א)",
+      "phone": "101",
+      "icon": "🚑",
+      "desc": "חירום",
+      "enabled": true
+    }
+  ],
+  "radio": {
+    "enabled": false,
+    "autoPlaySchedule": true,
+    "startHour": "08:00",
+    "endHour": "21:00",
+    "currentStation": "galgalatz",
+    "volume": 0.4,
+    "stations": [
+      {
+        "id": "galgalatz",
+        "name": "גלגלצ (Galgalatz)",
+        "url": "https://glzwizzlv.bynetcdn.com/glglz_mp3"
+      },
+      {
+        "id": "glz",
+        "name": "גלי צה\"ל (GLZ)",
+        "url": "https://glzwizzlv.bynetcdn.com/glz_mp3"
+      },
+      {
+        "id": "chillhop",
+        "name": "Chillout / Lofi Lounge (מוזיקה נעימה 24/7)",
+        "url": "https://streams.ilovemusic.de/iloveradio17.mp3"
+      },
+      {
+        "id": "dance",
+        "name": "I Love Dance & Hits",
+        "url": "https://streams.ilovemusic.de/iloveradio2.mp3"
+      }
+    ]
+  },
+  "security": {
+    "adminPin": "1234"
+  }
+}
