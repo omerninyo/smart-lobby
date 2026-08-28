@@ -23,6 +23,12 @@
     "leftBurnCompensation": 45,
     "highContrastSideCards": true,
     "layoutSide": "left",
+    "headerClockPosition": "right",
+    "headerBrandPosition": "left",
+    "headerShabbatPosition": "center",
+    "sideColumnWidth": "normal",
+    "showNewsTicker": true,
+    "showStageArrows": true,
     "newsSource": "ynet",
     "customTickerText": "ועד הבית מאחל יום נעים ובטוח לכל הדיירים והאורחים!"
   },
@@ -41,7 +47,7 @@
       "name": "מוקד עיריית חדרה",
       "phone": "106",
       "icon": "🏛️",
-      "desc": "24/7 לדיווח על מפגעים",
+      "desc": "24/7 לדיווח על מפגעים עירוניים",
       "enabled": true
     },
     {
@@ -71,30 +77,31 @@
   ],
   "radio": {
     "enabled": false,
-    "currentStation": "galgalatz",
-    "volume": 0.4,
+    "autoPlaySchedule": true,
     "startHour": "08:00",
     "endHour": "21:00",
+    "currentStation": "galgalatz",
+    "volume": 0.4,
     "stations": [
       {
         "id": "galgalatz",
-        "name": "גלגלצ",
+        "name": "גלגלצ (Galgalatz)",
         "url": "https://glzwizzlv.bynetcdn.com/glglz_mp3"
       },
       {
         "id": "glz",
-        "name": "גלי צה\"ל",
+        "name": "גלי צה\"ל (GLZ)",
         "url": "https://glzwizzlv.bynetcdn.com/glz_mp3"
       },
       {
         "id": "chillhop",
-        "name": "Chillout Lounge",
-        "url": "https://stream.zeno.fm/f3wvbbqmdg8uv"
+        "name": "Chillout / Lofi Lounge (מוזיקה נעימה 24/7)",
+        "url": "https://streams.ilovemusic.de/iloveradio17.mp3"
       },
       {
         "id": "dance",
-        "name": "Dance & Hits",
-        "url": "https://stream.zeno.fm/78w4vy0d2v8uv"
+        "name": "I Love Dance & Hits",
+        "url": "https://streams.ilovemusic.de/iloveradio2.mp3"
       }
     ]
   },
