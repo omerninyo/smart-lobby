@@ -1,14 +1,35 @@
 /**
  * =========================================================
  * Building Digital Signage - Mobile & Desktop Admin Panel
- * 5 Streamlined Categories, Background Opacity & Live Sync
+ * 6 Streamlined Categories, Full Mobile Optimization,
+ * Live Radio Stream Testing, Time Picker Fixes & Auto Sync
  * =========================================================
  */
+
+const RADIO_STATIONS_MAP = [
+  { id: 'galgalatz', name: 'גלגלצ (Galgalatz)', url: 'https://glzwizzlv.bynetcdn.com/glglz_mp3' },
+  { id: 'glz', name: 'גלי צה"ל (GLZ)', url: 'https://glzwizzlv.bynetcdn.com/glz_mp3' },
+  { id: 'kan_88', name: 'כאן 88 (Kan 88)', url: 'https://kanliveicy.media.kan.org.il/icy/kan88_mp3' },
+  { id: 'kan_gimmel', name: 'כאן גימל (מוזיקה ישראלית)', url: 'https://kanliveicy.media.kan.org.il/icy/kangimmel_mp3' },
+  { id: 'kan_kol_hamusica', name: 'קול המוסיקה (קלאסית ורוגע)', url: 'https://kanliveicy.media.kan.org.il/icy/kankolhamusica_mp3' },
+  { id: 'eco99', name: 'Eco 99 FM', url: 'https://eco01.livecdn.biz/ecolive/99fm_aac/icecast.audio' },
+  { id: 'radios100fm', name: 'רדיוס 100FM', url: 'https://radios100fm.livecdn.biz/radios100fm' },
+  { id: 'chillhop', name: 'Chillout / Lofi Lounge (מוזיקה נעימה 24/7)', url: 'https://streams.ilovemusic.de/iloveradio17.mp3' },
+  { id: 'dance', name: 'I Love Dance & Hits', url: 'https://streams.ilovemusic.de/iloveradio2.mp3' }
+];
 
 let currentPin = sessionStorage.getItem('admin_pin') || '';
 let settingsData = null;
 let selectedNoticeFile = null;
 let testAudio = null;
+
+function getStationById(id) {
+  const fromSettings = settingsData?.radio?.stations?.find(s => s.id === id);
+  if (fromSettings && fromSettings.url) return fromSettings;
+  const fromMap = RADIO_STATIONS_MAP.find(s => s.id === id);
+  if (fromMap) return fromMap;
+  return RADIO_STATIONS_MAP[0];
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   setupAuth();
@@ -23,6 +44,28 @@ document.addEventListener('DOMContentLoaded', () => {
     unlockAdmin();
   }
 });
+
+// ==========================================
+// TOAST NOTIFICATION HELPER
+// ==========================================
+function showAdminToast(msg, icon = '✅') {
+  const toast = document.getElementById('admin-toast');
+  const msgElem = document.getElementById('toast-msg');
+  const iconElem = document.getElementById('toast-icon');
+  if (!toast) return;
+
+  if (msgElem) msgElem.textContent = msg;
+  if (iconElem) iconElem.textContent = icon;
+
+  toast.classList.remove('opacity-0', 'pointer-events-none');
+  toast.classList.add('show');
+
+  clearTimeout(window.adminToastTimer);
+  window.adminToastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+    toast.classList.add('opacity-0', 'pointer-events-none');
+  }, 3200);
+}
 
 // ==========================================
 // 1. AUTHENTICATION (PIN)
@@ -91,7 +134,7 @@ async function loadAllData() {
 }
 
 // ==========================================
-// 2. TAB NAVIGATION (5 Categories)
+// 2. TAB NAVIGATION (6 Categories)
 // ==========================================
 function setupTabs() {
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -111,6 +154,11 @@ function setupTabs() {
           c.classList.add('hidden');
         }
       });
+
+      // Stop audio test when leaving radio tab to avoid background playing
+      if (targetTab !== 'radio' && testAudio && !testAudio.paused) {
+        testAudio.pause();
+      }
     });
   });
 }
@@ -232,7 +280,7 @@ function setupNoticesForm() {
             selectedNoticeFile = null;
             if (fileInput) fileInput.value = '';
             await loadNotices();
-            alert('ההודעה פורסמה בהצלחה במסך הראשי!');
+            showAdminToast('ההודעה פורסמה בהצלחה במסך הראשי!', '📢');
             return;
           }
         }
@@ -253,7 +301,7 @@ function setupNoticesForm() {
         selectedNoticeFile = null;
         if (fileInput) fileInput.value = '';
         await loadNotices();
-        alert('ההודעה נשמרה בהצלחה במסך הראשי!');
+        showAdminToast('ההודעה נשמרה בהצלחה במסך הראשי!', '📢');
       }
     });
   }
@@ -307,23 +355,23 @@ async function loadNotices() {
       const expDate = n.expiresAt ? `<span class="text-xs text-amber-400">תפוגה: ${new Date(n.expiresAt).toLocaleDateString('he-IL')}</span>` : '<span class="text-xs text-gray-500">ללא תפוגה</span>';
 
       return `
-        <div class="admin-card p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:border-gray-600 transition">
-          <div class="space-y-1 flex-1">
-            <div class="flex items-center gap-2">
+        <div class="admin-card p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:border-gray-600 transition">
+          <div class="space-y-1 flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
               ${urgentBadge}
               ${imgBadge}
-              <h3 class="font-bold text-sm sm:text-base text-white">${n.title}</h3>
+              <h3 class="font-bold text-sm sm:text-base text-white truncate">${n.title}</h3>
             </div>
             <p class="text-xs sm:text-sm text-gray-300 line-clamp-2">${n.content}</p>
-            <div class="flex items-center gap-3 pt-1 text-xs text-gray-400">
+            <div class="flex items-center gap-2 sm:gap-3 pt-1 text-[11px] sm:text-xs text-gray-400 flex-wrap">
               <span>נכתב ע"י: ${n.author || 'ועד הבית'}</span>
               <span>•</span>
               ${expDate}
             </div>
           </div>
-          <div class="flex gap-2 self-end sm:self-center shrink-0">
-            <button onclick="editNotice('${n.id}', '${encodeURIComponent(JSON.stringify(n))}')" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-semibold">✏️ ערוך</button>
-            <button onclick="deleteNotice('${n.id}')" class="px-3 py-1.5 bg-red-900 bg-opacity-40 hover:bg-opacity-80 text-red-300 rounded-lg text-xs font-semibold">🗑️ מחק</button>
+          <div class="flex gap-2 self-end sm:self-center shrink-0 w-full sm:w-auto justify-end">
+            <button onclick="editNotice('${n.id}', '${encodeURIComponent(JSON.stringify(n))}')" class="px-3.5 py-1.5 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-xs font-semibold">✏️ ערוך</button>
+            <button onclick="deleteNotice('${n.id}')" class="px-3.5 py-1.5 bg-red-900 bg-opacity-40 hover:bg-opacity-80 active:scale-95 text-red-300 rounded-lg text-xs font-semibold">🗑️ מחק</button>
           </div>
         </div>
       `;
@@ -379,6 +427,7 @@ window.deleteNotice = async function(id) {
       const result = await res.json();
       if (result.success) {
         await loadNotices();
+        showAdminToast('ההודעה נמחקה בהצלחה', '🗑️');
         return;
       }
     }
@@ -389,6 +438,7 @@ window.deleteNotice = async function(id) {
     const updated = localNotices.filter(n => n.id !== id);
     localStorage.setItem('smart_lobby_notices', JSON.stringify(updated));
     await loadNotices();
+    showAdminToast('ההודעה נמחקה בהצלחה', '🗑️');
   }
 };
 
@@ -432,9 +482,6 @@ function setupDisplayControls() {
           sideColumnWidth: document.getElementById('setting-side-width')?.value || 'normal',
           showNewsTicker: document.getElementById('setting-show-news-ticker')?.checked !== false,
           showStageArrows: document.getElementById('setting-show-stage-arrows')?.checked !== false,
-          slideDurationSeconds: parseInt(document.getElementById('setting-slide-duration')?.value || '12', 10),
-          tickerSpeed: document.getElementById('setting-ticker-speed')?.value || 'slow',
-          resolution: document.getElementById('setting-resolution')?.value || 'auto',
           customTickerText: document.getElementById('setting-custom-ticker')?.value.trim() || '',
           theme: selectedThemeMode,
           customTheme
@@ -490,14 +537,25 @@ function setupContactsManager() {
 }
 
 // ==========================================
-// 6. TAB 4: RADIO & MUSIC
+// 6. TAB 4: RADIO & MUSIC (Reliable Live Testing)
 // ==========================================
+window.setVolumePreset = function(vol) {
+  const volInput = document.getElementById('radio-volume');
+  const volLabel = document.getElementById('vol-label');
+  if (volInput) {
+    volInput.value = vol;
+    if (volLabel) volLabel.textContent = `${Math.round(vol * 100)}%`;
+    if (testAudio) testAudio.volume = vol;
+  }
+};
+
 function setupRadioControls() {
   const volInput = document.getElementById('radio-volume');
   const volLabel = document.getElementById('vol-label');
   const saveBtn = document.getElementById('save-radio-btn');
   const testBtn = document.getElementById('test-audio-btn');
   const testStatus = document.getElementById('test-audio-status');
+  const testIcon = document.getElementById('test-audio-icon');
   const stationSelect = document.getElementById('radio-station-select');
   testAudio = document.getElementById('admin-test-audio');
 
@@ -508,43 +566,109 @@ function setupRadioControls() {
     });
   }
 
+  // Handle audio player state events
+  if (testAudio) {
+    testAudio.onwaiting = () => {
+      if (testStatus) testStatus.textContent = '⏳ מתחבר לשידור החי...';
+      if (testBtn) testBtn.innerHTML = '<span>⏳</span><span>מתחבר...</span>';
+    };
+
+    testAudio.onplaying = () => {
+      const st = getStationById(stationSelect ? stationSelect.value : 'galgalatz');
+      if (testStatus) testStatus.innerHTML = `<span class="text-green-400 font-bold">🔊 משמיע: ${st.name}</span>`;
+      if (testIcon) testIcon.innerHTML = '🎵';
+      if (testBtn) {
+        testBtn.innerHTML = '<span>⏹️</span><span>עצור השמעה</span>';
+        testBtn.classList.remove('bg-green-700', 'hover:bg-green-600');
+        testBtn.classList.add('bg-red-700', 'hover:bg-red-600');
+      }
+    };
+
+    testAudio.onpause = () => {
+      if (testStatus && !testStatus.innerHTML.includes('שגיאה')) {
+        testStatus.textContent = 'ההשמעה נעצרה';
+      }
+      if (testIcon) testIcon.innerHTML = '📻';
+      if (testBtn) {
+        testBtn.innerHTML = '<span>▶️</span><span>השמע בדיקה עכשיו</span>';
+        testBtn.classList.remove('bg-red-700', 'hover:bg-red-600');
+        testBtn.classList.add('bg-green-700', 'hover:bg-green-600');
+      }
+    };
+
+    testAudio.onerror = (e) => {
+      console.warn('Audio test error:', e);
+      if (testStatus) {
+        testStatus.innerHTML = '<span class="text-amber-300 font-bold">⚠️ השידור מתחבר או חסום בדפדפן</span>';
+      }
+      if (testBtn) {
+        testBtn.innerHTML = '<span>▶️</span><span>השמע בדיקה עכשיו</span>';
+        testBtn.classList.remove('bg-red-700', 'hover:bg-red-600');
+        testBtn.classList.add('bg-green-700', 'hover:bg-green-600');
+      }
+    };
+  }
+
+  // Switch station in real time if playing
+  if (stationSelect) {
+    stationSelect.addEventListener('change', () => {
+      const selectedStId = stationSelect.value;
+      const st = getStationById(selectedStId);
+      if (testAudio && !testAudio.paused) {
+        testAudio.src = st.url;
+        testAudio.play().catch(e => console.log(e));
+      }
+    });
+  }
+
+  // Test Play/Stop Button Click
   if (testBtn && stationSelect) {
     testBtn.addEventListener('click', () => {
       const selectedStId = stationSelect.value;
-      const st = settingsData?.radio?.stations?.find(s => s.id === selectedStId) || settingsData?.radio?.stations?.[0];
+      const st = getStationById(selectedStId);
 
-      if (!st || !st.url || !testAudio) return;
+      if (!testAudio) return;
 
       if (testAudio.paused) {
         testAudio.src = st.url;
         testAudio.volume = volInput ? parseFloat(volInput.value) : 0.4;
+        testBtn.innerHTML = '<span>⏳</span><span>מתחבר...</span>';
+        if (testStatus) testStatus.textContent = `מתחבר ל-${st.name}...`;
+
         testAudio.play().then(() => {
-          testBtn.innerHTML = '<span>⏹️</span><span>עצור בדיקה</span>';
-          if (testStatus) testStatus.textContent = `משמיע: ${st.name}`;
+          // handled by onplaying
         }).catch(err => {
-          alert('שגיאה בהשמעה: ' + err.message);
+          if (testStatus) testStatus.innerHTML = `<span class="text-red-400 font-bold">שגיאה: ${err.message}</span>`;
+          testBtn.innerHTML = '<span>▶️</span><span>נסה שוב</span>';
+          testBtn.classList.remove('bg-red-700');
+          testBtn.classList.add('bg-green-700');
         });
       } else {
         testAudio.pause();
-        testBtn.innerHTML = '<span>▶️</span><span>השמע בדיקה</span>';
-        if (testStatus) testStatus.textContent = 'ההשמעה נעצרה';
       }
     });
   }
 
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
+      let startH = document.getElementById('radio-start-time')?.value || '08:00';
+      let endH = document.getElementById('radio-end-time')?.value || '21:00';
+
+      // Auto-correct any flipped RTL strings
+      if (startH === '00:08') startH = '08:00';
+      if (endH === '00:21') endH = '21:00';
+
       const updatedSettings = {
         radio: {
           ...settingsData?.radio,
           enabled: document.getElementById('radio-enabled')?.checked || false,
           currentStation: document.getElementById('radio-station-select')?.value || 'galgalatz',
-          startHour: document.getElementById('radio-start-time')?.value || '08:00',
-          endHour: document.getElementById('radio-end-time')?.value || '21:00',
+          startHour: startH,
+          endHour: endH,
           volume: volInput ? parseFloat(volInput.value) : 0.4
         }
       };
-      await saveSettingsToServer(updatedSettings, 'הגדרות הרדיו והמוזיקה נשמרו!');
+      await saveSettingsToServer(updatedSettings, 'הגדרות הרדיו והמוזיקה נשמרו בהצלחה!');
     });
   }
 }
@@ -663,15 +787,6 @@ function populateSettingsUI() {
   const showStageArrows = document.getElementById('setting-show-stage-arrows');
   if (showStageArrows) showStageArrows.checked = settingsData.display?.showStageArrows !== false;
 
-  const slideDuration = document.getElementById('setting-slide-duration');
-  if (slideDuration) slideDuration.value = settingsData.display?.slideDurationSeconds || 12;
-
-  const tickerSpeed = document.getElementById('setting-ticker-speed');
-  if (tickerSpeed) tickerSpeed.value = settingsData.display?.tickerSpeed || 'slow';
-
-  const resolution = document.getElementById('setting-resolution');
-  if (resolution) resolution.value = settingsData.display?.resolution || 'auto';
-
   const customTicker = document.getElementById('setting-custom-ticker');
   if (customTicker) customTicker.value = settingsData.display?.customTickerText || '';
 
@@ -725,8 +840,15 @@ function populateSettingsUI() {
 
   if (radioEnabled) radioEnabled.checked = Boolean(settingsData.radio?.enabled);
   if (radioStation) radioStation.value = settingsData.radio?.currentStation || 'galgalatz';
-  if (radioStart) radioStart.value = settingsData.radio?.startHour || '08:00';
-  if (radioEnd) radioEnd.value = settingsData.radio?.endHour || '21:00';
+  
+  let sVal = settingsData.radio?.startHour || '08:00';
+  if (sVal === '00:08') sVal = '08:00';
+  if (radioStart) radioStart.value = sVal;
+
+  let eVal = settingsData.radio?.endHour || '21:00';
+  if (eVal === '00:21') eVal = '21:00';
+  if (radioEnd) radioEnd.value = eVal;
+
   if (radioVol) radioVol.value = settingsData.radio?.volume || 0.4;
   if (volLabel) volLabel.textContent = `${Math.round((settingsData.radio?.volume || 0.4) * 100)}%`;
 
@@ -752,7 +874,7 @@ async function saveSettingsToServer(newSettings, successMessage) {
       const data = await res.json();
       if (data.success) {
         await loadSettings();
-        alert(successMessage || 'נשמר בהצלחה!');
+        showAdminToast(successMessage || 'נשמר בהצלחה!', '✅');
         return true;
       }
     }
@@ -764,7 +886,7 @@ async function saveSettingsToServer(newSettings, successMessage) {
     localStorage.setItem('smart_lobby_settings', JSON.stringify(merged));
     settingsData = { ...settingsData, ...newSettings };
     populateSettingsUI();
-    alert(successMessage || 'ההגדרות נשמרו בהצלחה!');
+    showAdminToast(successMessage || 'ההגדרות נשמרו בהצלחה!', '✅');
     return true;
   }
 }
