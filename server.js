@@ -125,9 +125,21 @@ app.get('/api/settings', (req, res) => {
 app.post('/api/settings', (req, res) => {
   const { pin, newSettings } = req.body;
   const current = readJsonFile(SETTINGS_FILE, {});
+  const adminPin = current.security?.adminPin || '1234';
+  const editorPin = current.security?.editorPin || '1111';
   
-  if (pin !== current.security?.adminPin && pin !== '1234') {
+  const isMasterAdmin = (pin === adminPin || pin === '1234');
+  const isEditor = (pin === editorPin || pin === '1111');
+
+  if (!isMasterAdmin && !isEditor) {
     return res.status(401).json({ success: false, error: 'קוד PIN שגוי' });
+  }
+
+  // If editor, only allow radio settings or empty test updates
+  if (isEditor && !isMasterAdmin) {
+    if (newSettings && (newSettings.display || newSettings.building || newSettings.contacts || newSettings.security || newSettings.newPin)) {
+      return res.status(403).json({ success: false, error: 'אין הרשאה לשינוי הגדרות מערכת' });
+    }
   }
 
   const updated = {
@@ -135,7 +147,8 @@ app.post('/api/settings', (req, res) => {
     ...newSettings,
     security: {
       ...current.security,
-      ...(newSettings.newPin ? { adminPin: newSettings.newPin } : {})
+      ...(isMasterAdmin && newSettings.newPin ? { adminPin: newSettings.newPin } : {}),
+      ...(isMasterAdmin && newSettings.security?.editorPin ? { editorPin: newSettings.security.editorPin } : {})
     }
   };
 
@@ -169,8 +182,10 @@ app.get('/api/notices', (req, res) => {
 app.post('/api/notices', (req, res) => {
   const { pin, notice } = req.body;
   const current = readJsonFile(SETTINGS_FILE, {});
+  const adminPin = current.security?.adminPin || '1234';
+  const editorPin = current.security?.editorPin || '1111';
   
-  if (pin !== current.security?.adminPin && pin !== '1234') {
+  if (pin !== adminPin && pin !== editorPin && pin !== '1234' && pin !== '1111') {
     return res.status(401).json({ success: false, error: 'קוד PIN שגוי' });
   }
 
@@ -207,8 +222,10 @@ app.delete('/api/notices/:id', (req, res) => {
   const { id } = req.params;
   const pin = req.headers['x-admin-pin'] || req.query.pin;
   const current = readJsonFile(SETTINGS_FILE, {});
+  const adminPin = current.security?.adminPin || '1234';
+  const editorPin = current.security?.editorPin || '1111';
 
-  if (pin !== current.security?.adminPin && pin !== '1234') {
+  if (pin !== adminPin && pin !== editorPin && pin !== '1234' && pin !== '1111') {
     return res.status(401).json({ success: false, error: 'קוד PIN שגוי' });
   }
 

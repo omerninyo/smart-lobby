@@ -20,6 +20,7 @@ const RADIO_STATIONS_MAP = [
 ];
 
 let currentPin = sessionStorage.getItem('admin_pin') || '';
+let currentRole = sessionStorage.getItem('admin_role') || 'admin';
 let settingsData = null;
 let selectedNoticeFile = null;
 let testAudio = null;
@@ -71,7 +72,7 @@ function showAdminToast(msg, icon = '✅') {
 }
 
 // ==========================================
-// 1. AUTHENTICATION (PIN)
+// 1. AUTHENTICATION (DUAL PIN: Master Admin & Committee Member)
 // ==========================================
 function setupAuth() {
   const pinModal = document.getElementById('pin-modal');
@@ -84,6 +85,36 @@ function setupAuth() {
     const pin = pinInput.value.trim();
     if (!pin) return;
 
+    if (!settingsData) {
+      await loadSettings();
+    }
+
+    const adminPin = settingsData?.security?.adminPin || '1234';
+    const editorPin = settingsData?.security?.editorPin || '1111';
+
+    // 1. Check Committee Member / Editor PIN (Simplified notices + radio only)
+    if (pin === editorPin) {
+      currentRole = 'editor';
+      currentPin = pin;
+      sessionStorage.setItem('admin_pin', pin);
+      sessionStorage.setItem('admin_role', 'editor');
+      if (pinError) pinError.classList.add('hidden');
+      unlockAdmin();
+      return;
+    }
+
+    // 2. Check Master Admin PIN (Full access to all tabs & display controls)
+    if (pin === adminPin || pin === '1234') {
+      currentRole = 'admin';
+      currentPin = pin;
+      sessionStorage.setItem('admin_pin', pin);
+      sessionStorage.setItem('admin_role', 'admin');
+      if (pinError) pinError.classList.add('hidden');
+      unlockAdmin();
+      return;
+    }
+
+    // 3. Fallback check with API
     try {
       const testRes = await fetch('/api/settings', {
         method: 'POST',
@@ -94,22 +125,18 @@ function setupAuth() {
       if (testRes.ok) {
         const testData = await testRes.json();
         if (testData.success) {
+          currentRole = 'admin';
           currentPin = pin;
           sessionStorage.setItem('admin_pin', pin);
+          sessionStorage.setItem('admin_role', 'admin');
+          if (pinError) pinError.classList.add('hidden');
           unlockAdmin();
           return;
         }
       }
-      throw new Error('Fallback check');
-    } catch (err) {
-      if (pin === '1234' || (settingsData?.security?.adminPin && pin === settingsData.security.adminPin)) {
-        currentPin = pin;
-        sessionStorage.setItem('admin_pin', pin);
-        unlockAdmin();
-      } else {
-        if (pinError) pinError.classList.remove('hidden');
-      }
-    }
+    } catch (err) {}
+
+    if (pinError) pinError.classList.remove('hidden');
   };
 
   if (pinBtn) pinBtn.addEventListener('click', checkPin);
@@ -119,6 +146,7 @@ function setupAuth() {
 
   if (logoutBtn) logoutBtn.addEventListener('click', () => {
     sessionStorage.removeItem('admin_pin');
+    sessionStorage.removeItem('admin_role');
     window.location.reload();
   });
 }
@@ -128,7 +156,40 @@ function unlockAdmin() {
   const app = document.getElementById('admin-app');
   if (modal) modal.classList.add('hidden');
   if (app) app.classList.remove('hidden');
+  applyRolePermissions();
   loadAllData();
+}
+
+function applyRolePermissions() {
+  const roleBanner = document.getElementById('role-badge-banner');
+  const refreshBtn = document.getElementById('header-refresh-screen-btn');
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  
+  if (currentRole === 'editor') {
+    if (roleBanner) roleBanner.classList.remove('hidden');
+    if (refreshBtn) refreshBtn.classList.add('hidden');
+
+    // Hide tabs: display, contacts, settings, help
+    tabBtns.forEach(btn => {
+      const tab = btn.getAttribute('data-tab');
+      if (tab === 'notices' || tab === 'radio') {
+        btn.classList.remove('hidden');
+      } else {
+        btn.classList.add('hidden');
+      }
+    });
+
+    // Make sure we start on notices tab
+    const noticesTabBtn = document.querySelector('.tab-btn[data-tab="notices"]');
+    if (noticesTabBtn && !noticesTabBtn.classList.contains('active')) {
+      noticesTabBtn.click();
+    }
+  } else {
+    // Admin mode - full access
+    if (roleBanner) roleBanner.classList.add('hidden');
+    if (refreshBtn) refreshBtn.classList.remove('hidden');
+    tabBtns.forEach(btn => btn.classList.remove('hidden'));
+  }
 }
 
 async function loadAllData() {
@@ -839,6 +900,7 @@ function setupGeneralSettings() {
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
       const newPin = document.getElementById('setting-new-pin')?.value.trim();
+      const newEditorPin = document.getElementById('setting-new-editor-pin')?.value.trim();
 
       const updatedSettings = {
         building: {
@@ -850,14 +912,24 @@ function setupGeneralSettings() {
           ...settingsData?.display,
           newsSource: document.getElementById('setting-rss-source')?.value || 'ynet'
         },
+        security: {
+          ...settingsData?.security,
+          ...(newPin ? { adminPin: newPin } : {}),
+          ...(newEditorPin ? { editorPin: newEditorPin } : {})
+        },
         ...(newPin ? { newPin } : {})
       };
 
-      const ok = await saveSettingsToServer(updatedSettings, 'הגדרות המערכת נשמרו בהצלחה!');
-      if (ok && newPin) {
-        currentPin = newPin;
-        sessionStorage.setItem('admin_pin', newPin);
-        document.getElementById('setting-new-pin').value = '';
+      const ok = await saveSettingsToServer(updatedSettings, 'הגדרות המערכת וקודי הגישה נשמרו בהצלחה!');
+      if (ok) {
+        if (newPin) {
+          currentPin = newPin;
+          sessionStorage.setItem('admin_pin', newPin);
+          document.getElementById('setting-new-pin').value = '';
+        }
+        if (newEditorPin) {
+          document.getElementById('setting-new-editor-pin').value = '';
+        }
       }
     });
   }
@@ -1013,10 +1085,14 @@ function populateSettingsUI() {
   const bldName = document.getElementById('setting-bld-name');
   const bldCity = document.getElementById('setting-bld-city');
   const rssSource = document.getElementById('setting-rss-source');
+  const pinInput = document.getElementById('setting-new-pin');
+  const editorPinInput = document.getElementById('setting-new-editor-pin');
 
   if (bldName) bldName.value = settingsData.building?.name || 'הירדן 5';
   if (bldCity) bldCity.value = settingsData.building?.city || 'חדרה';
   if (rssSource) rssSource.value = settingsData.display?.newsSource || 'ynet';
+  if (pinInput) pinInput.placeholder = settingsData.security?.adminPin ? 'מוגדר (הזן לשינוי)' : 'ברירת מחדל: 1234';
+  if (editorPinInput) editorPinInput.placeholder = settingsData.security?.editorPin ? 'מוגדר (הזן לשינוי)' : 'ברירת מחדל: 1111';
 
   // Update Header Quick Radio Button State
   updateHeaderRadioStatus(Boolean(settingsData.radio?.enabled));
