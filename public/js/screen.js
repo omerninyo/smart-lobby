@@ -395,7 +395,7 @@ class BuildingSignageApp {
         }
       } catch (e) {}
     }
-    // 2. Static GitHub Pages fallback with cache buster
+    // 2. Static GitHub Pages fallback
     try {
       const res = await fetch('data/settings.json?v=' + Date.now());
       if (res.ok) {
@@ -409,22 +409,7 @@ class BuildingSignageApp {
     try {
       const localSettings = JSON.parse(localStorage.getItem('smart_lobby_settings') || 'null');
       if (localSettings) {
-        this.settings = {
-          ...this.settings,
-          ...localSettings,
-          display: {
-            ...(this.settings?.display || {}),
-            ...(localSettings.display || {})
-          },
-          building: {
-            ...(this.settings?.building || {}),
-            ...(localSettings.building || {})
-          },
-          radio: {
-            ...(this.settings?.radio || {}),
-            ...(localSettings.radio || {})
-          }
-        };
+        this.settings = { ...this.settings, ...localSettings };
       }
     } catch (e) {}
 
@@ -453,12 +438,15 @@ class BuildingSignageApp {
       tickerContent.classList.add(`ticker-speed-${speed}`);
     }
 
-    // Background Opacity & Dimming (0% to 100%)
+    // Background Opacity & Dimming (0% to 100%) - Dynamic Crystal Glassmorphism
     const bgOpacityVal = this.settings.display?.bgOpacity !== undefined ? this.settings.display.bgOpacity : 85;
-    const layerOpacity = (bgOpacityVal / 100).toFixed(2);
-    const overlayDim = Math.max(0.12, ((100 - bgOpacityVal) / 100 * 0.75 + 0.20)).toFixed(2);
+    const pct = Math.max(0.1, Math.min(1.0, bgOpacityVal / 100));
+    const layerOpacity = (0.35 + pct * 0.65).toFixed(2);
+    const overlayDim = Math.max(0.02, (1 - pct) * 0.65).toFixed(2);
+    const cardBgOp = Math.max(0.20, (0.75 - pct * 0.45)).toFixed(2);
     document.documentElement.style.setProperty('--bg-layer-opacity', layerOpacity);
     document.documentElement.style.setProperty('--bg-overlay-opacity', overlayDim);
+    document.documentElement.style.setProperty('--card-bg-opacity', cardBgOp);
 
     // Left-Side Backlight Burn Compensation (Luminance Boost - 0% default)
     const leftBoostPct = this.settings.display?.leftBurnCompensation !== undefined ? this.settings.display.leftBurnCompensation : 0;
@@ -631,30 +619,32 @@ class BuildingSignageApp {
   }
 
   async fetchShabbatAndHolidays() {
-    // Curated, verified, authentic Jewish holiday & Special Event photographic collections
+    // Curated, verified, authentic Jewish holiday & Special Event photographic collections - STRICTLY NO PEOPLE
     const HOLIDAY_COLLECTIONS = {
       'shabbat': [
-        'https://images.unsplash.com/photo-1511994298241-608e28f14fde?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1543258103-a62bdc069871?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1606293926075-69a00dbfde81?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?auto=format&fit=crop&w=1920&q=85',
         'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1576085898323-218337e3e43c?auto=format&fit=crop&w=1920&q=85'
+        'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1920&q=85'
       ],
       'rosh-hashanah': [
-        'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1601662528567-526cd06f6582?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1568644396922-5c3bfae12521?auto=format&fit=crop&w=1920&q=85'
+        'https://images.unsplash.com/photo-1568644396922-5c3bfae12521?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?auto=format&fit=crop&w=1920&q=85'
       ],
       'yom-kippur': [
         'https://images.unsplash.com/photo-1509099836639-18ba1795216d?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1920&q=85'
+        'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1920&q=85'
       ],
       'sukkot': [
         'https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1920&q=85',
         'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=85'
       ],
       'simchat-torah': [
-        'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1511994298241-608e28f14fde?auto=format&fit=crop&w=1920&q=85'
+        'https://images.unsplash.com/photo-1544967082-d9d25d867d66?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1543258103-a62bdc069871?auto=format&fit=crop&w=1920&q=85'
       ],
       'hanukkah': [
         'https://images.unsplash.com/photo-1513297887119-d46091b24bfa?auto=format&fit=crop&w=1920&q=85',
@@ -710,9 +700,18 @@ class BuildingSignageApp {
         'https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?auto=format&fit=crop&w=1920&q=85'
       ],
       'default': [
+        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1509773896068-7fd415d91e2e?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?auto=format&fit=crop&w=1920&q=85',
         'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1920&q=85',
-        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=85'
+        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=1920&q=85',
+        'https://images.unsplash.com/photo-1519751138087-5bf79df62d5b?auto=format&fit=crop&w=1920&q=85'
       ]
     };
 
@@ -861,6 +860,10 @@ class BuildingSignageApp {
           activeEvent = null;
         }
 
+        const shuffledThemeImages = (Array.isArray(themeImages) && themeImages.length > 1)
+          ? [...themeImages].sort(() => Math.random() - 0.5)
+          : themeImages;
+
         this.shabbatData = {
           isShabbatActive,
           parasha,
@@ -869,12 +872,12 @@ class BuildingSignageApp {
           holidays,
           activeHoliday: activeEvent,
           recommendedTheme,
-          themeImage: themeImages[0],
-          themeImages
+          themeImage: shuffledThemeImages[0],
+          themeImages: shuffledThemeImages
         };
 
         // Update default wallpapers to match current holiday/special event theme!
-        this.wallpapers = themeImages.map((url, i) => ({ id: `theme-wall-${i}`, url }));
+        this.wallpapers = shuffledThemeImages.map((url, i) => ({ id: `theme-wall-${i}`, url }));
 
         this.renderShabbatAndHolidays();
         this.buildSlides();
@@ -962,13 +965,15 @@ class BuildingSignageApp {
       }
     }
 
-    // Merge with any client-side localStorage notices
+    // Merge with any client-side localStorage notices & filter deleted
     try {
       const localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
       if (Array.isArray(localNotices) && localNotices.length > 0) {
         const localIds = new Set(localNotices.map(n => n.id));
         list = [...localNotices, ...list.filter(n => !localIds.has(n.id))];
       }
+      const deletedIds = new Set(JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]'));
+      list = list.filter(n => !deletedIds.has(n.id));
     } catch (e) {}
 
     this.notices = list;
@@ -1507,6 +1512,7 @@ class BuildingSignageApp {
 
     const fallbackStations = [
       { id: 'galgalatz', name: 'גלגלצ', url: 'https://glzwizzlv.bynetcdn.com/glglz_mp3' },
+      { id: '103fm', name: '103FM', url: 'https://cdn.cybercdn.live/103FM/Live/icecast.audio' },
       { id: 'glz', name: 'גלי צה"ל', url: 'https://glzwizzlv.bynetcdn.com/glz_mp3' },
       { id: 'kan_88', name: 'כאן 88', url: 'https://kanliveicy.media.kan.org.il/icy/kan88_mp3' },
       { id: 'kan_gimmel', name: 'כאן גימל', url: 'https://kanliveicy.media.kan.org.il/icy/kangimmel_mp3' },
