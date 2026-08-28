@@ -1188,8 +1188,8 @@ body.high-contrast-side .env-stat-box {
   animation: modal-fade-in 0.25s ease-out;
 }
 
-.modal-backdrop.hidden {
-  display: none;
+.modal-backdrop.hidden, .hidden {
+  display: none !important;
 }
 
 .modal-card {
@@ -1318,4 +1318,3 @@ body.high-contrast-side .side-column .env-stat-box {
   background: rgba(241, 245, 249, 0.95) !important;
   border: 1px solid rgba(15, 23, 42, 0.15) !important;
 }
-
