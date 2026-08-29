@@ -1,3 +1,17 @@
+// ==========================================
+// SECURITY & DATA HELPERS
+// ==========================================
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+window._adminNoticesMap = {};
+
 /**
  * =========================================================
  * Building Digital Signage - Mobile & Desktop Admin Panel
@@ -495,6 +509,9 @@ async function loadNotices() {
       return;
     }
 
+    window._adminNoticesMap = {};
+    notices.forEach(n => { window._adminNoticesMap[n.id] = n; });
+
     list.innerHTML = notices.map(n => {
       const urgentBadge = n.isUrgent ? `<span class="bg-red-600 text-white text-xs px-2 py-0.5 rounded-md font-bold">⚠️ דחוף</span>` : '';
       const imgBadge = n.imageUrl ? `<span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-md">🖼️ תמונה</span>` : '';
@@ -506,17 +523,17 @@ async function loadNotices() {
             <div class="flex items-center gap-2 flex-wrap">
               ${urgentBadge}
               ${imgBadge}
-              <h3 class="font-bold text-sm sm:text-base text-white truncate">${n.title}</h3>
+              <h3 class="font-bold text-sm sm:text-base text-white truncate">${escapeHtml(n.title)}</h3>
             </div>
-            <p class="text-xs sm:text-sm text-gray-300 line-clamp-2">${n.content}</p>
+            <p class="text-xs sm:text-sm text-gray-300 line-clamp-2">${escapeHtml(n.content)}</p>
             <div class="flex items-center gap-2 sm:gap-3 pt-1 text-[11px] sm:text-xs text-gray-400 flex-wrap">
-              <span>נכתב ע"י: ${n.author || 'ועד הבית'}</span>
+              <span>נכתב ע"י: ${escapeHtml(n.author || 'ועד הבית')}</span>
               <span>•</span>
               ${expDate}
             </div>
           </div>
           <div class="flex gap-2 self-end sm:self-center shrink-0 w-full sm:w-auto justify-end">
-            <button onclick="editNotice('${n.id}', '${encodeURIComponent(JSON.stringify(n))}')" class="px-3.5 py-1.5 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-xs font-semibold">✏️ ערוך</button>
+            <button onclick="editNotice('${n.id}')" class="px-3.5 py-1.5 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-xs font-semibold">✏️ ערוך</button>
             <button onclick="deleteNotice('${n.id}')" class="px-3.5 py-1.5 bg-red-900 bg-opacity-40 hover:bg-opacity-80 active:scale-95 text-red-300 rounded-lg text-xs font-semibold">🗑️ מחק</button>
           </div>
         </div>
@@ -528,7 +545,8 @@ async function loadNotices() {
 }
 
 window.editNotice = function(id, encodedNotice) {
-  const n = JSON.parse(decodeURIComponent(encodedNotice));
+  const n = window._adminNoticesMap[id] || (encodedNotice ? JSON.parse(decodeURIComponent(encodedNotice)) : null);
+  if (!n) return;
   document.getElementById('notice-id').value = n.id;
   document.getElementById('notice-title').value = n.title;
   document.getElementById('notice-content').value = n.content;

@@ -1,3 +1,29 @@
+// ==========================================
+// SECURITY & RESILIENCE HELPERS
+// ==========================================
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timeoutId);
+    return res;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
+}
+
 /**
  * =========================================================
  * Building Digital Signage - Screen Controller (Multi-Zone & Touch)
@@ -587,7 +613,7 @@ class BuildingSignageApp {
       const lon = this.settings?.building?.lon || 34.9197;
       const cityName = this.settings?.building?.city || 'חדרה';
       const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,precipitation_probability_max,sunrise,sunset&timezone=Asia%2FJerusalem`;
-      const resp = await fetch(url);
+      const resp = await fetchWithTimeout(url, {}, 8000);
       if (resp.ok) {
         const data = await resp.json();
         const current = data.current;
@@ -736,7 +762,7 @@ class BuildingSignageApp {
       const lat = this.settings?.building?.lat || 32.4340;
       const lon = this.settings?.building?.lon || 34.9197;
       const url = `https://www.hebcal.com/shabbat?cfg=json&latitude=${lat}&longitude=${lon}&tzid=Asia/Jerusalem&M=on&lg=he`;
-      const resp = await fetch(url);
+      const resp = await fetchWithTimeout(url, {}, 8000);
       if (resp.ok) {
         const data = await resp.json();
         const items = data.items || [];
@@ -1275,14 +1301,14 @@ class BuildingSignageApp {
               <div class="stage-notice-layout">
                 <div class="notice-header-row">
                   <span class="notice-type-badge ${urgentClass}">${badgeText}</span>
-                  <span class="notice-author-tag">${n.author || 'ועד הבית'}</span>
+                  <span class="notice-author-tag">${escapeHtml(n.author || 'ועד הבית')}</span>
                 </div>
                 <div class="stage-notice-body">
                   <div class="stage-notice-title-row">
                     <span style="font-size: 2rem;">${typeIcon}</span>
-                    <h2 class="stage-notice-title">${n.title}</h2>
+                    <h2 class="stage-notice-title">${escapeHtml(n.title)}</h2>
                   </div>
-                  <div class="stage-notice-content">${n.content}</div>
+                  <div class="stage-notice-content">${escapeHtml(n.content)}</div>
                 </div>
                 <div class="stage-notice-footer">
                   <span>הירדן 5, חדרה</span>
@@ -1296,14 +1322,14 @@ class BuildingSignageApp {
             <div class="stage-notice-layout">
               <div class="notice-header-row">
                 <span class="notice-type-badge ${urgentClass}">${badgeText}</span>
-                <span class="notice-author-tag">${n.author || 'ועד הבית'}</span>
+                <span class="notice-author-tag">${escapeHtml(n.author || 'ועד הבית')}</span>
               </div>
               <div class="stage-notice-body">
                 <div class="stage-notice-title-row">
                   <span style="font-size: 2.2rem;">${typeIcon}</span>
-                  <h2 class="stage-notice-title">${n.title}</h2>
+                  <h2 class="stage-notice-title">${escapeHtml(n.title)}</h2>
                 </div>
-                <div class="stage-notice-content">${n.content}</div>
+                <div class="stage-notice-content">${escapeHtml(n.content)}</div>
               </div>
               <div class="stage-notice-footer">
                 <span>הירדן 5, חדרה</span>
@@ -1351,9 +1377,9 @@ class BuildingSignageApp {
           <div class="contact-pill-card">
             <div class="contact-icon">${c.icon || '📞'}</div>
             <div class="contact-details">
-              <h4>${c.name}</h4>
-              <div class="contact-phone">${c.phone}</div>
-              <div class="contact-desc">${c.desc || ''}</div>
+              <h4>${escapeHtml(c.name)}</h4>
+              <div class="contact-phone">${escapeHtml(c.phone)}</div>
+              <div class="contact-desc">${escapeHtml(c.desc || '')}</div>
             </div>
           </div>
         `).join('');
