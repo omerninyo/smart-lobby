@@ -694,66 +694,67 @@ class BuildingSignageApp {
     // Curated, verified, authentic Jewish holiday & Special Event AI wallpapers - STRICTLY NO PEOPLE
     const HOLIDAY_COLLECTIONS = {
       'shabbat': [
-        'images/wallpapers/shabbat/shabbat_candles_luxury.jpg'
+        'images/wallpapers/shabbat/shabbat_candles_luxury.jpg?v=20260830'
       ],
       'rosh-hashanah': [
-        'images/wallpapers/holidays/rosh_hashanah.jpg'
+        'images/wallpapers/holidays/rosh_hashanah.jpg?v=20260830'
       ],
       'yom-kippur': [
-        'images/wallpapers/abstract/luxury_fluid_gold.jpg'
+        'images/wallpapers/holidays/yom_kippur.jpg?v=20260830'
       ],
       'sukkot': [
-        'images/wallpapers/holidays/sukkot.jpg'
+        'images/wallpapers/holidays/sukkot.jpg?v=20260830'
       ],
       'simchat-torah': [
-        'images/wallpapers/holidays/sukkot.jpg'
+        'images/wallpapers/holidays/simchat_torah.jpg?v=20260830'
       ],
       'hanukkah': [
-        'images/wallpapers/holidays/hanukkah.jpg'
+        'images/wallpapers/holidays/hanukkah.jpg?v=20260830'
       ],
       'tu-bishvat': [
-        'images/wallpapers/landscapes/galilee_olive_sunrise.jpg'
+        'images/wallpapers/holidays/tu_bishvat.jpg?v=20260830'
       ],
       'purim': [
-        'images/wallpapers/holidays/rosh_hashanah.jpg'
+        'images/wallpapers/holidays/purim.jpg?v=20260830'
       ],
       'pesach': [
-        'images/wallpapers/holidays/pesach.jpg'
+        'images/wallpapers/holidays/pesach.jpg?v=20260830'
       ],
       'memorial': [
-        'images/wallpapers/abstract/luxury_fluid_gold.jpg'
+        'images/wallpapers/holidays/memorial_candle.jpg?v=20260830'
       ],
       'israel': [
-        'images/wallpapers/landscapes/jerusalem_sunset.jpg'
+        'images/wallpapers/holidays/israel_independence.jpg?v=20260830'
       ],
       'lag-baomer': [
-        'images/wallpapers/holidays/hanukkah.jpg'
+        'images/wallpapers/holidays/lag_baomer.jpg?v=20260830'
       ],
       'jerusalem': [
-        'images/wallpapers/landscapes/jerusalem_sunset.jpg'
+        'images/wallpapers/holidays/israel_independence.jpg?v=20260830',
+        'images/wallpapers/landscapes/jerusalem_sunset.jpg?v=20260830'
       ],
       'shavuot': [
-        'images/wallpapers/holidays/shavuot.jpg'
+        'images/wallpapers/holidays/shavuot.jpg?v=20260830'
       ],
       'tu-baav': [
-        'images/wallpapers/landscapes/galilee_olive_sunrise.jpg'
+        'images/wallpapers/landscapes/galilee_olive_sunrise.jpg?v=20260830'
       ],
       'back-to-school': [
-        'images/wallpapers/landscapes/jerusalem_sunset.jpg'
+        'images/wallpapers/events/back_to_school.jpg?v=20260830'
       ],
       'new-year': [
-        'images/wallpapers/abstract/luxury_fluid_gold.jpg'
+        'images/wallpapers/events/new_year_civil.jpg?v=20260830'
       ],
       'family-day': [
-        'images/wallpapers/landscapes/galilee_olive_sunrise.jpg'
+        'images/wallpapers/landscapes/galilee_olive_sunrise.jpg?v=20260830'
       ],
       'elections': [
-        'images/wallpapers/landscapes/jerusalem_sunset.jpg'
+        'images/wallpapers/holidays/israel_independence.jpg?v=20260830'
       ],
       'default': [
-        'images/wallpapers/abstract/luxury_fluid_gold.jpg',
-        'images/wallpapers/landscapes/jerusalem_sunset.jpg',
-        'images/wallpapers/landscapes/galilee_olive_sunrise.jpg'
+        'images/wallpapers/abstract/luxury_fluid_gold.jpg?v=20260830',
+        'images/wallpapers/landscapes/jerusalem_sunset.jpg?v=20260830',
+        'images/wallpapers/landscapes/galilee_olive_sunrise.jpg?v=20260830'
       ]
     };
 

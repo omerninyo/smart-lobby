@@ -13,11 +13,25 @@
       "url": "images/wallpapers/holidays/rosh_hashanah.jpg"
     }
   ],
+  "yom-kippur": [
+    {
+      "id": "yk-1",
+      "title": "טלית לבנה צחורה, שופר ומחזור יום הכיפורים",
+      "url": "images/wallpapers/holidays/yom_kippur.jpg"
+    }
+  ],
   "sukkot": [
     {
       "id": "sukkot-1",
       "title": "ארבעת המינים בסוכה מסורתית",
       "url": "images/wallpapers/holidays/sukkot.jpg"
+    }
+  ],
+  "simchat-torah": [
+    {
+      "id": "st-1",
+      "title": "ספר תורה מהודר בכתר כסף ורקמת זהב על הבימה",
+      "url": "images/wallpapers/holidays/simchat_torah.jpg"
     }
   ],
   "hanukkah": [
@@ -27,6 +41,20 @@
       "url": "images/wallpapers/holidays/hanukkah.jpg"
     }
   ],
+  "tu-bishvat": [
+    {
+      "id": "tb-1",
+      "title": "קערת פירות יבשים, פריחת השקדיה וענפי זית",
+      "url": "images/wallpapers/holidays/tu_bishvat.jpg"
+    }
+  ],
+  "purim": [
+    {
+      "id": "purim-1",
+      "title": "אוזני המן טריות במילויים מגוונים, רעשנים וקונפטי",
+      "url": "images/wallpapers/holidays/purim.jpg"
+    }
+  ],
   "pesach": [
     {
       "id": "pesach-1",
@@ -34,11 +62,46 @@
       "url": "images/wallpapers/holidays/pesach.jpg"
     }
   ],
+  "memorial": [
+    {
+      "id": "mem-1",
+      "title": "נר זיכרון ממלכתי, סרט כחול-לבן ופרחי דם המכבים",
+      "url": "images/wallpapers/holidays/memorial_candle.jpg"
+    }
+  ],
+  "israel": [
+    {
+      "id": "isr-1",
+      "title": "דגל ישראל אלגנטי על אבני ירושלים ואורות חגיגיים",
+      "url": "images/wallpapers/holidays/israel_independence.jpg"
+    }
+  ],
+  "lag-baomer": [
+    {
+      "id": "lbo-1",
+      "title": "מדורת ל\"ג בעומר חמה וגיצי אש מול שמי כוכבים",
+      "url": "images/wallpapers/holidays/lag_baomer.jpg"
+    }
+  ],
   "shavuot": [
     {
       "id": "shavuot-1",
       "title": "סל ביכורים, שבעת המינים וגבינות",
       "url": "images/wallpapers/holidays/shavuot.jpg"
+    }
+  ],
+  "back-to-school": [
+    {
+      "id": "bts-1",
+      "title": "ילקוט בית ספר מעור, עפרונות צבעוניים, גלובוס ותפוח",
+      "url": "images/wallpapers/events/back_to_school.jpg"
+    }
+  ],
+  "new-year": [
+    {
+      "id": "ny-1",
+      "title": "שעון זהב לקראת חצות, גביעי שמפניה ואורות מנצנצים",
+      "url": "images/wallpapers/events/new_year_civil.jpg"
     }
   ],
   "default": [
