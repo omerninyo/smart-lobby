@@ -17,6 +17,20 @@
 
 ---
 
+---
+
+## 📸 Visual Showcase & Interface Previews
+
+| 🖥️ Main Lobby Touchscreen Kiosk Display | 🌤️ 4-Day Forecast & Shabbat Timings |
+| :---: | :---: |
+| ![Lobby Kiosk Display](docs/screenshots/01_kiosk_display_main.png) | ![Weather & Jewish Calendar](docs/screenshots/02_kiosk_weather_forecast.png) |
+
+| 📱 Committee Admin Panel (Dual-PIN Auth) | 🖼️ Built-in AI Photographic Gallery Picker |
+| :---: | :---: |
+| ![Admin Panel Overview](docs/screenshots/03_admin_panel_overview.png) | ![Gallery Picker Modal](docs/screenshots/04_admin_gallery_picker.png) |
+
+---
+
 ## 📖 Overview
 **Smart Building Digital Signage** is a lightweight, zero-bloat digital signage dashboard engineered specifically for residential lobby touchscreens (such as wall-mounted Android tablets or commercial smart screens). It replaces antiquated static slides with an interactive, rich, autonomous media board and an iPhone/Mobile-friendly administration panel for building committees (ועד בית).
 
@@ -143,11 +157,27 @@ graph TD
 
 ---
 
-## 📺 Kiosk Setup Guide for Lobby Screen (Android)
-For permanent wall-mounted installations:
-1. Install **Fully Kiosk Browser** on your Android tablet or TV screen.
-2. Set **Start URL** to `https://lobby.ninyo.co`.
-3. Enable **Kiosk Mode (Locked)**, **Start on Boot**, and **Keep Screen On**.
+## 📺 Recommended Hardware & Android Kiosk Setup Guide
+
+For permanent residential lobby installations (wall-mounted Android tablets, smart TVs, or commercial signage touchscreens), we **strongly recommend using [Fully Kiosk Browser](https://www.fully-kiosk.com/)** (Tested, Verified, and Approved in Production).
+
+### 🏆 Why Fully Kiosk Browser is the Gold Standard:
+* ⚡ **Legacy Hardware Compatibility:** Seamless 60fps hardware-accelerated rendering even on older Android 7+ devices and budget tablets.
+* 🔒 **Locked Kiosk Mode:** Prevents residents or children from exiting the signage app, accessing Android settings, or opening unauthorized apps.
+* 🔌 **Auto-Start & Power-Loss Recovery:** Automatically launches the lobby dashboard immediately upon device boot or power restoration.
+* 💡 **Display & Screen Management:** Keeps the screen on 24/7 or configures automated sleep/wake schedules and screen saver dimming.
+* 🔄 **Remote Management & Reload:** Allows remote reloads, cache clearing, and URL updates directly from the network or web portal.
+
+### ⚙️ Recommended Fully Kiosk Browser Configuration:
+1. **Web Browsing Settings:**
+   * **Start URL:** `https://lobby.ninyo.co` (or your building's custom GitHub Pages domain).
+   * **Enable WebGL / Hardware Acceleration:** `ON`
+   * **Clear Cache on Start:** `OFF` (preserves instant offline loading).
+2. **Device Management Settings:**
+   * **Keep Screen On:** `ON` (when connected to AC power).
+   * **Run as Launcher / Kiosk Mode:** `ON` (locks device to signage).
+3. **Audio & Media Settings:**
+   * **Autoplay Audio:** `Enabled` (for smooth background radio playback).
 
 ---
 
