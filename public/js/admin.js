@@ -43,11 +43,51 @@ document.addEventListener('DOMContentLoaded', () => {
   setupContactsManager();
   setupRadioControls();
   setupGeneralSettings();
+  setupFirebaseCloudSync();
   
   if (currentPin) {
     unlockAdmin();
   }
 });
+
+async function setupFirebaseCloudSync() {
+  const badge = document.getElementById('cloud-sync-status-badge');
+  const badgeText = document.getElementById('cloud-sync-text');
+  
+  if (!window.FirebaseSync) return;
+
+  try {
+    const ok = await window.FirebaseSync.init();
+    if (ok) {
+      if (badge) {
+        badge.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-600/50 shadow-sm';
+      }
+      if (badgeText) badgeText.textContent = 'סנכרון ענן פעיל';
+
+      // Listen for remote real-time updates while admin is open
+      window.FirebaseSync.onSettingsChanged((cloudSettings) => {
+        if (!cloudSettings) return;
+        settingsData = { ...settingsData, ...cloudSettings };
+        populateSettingsUI();
+      });
+
+      window.FirebaseSync.onNoticesChanged((cloudNotices) => {
+        if (!cloudNotices) return;
+        loadNotices();
+      });
+
+      // Seed if empty
+      if (settingsData) {
+        const localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
+        await window.FirebaseSync.seedIfEmpty(settingsData, localNotices);
+      }
+    } else {
+      if (badgeText) badgeText.textContent = 'מצב מקומי';
+    }
+  } catch (err) {
+    console.warn('Admin Firebase sync setup note:', err);
+  }
+}
 
 // ==========================================
 // TOAST NOTIFICATION HELPER
@@ -364,7 +404,7 @@ function setupNoticesForm() {
         }
         throw new Error('API unavailable');
       } catch (err) {
-        // Fallback for static GitHub Pages (localStorage)
+        // LocalStorage & Firebase Cloud Sync
         const localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
         if (!noticeData.id) noticeData.id = 'notice_' + Date.now();
 
@@ -380,13 +420,19 @@ function setupNoticesForm() {
           localNotices.unshift(noticeData);
         }
         localStorage.setItem('smart_lobby_notices', JSON.stringify(localNotices));
+
+        // Sync to Firebase Cloud
+        if (window.FirebaseSync) {
+          await window.FirebaseSync.saveNotices(localNotices);
+        }
+
         try { window.dispatchEvent(new Event('storage')); } catch (e) {}
         formBox.classList.add('hidden');
         form.reset();
         selectedNoticeFile = null;
         if (fileInput) fileInput.value = '';
         await loadNotices();
-        showAdminToast('ההודעה נשמרה בהצלחה במסך הראשי!', '📢');
+        showAdminToast('ההודעה נשמרה וסונכרנה ללובי בהצלחה!', '📢');
       }
     });
   }
@@ -398,7 +444,19 @@ async function loadNotices() {
 
   try {
     let notices = [];
-    if (window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {
+
+    // 1. Try Firebase Cloud first
+    if (window.FirebaseSync && window.FirebaseSync.isInitialized) {
+      try {
+        const cloudNotices = await window.FirebaseSync.getNotices();
+        if (Array.isArray(cloudNotices) && cloudNotices.length > 0) {
+          notices = cloudNotices;
+        }
+      } catch (e) {}
+    }
+
+    // 2. Try Local Node API
+    if (notices.length === 0 && window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {
       try {
         const res = await fetch('/api/notices');
         if (res.ok) {
@@ -408,6 +466,7 @@ async function loadNotices() {
       } catch (apiErr) {}
     }
     
+    // 3. Fallback to data/notices.json
     if (notices.length === 0) {
       try {
         const res = await fetch('data/notices.json?v=' + Date.now());
@@ -523,12 +582,17 @@ window.deleteNotice = async function(id) {
     const updated = localNotices.filter(n => n.id !== id);
     localStorage.setItem('smart_lobby_notices', JSON.stringify(updated));
 
+    // Sync deletion to Firebase Cloud
+    if (window.FirebaseSync) {
+      await window.FirebaseSync.saveNotices(updated);
+    }
+
     // Dispatch event to notify other open screens
     window.dispatchEvent(new Event('storage'));
   } catch (e) {}
 
   await loadNotices();
-  showAdminToast('ההודעה נמחקה בהצלחה מהמסך!', '🗑️');
+  showAdminToast('ההודעה נמחקה וסונכרנה מהלובי בהצלחה!', '🗑️');
 };
 
 // ==========================================
@@ -1160,31 +1224,33 @@ function updateHeaderRadioStatus(isEnabled) {
 }
 
 async function saveSettingsToServer(newSettings, successMessage) {
+  // Always update local in-memory & localStorage
+  const local = JSON.parse(localStorage.getItem('smart_lobby_settings') || '{}');
+  const merged = { ...local, ...newSettings };
+  localStorage.setItem('smart_lobby_settings', JSON.stringify(merged));
+  settingsData = { ...settingsData, ...newSettings };
+  populateSettingsUI();
+
+  // 1. Sync to Firebase Real-time Global Cloud
+  if (window.FirebaseSync) {
+    try {
+      await window.FirebaseSync.saveSettings(merged);
+      console.log('⚡ Settings synced to Firebase Cloud successfully!');
+    } catch (e) {
+      console.warn('Firebase save settings warning:', e);
+    }
+  }
+
+  // 2. Also try local Node API if available
   try {
-    const res = await fetch('/api/settings', {
+    await fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pin: currentPin, newSettings })
     });
+  } catch (err) {}
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success) {
-        await loadSettings();
-        showAdminToast(successMessage || 'נשמר בהצלחה!', '✅');
-        return true;
-      }
-    }
-    throw new Error('API not available');
-  } catch (err) {
-    // Static / LocalStorage fallback
-    const local = JSON.parse(localStorage.getItem('smart_lobby_settings') || '{}');
-    const merged = { ...local, ...newSettings };
-    localStorage.setItem('smart_lobby_settings', JSON.stringify(merged));
-    settingsData = { ...settingsData, ...newSettings };
-    populateSettingsUI();
-    showAdminToast(successMessage || 'ההגדרות נשמרו בהצלחה!', '✅');
-    return true;
-  }
+  showAdminToast(successMessage || 'ההגדרות נשמרו וסונכרנו ללובי בהצלחה!', '⚡');
+  return true;
 }
 

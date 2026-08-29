@@ -60,6 +60,41 @@ class BuildingSignageApp {
     this.renderSideColumn();
     this.startSlideshow();
     this.startPeriodicUpdates();
+
+    // Connect to Firebase Real-time Global Cloud
+    this.setupFirebaseCloudSync();
+  }
+
+  async setupFirebaseCloudSync() {
+    if (!window.FirebaseSync) return;
+
+    try {
+      await window.FirebaseSync.init();
+
+      // Listen for Live Settings Updates from any admin worldwide
+      window.FirebaseSync.onSettingsChanged((cloudSettings) => {
+        if (!cloudSettings) return;
+        console.log('⚡ [Screen] Live cloud settings received:', cloudSettings);
+        this.settings = { ...this.settings, ...cloudSettings };
+        this.applySettings();
+        this.renderNewsTicker();
+        this.buildSlides();
+      });
+
+      // Listen for Live Notices Updates from any admin worldwide
+      window.FirebaseSync.onNoticesChanged((cloudNotices) => {
+        if (!cloudNotices) return;
+        console.log('⚡ [Screen] Live cloud notices received:', cloudNotices.length);
+        this.notices = cloudNotices;
+        this.renderSideColumn();
+        this.buildSlides();
+      });
+
+      // Seed cloud database on first run if it is empty
+      await window.FirebaseSync.seedIfEmpty(this.settings, this.notices);
+    } catch (err) {
+      console.warn('[Screen] Firebase cloud sync setup note:', err);
+    }
   }
 
   // =========================================================
