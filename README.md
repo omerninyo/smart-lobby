@@ -64,6 +64,11 @@ Designed and developed by **[Omer Ninyo](https://github.com/omerninyo)**.
 * **Daily Auto-Play Scheduler:** Define daily broadcast hours (e.g. `08:00`–`21:00`).
 * **Secret Mute Gesture:** Long-press the clock (1.2s) or double-tap the logo to instantly mute/unmute audio.
 
+### ⚡ 6. Real-Time Global Cloud Sync (Google Firebase Firestore)
+* **Instant Multi-Device Sync:** Any notice or setting updated from an iPhone/Android or laptop is synced instantly via Firebase Firestore () and pushed to the lobby screen in real-time without page reloads.
+* **Offline Resilience:** Seamless fallback to LocalStorage and local JSON files if internet connection drops temporarily.
+* **Fork-Safe & Domain Protected:** Secured via Google Cloud authorized domain filters.
+
 ### 🕯️ 5. Autonomous Jewish Calendar & Israeli Special Events (שבת ומועדי ישראל)
 * **Dynamic Hebcal GPS Engine:** Automatic calculation of candle lighting, Havdalah times, and Parashat HaShavua for Hadera (`32.434°N, 34.9197°E`).
 * **Automated Festive Themes:** Auto-activates matching photographic wallpapers for Shabbat, Rosh Hashanah, Yom Kippur, Sukkot, Hanukkah, Tu BiShvat, Purim, Pesach, Memorial Days, Independence Day, Shavuot, and Tu B'Av.
@@ -143,6 +148,21 @@ For permanent wall-mounted installations:
 1. Install **Fully Kiosk Browser** on your Android tablet or TV screen.
 2. Set **Start URL** to `https://lobby.ninyo.co`.
 3. Enable **Kiosk Mode (Locked)**, **Start on Boot**, and **Keep Screen On**.
+
+---
+
+## 🌍 How to Deploy for Your Own Building (Open Source Guide)
+Anyone is welcome to fork this repository and launch a smart lobby board for their own residential building in 3 minutes:
+
+1. **Fork this repository** to your own GitHub account.
+2. **Customize your building settings** in `data/settings.json` (Building name, city, and GPS coordinates for accurate Shabbat and weather times).
+3. **Enable GitHub Pages:**
+   * Go to **Settings** ➡️ **Pages** in your repository.
+   * Under **Build and deployment**, select **Deploy from a branch** ➡️ choose `main` / `root` (or GitHub Actions).
+   * Your building dashboard is immediately live!
+4. *(Optional)* **Enable Real-Time Cloud Sync:**
+   * Create a free project at [Firebase Console](https://console.firebase.google.com).
+   * Copy `js/config.example.js` to `js/config.js` and paste your project credentials.
 
 ---
 

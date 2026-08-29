@@ -7,7 +7,7 @@
 (function(window) {
   "use strict";
 
-  const firebaseConfig = {
+  const defaultFirebaseConfig = {
     apiKey: "AIzaSyAj6G1ur6BK4OLiId1K2ABi2-_UtRAsEfY",
     authDomain: "smart-lobby-yarden.firebaseapp.com",
     projectId: "smart-lobby-yarden",
@@ -16,6 +16,10 @@
     appId: "1:183421780763:web:406f212c8efe8dc5f309be",
     measurementId: "G-RPM140HVZD"
   };
+
+  const firebaseConfig = (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey && !window.FIREBASE_CONFIG.apiKey.startsWith('YOUR_'))
+    ? window.FIREBASE_CONFIG
+    : defaultFirebaseConfig;
 
   class FirebaseSyncManager {
     constructor() {
