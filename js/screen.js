@@ -69,12 +69,21 @@ class BuildingSignageApp {
     if (!window.FirebaseSync) return;
 
     try {
+      this.bootTimestamp = this.bootTimestamp || Date.now();
       await window.FirebaseSync.init();
 
       // Listen for Live Settings Updates from any admin worldwide
       window.FirebaseSync.onSettingsChanged((cloudSettings) => {
         if (!cloudSettings) return;
         console.log('⚡ [Screen] Live cloud settings received:', cloudSettings);
+
+        // Check for Remote Force Reload
+        if (cloudSettings.system?.forceReloadAt && cloudSettings.system.forceReloadAt > this.bootTimestamp) {
+          console.log('🔄 [Screen] Remote reload command received from admin!');
+          window.location.reload(true);
+          return;
+        }
+
         this.settings = { ...this.settings, ...cloudSettings };
         this.applySettings();
         this.renderNewsTicker();
