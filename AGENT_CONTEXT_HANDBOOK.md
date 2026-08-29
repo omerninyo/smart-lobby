@@ -9,6 +9,9 @@
 ---
 
 ## 🧭 1. Executive Context & Core Principles
+0. **Firebase Real-Time Global Cloud Sync:**
+   The entire system is powered by Google Firebase Cloud Firestore (`smart-lobby-yarden` via `js/firebase-sync.js`). Any changes made in Admin from any mobile/desktop device anywhere in the world are synced to Firestore in <100ms and pushed via live websockets (`onSnapshot`) directly to the physical lobby screen in real-time without page reloads.
+
 1. **Zero External Heavy Dependencies on Frontend:**  
    The kiosk device in the building lobby runs an older Android 7 OS with limited RAM and CPU. The frontend strictly uses Vanilla JavaScript and optimized CSS3 (with GPU-accelerated `translate3d` and `will-change`). Do NOT introduce heavy frontend frameworks (React, Vue, Angular, etc.) on the display client.
 2. **Kiosk Layout Constraints:**  
