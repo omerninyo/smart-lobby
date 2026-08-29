@@ -155,3 +155,14 @@
 | `GET` | `/api/weather` | None | Live Open-Meteo weather & 4-day forecast |
 | `GET` | `/api/shabbat` | None | Live Hebcal candle lighting & holiday theme |
 | `GET` | `/api/news` | None | Real-time RSS news headlines |
+
+---
+
+## 🎨 5. Generated Photographic Notice Assets
+All images in the system are 100% human-free, photorealistic, and tailor-made:
+* `images/notices/peaceful_morning_lobby.jpg`: Luxury double-height lobby with sunlit Mediterranean garden.
+* `images/notices/clean_hallway_care.jpg`: Sparkling clean residential corridor with marble floor and elevator.
+* `images/notices/pets_cleanliness.jpg`: Well-groomed dog on leash in sunlit residential garden patio.
+* `images/notices/pruning_waste.jpg`: Neatly bundled green pruning branches on clean sidewalk edge.
+* `images/notices/gardening_cleaning.jpg`: Blooming residential garden and walkway.
+* `images/notices/maintenance.jpg`: Modern architectural building systems and clean entryway.
