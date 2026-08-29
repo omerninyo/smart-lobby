@@ -1079,9 +1079,9 @@ class BuildingSignageApp {
       } catch (e) {}
     }
 
-    // Client-side RSS proxy for GitHub Pages
+    // Client-side RSS proxy for GitHub Pages (with timeout & fallback)
     try {
-      const proxyRes = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://www.ynet.co.il/Integration/StoryRss2.xml');
+      const proxyRes = await fetchWithTimeout('https://api.rss2json.com/v1/api.json?rss_url=https://www.ynet.co.il/Integration/StoryRss2.xml', {}, 8000);
       if (proxyRes.ok) {
         const data = await proxyRes.json();
         if (data.items && data.items.length > 0) {
@@ -1090,7 +1090,9 @@ class BuildingSignageApp {
           return;
         }
       }
-    } catch (proxyErr) {}
+    } catch (proxyErr) {
+      console.warn('[Screen] Primary RSS fetch failed, checking backup proxy...', proxyErr.message);
+    }
 
     // Fallback Announcements Ticker
     this.newsItems = [
