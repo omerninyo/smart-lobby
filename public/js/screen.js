@@ -1157,7 +1157,7 @@ class BuildingSignageApp {
       return;
     }
 
-    feedContainer.innerHTML = this.notices.slice(0, 2).map((n, idx) => {
+    feedContainer.innerHTML = activeNotices.slice(0, 2).map((n, idx) => {
       const urgentClass = n.isUrgent ? 'urgent' : '';
       const badgeIcon = n.isUrgent ? '⚠️' : '📢';
       const imgIndicator = n.imageUrl ? '<span style="font-size: 0.72rem; color: #38bdf8;">🖼️ תמונה</span>' : '';
@@ -1190,8 +1190,9 @@ class BuildingSignageApp {
   buildSlides() {
     this.slides = [];
 
-    // 1. Committee Notice Slides
+    // 1. Committee Notice Slides (Exclude hidden notices)
     this.notices.forEach(notice => {
+      if (notice.hidden === true) return;
       this.slides.push({
         type: 'notice',
         data: notice

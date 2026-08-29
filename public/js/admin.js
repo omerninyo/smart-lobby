@@ -363,6 +363,7 @@ function setupNoticesForm() {
       const author = document.getElementById('notice-author').value.trim() || 'ועד הבית';
       const expiresVal = document.getElementById('notice-expires').value;
       const isUrgent = document.getElementById('notice-urgent').checked;
+      const isHidden = document.getElementById('notice-hidden') ? document.getElementById('notice-hidden').checked : false;
       let imageUrl = imgUrlHidden.value || null;
 
       // Upload image if newly selected
@@ -393,6 +394,7 @@ function setupNoticesForm() {
         content,
         author,
         isUrgent,
+        hidden: isHidden,
         imageUrl,
         expiresAt: expiresVal ? new Date(expiresVal).toISOString() : null
       };
@@ -515,14 +517,19 @@ async function loadNotices() {
     list.innerHTML = notices.map(n => {
       const urgentBadge = n.isUrgent ? `<span class="bg-red-600 text-white text-xs px-2 py-0.5 rounded-md font-bold">⚠️ דחוף</span>` : '';
       const imgBadge = n.imageUrl ? `<span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-md">🖼️ תמונה</span>` : '';
+      const hiddenBadge = n.hidden 
+        ? `<span class="bg-gray-700 text-amber-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-gray-600">👁️‍🗨️ מוסתרת</span>` 
+        : `<span class="bg-emerald-950 text-emerald-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-emerald-800">✅ מוצגת במסך</span>`;
       const expDate = n.expiresAt ? `<span class="text-xs text-amber-400">תפוגה: ${new Date(n.expiresAt).toLocaleDateString('he-IL')}</span>` : '<span class="text-xs text-gray-500">ללא תפוגה</span>';
+      const cardBg = n.hidden ? 'opacity-65 bg-gray-950/70 border-dashed border-gray-700' : 'hover:border-gray-600';
 
       return `
-        <div class="admin-card p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 hover:border-gray-600 transition">
+        <div class="admin-card p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 transition ${cardBg}">
           <div class="space-y-1 flex-1 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
               ${urgentBadge}
               ${imgBadge}
+              ${hiddenBadge}
               <h3 class="font-bold text-sm sm:text-base text-white truncate">${escapeHtml(n.title)}</h3>
             </div>
             <p class="text-xs sm:text-sm text-gray-300 line-clamp-2">${escapeHtml(n.content)}</p>
@@ -532,7 +539,10 @@ async function loadNotices() {
               ${expDate}
             </div>
           </div>
-          <div class="flex gap-2 self-end sm:self-center shrink-0 w-full sm:w-auto justify-end">
+          <div class="flex gap-2 self-end sm:self-center shrink-0 w-full sm:w-auto justify-end flex-wrap">
+            <button onclick="toggleNoticeHidden('${n.id}')" class="px-3 py-1.5 ${n.hidden ? 'bg-emerald-800 hover:bg-emerald-700 text-emerald-100' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'} active:scale-95 rounded-lg text-xs font-bold transition" title="${n.hidden ? 'הצג הודעה זו במסך הלובי' : 'הסתר הודעה זו מהמסך'}">
+              ${n.hidden ? '👁️ הצג במסך' : '👁️‍🗨️ הסתר'}
+            </button>
             <button onclick="editNotice('${n.id}')" class="px-3.5 py-1.5 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-xs font-semibold">✏️ ערוך</button>
             <button onclick="deleteNotice('${n.id}')" class="px-3.5 py-1.5 bg-red-900 bg-opacity-40 hover:bg-opacity-80 active:scale-95 text-red-300 rounded-lg text-xs font-semibold">🗑️ מחק</button>
           </div>
@@ -552,6 +562,7 @@ window.editNotice = function(id, encodedNotice) {
   document.getElementById('notice-content').value = n.content;
   document.getElementById('notice-author').value = n.author || 'ועד הבית';
   document.getElementById('notice-urgent').checked = Boolean(n.isUrgent);
+  if (document.getElementById('notice-hidden')) document.getElementById('notice-hidden').checked = Boolean(n.hidden);
   document.getElementById('notice-image-url').value = n.imageUrl || '';
 
   const previewBox = document.getElementById('notice-img-preview-box');
@@ -1280,3 +1291,33 @@ async function saveSettingsToServer(newSettings, successMessage) {
   return true;
 }
 
+
+window.toggleNoticeHidden = async function(id) {
+  const n = window._adminNoticesMap[id];
+  if (!n) return;
+
+  const newState = !Boolean(n.hidden);
+  n.hidden = newState;
+
+  let localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
+  const idx = localNotices.findIndex(item => item.id === id);
+  if (idx !== -1) {
+    localNotices[idx].hidden = newState;
+  } else {
+    localNotices.unshift(n);
+  }
+  localStorage.setItem('smart_lobby_notices', JSON.stringify(localNotices));
+
+  if (window.FirebaseSync) {
+    await window.FirebaseSync.saveNotices(localNotices);
+  }
+
+  try { window.dispatchEvent(new Event('storage')); } catch (e) {}
+
+  await loadNotices();
+  if (newState) {
+    showAdminToast('ההודעה הוסתרה מהמסך בהצלחה! (נשמרת באדמין לשימוש עתידי)', '👁️‍🗨️');
+  } else {
+    showAdminToast('ההודעה מוצגת כעת במסך הלובי!', '👁️');
+  }
+};
