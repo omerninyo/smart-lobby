@@ -60,14 +60,34 @@
   ],
   "notice_topics": [
     {
-      "id": "topic-maintenance",
-      "title": "תחזוקה ושיפוצים",
-      "url": "images/notices/maintenance.jpg"
+      "id": "notice-peaceful-lobby",
+      "name": "בוקר טוב ויום רגוע",
+      "url": "images/notices/peaceful_morning_lobby.jpg"
     },
     {
-      "id": "topic-gardening",
-      "title": "ניקיון וגינון",
+      "id": "notice-hallway-clean",
+      "name": "ניקיון מסדרון ומעלית",
+      "url": "images/notices/clean_hallway_care.jpg"
+    },
+    {
+      "id": "notice-pets",
+      "name": "חיות מחמד וגינה",
+      "url": "images/notices/pets_cleanliness.jpg"
+    },
+    {
+      "id": "notice-pruning",
+      "name": "פינוי גזם וגינון",
+      "url": "images/notices/pruning_waste.jpg"
+    },
+    {
+      "id": "notice-gardening",
+      "name": "גינון וטיפוח סביבתי",
       "url": "images/notices/gardening_cleaning.jpg"
+    },
+    {
+      "id": "notice-maintenance",
+      "name": "תחזוקה ומערכות",
+      "url": "images/notices/maintenance.jpg"
     }
   ]
 }

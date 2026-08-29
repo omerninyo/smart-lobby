@@ -6,7 +6,7 @@
     "content": "ועד הבית מברך את כל הדיירים, המשפחות והאורחים בברכת יום נעים, שקט ופורה. לכל שאלה, פנייה או דיווח ניתן לפנות לחברי הוועד.",
     "author": "ועד הבית",
     "isUrgent": false,
-    "imageUrl": "images/wallpapers/abstract/luxury_fluid_gold.jpg",
+    "imageUrl": "images/notices/peaceful_morning_lobby.jpg",
     "createdAt": "2026-08-29T10:00:00.000Z",
     "expiresAt": null
   },
@@ -28,7 +28,7 @@
     "content": "נא להקפיד על קשירת שקיות האשפה היטב כדי למנוע טפטופים ולכלוך במעלית ובמסדרונות הקומות בדרך לפח המרכזי. תודה על שיתוף הפעולה!",
     "author": "ועד הבית",
     "isUrgent": false,
-    "imageUrl": "images/notices/gardening_cleaning.jpg",
+    "imageUrl": "images/notices/clean_hallway_care.jpg",
     "createdAt": "2026-08-29T10:00:00.000Z",
     "expiresAt": null
   },
@@ -39,7 +39,7 @@
     "content": "דיירים יקרים בעלי כלבים: נא להקפיד על הולכת כלבים ברצועה בשטחים המשותפים, ולדאוג לשמירה קפדנית על ניקיון הלובי, המעלית והחצר. יחד נשמור על סביבה נקייה ונעימה לכולם!",
     "author": "ועד הבית",
     "isUrgent": false,
-    "imageUrl": "images/wallpapers/landscapes/galilee_olive_sunrise.jpg",
+    "imageUrl": "images/notices/pets_cleanliness.jpg",
     "createdAt": "2026-08-29T10:00:00.000Z",
     "expiresAt": null
   },
@@ -50,7 +50,7 @@
     "content": "פינוי גזם וגרוטאות ברחוב הירדן מתבצע ע\"י עיריית חדרה בימי שני בבוקר. אנא הוציאו גזם וגרוטאות לפינת הפינוי ברחוב אך ורק ביום ראשון החל משעות הערב, כדי לשמור על מדרכה פנויה ומסודרת במהלך השבוע.",
     "author": "ועד הבית",
     "isUrgent": false,
-    "imageUrl": "images/notices/maintenance.jpg",
+    "imageUrl": "images/notices/pruning_waste.jpg",
     "createdAt": "2026-08-29T10:00:00.000Z",
     "expiresAt": null
   }
