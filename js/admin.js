@@ -1191,15 +1191,23 @@ function setupHeaderQuickActions() {
   }
 
   if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => {
+    refreshBtn.addEventListener('click', async () => {
       const now = Date.now();
       localStorage.setItem('smart_lobby_force_reload', now.toString());
+
+      if (window.FirebaseSync) {
+        try {
+          await window.FirebaseSync.saveSettings({
+            system: { forceReloadAt: now }
+          });
+        } catch (e) {}
+      }
 
       try {
         window.dispatchEvent(new Event('storage'));
       } catch (e) {}
 
-      showAdminToast('🔄 אות רענון נשלח למסך השילוט!', '🚀');
+      showAdminToast('🔄 אות רענון ענן נשלח למסך הלובי!', '🚀');
     });
   }
 }
