@@ -96,8 +96,8 @@
     ]
   },
   "security": {
-    "adminPin": "1234",    // Master Admin PIN (all 6 tabs)
-    "editorPin": "1111"     // Simplified Committee Member PIN (Notices + Radio only)
+    "adminPin": "9681 (Default in repo: 1234)",    // Master Admin PIN (all 6 tabs)
+    "editorPin": "9090 (Default in repo: 1111)"     // Simplified Committee Member PIN (Notices + Radio only)
   }
 }
 ```
@@ -106,7 +106,7 @@
 ```json
 [
   {
-    "id": "notice-123456789",
+    "id": "notice-9681 (Default in repo: 1234)56789",
     "title": "כותרת ההודעה",
     "content": "תוכן ההודעה המלא...",
     "author": "ועד הבית",
@@ -138,8 +138,8 @@
 
 | Role | PIN | Access Permissions |
 | :--- | :---: | :--- |
-| **Master Admin** | `1234` | Full access to all 6 tabs (Notices, Display & Themes, Contacts, Radio, Settings & Security, Help & Touch Map). |
-| **Committee Member** | `1111` | Simplified Senior-friendly interface: Access restricted to **Notices Board** and **Radio Controls** only. All display, opacity, hardware calibration, contacts, and security tabs are completely hidden. |
+| **Master Admin** | `9681 (Default in repo: 1234)` | Full access to all 6 tabs (Notices, Display & Themes, Contacts, Radio, Settings & Security, Help & Touch Map). |
+| **Committee Member** | `9090 (Default in repo: 1111)` | Simplified Senior-friendly interface: Access restricted to **Notices Board** and **Radio Controls** only. All display, opacity, hardware calibration, contacts, and security tabs are completely hidden. |
 
 ---
 
@@ -172,3 +172,10 @@ All images in the system are 100% human-free, photorealistic, and tailor-made:
 ## 📐 6. Notice & Theme Layout Proportions
 * **Notice Attached Images:** Structured in vertical portrait ratio (3:4 / 9:16). Fills the 46% split card vertically with `object-fit: cover` and rounded corners, delivering a magazine/poster aesthetic.
 * **Theme & Holiday Slides:** Features an expansive, grand hero card with gradient glassmorphism overlay, providing substantial height and cinematic presence.
+
+---
+
+## 🔑 7. Active Production Credentials & PINs
+* **Master Admin PIN (Production):** `9681` (Full access to all 6 tabs and cloud settings).
+* **Committee Member PIN (Production):** `9090` (Simplified notices + radio view).
+* **Default Open-Source PINs (in repo settings.json template):** `1234` / `1111`.
