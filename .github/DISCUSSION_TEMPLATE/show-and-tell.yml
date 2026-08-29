@@ -1,0 +1,21 @@
+title: "🏢 [המסך בבניין שלנו]: "
+labels: ["show-and-tell"]
+body:
+  - type: markdown
+    attributes:
+      value: "התקנתם את המערכת בלובי הבניין שלכם? נשמח לראות! שתפו תמונה או סרטון קצר מהמסך."
+  - type: input
+    id: building_city
+    attributes:
+      label: "עיר / סוג הבניין (אופציונלי)"
+      placeholder: "למשל: תל אביב / מגדל 18 קומות / בניין בוטיק"
+  - type: textarea
+    id: hardware_setup
+    attributes:
+      label: "באיזו חומרה השתמשתם? (טאבלט / טלוויזיה / Fully Kiosk)"
+      placeholder: "למשל: טאבלט Samsung 10.1 עם אפליקציית Fully Kiosk Browser ומטען קיר קבוע"
+  - type: textarea
+    id: photo_embed
+    attributes:
+      label: "תמונה של המסך בלובי (גררו תמונה לכאן)"
+      placeholder: "גררו תמונה של המסך בלובי..."

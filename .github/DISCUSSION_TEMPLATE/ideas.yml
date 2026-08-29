@@ -1,0 +1,20 @@
+title: "💡 [רעיון / הצעה]: "
+labels: ["enhancement", "idea"]
+body:
+  - type: markdown
+    attributes:
+      value: "תודה על השיתוף! הציעו פיצ'רים, ערכות נושא, או שיפורים לשילוט הדיגיטלי."
+  - type: input
+    id: idea_title
+    attributes:
+      label: "כותרת הרעיון / הפיצ'ר המוצע"
+      placeholder: "למשל: תמיכה בתחזית רב-שבועית או ווידג'ט מעליות נוסף"
+    validations:
+      required: true
+  - type: textarea
+    id: idea_desc
+    attributes:
+      label: "תיאור מפורט ואיך זה יעזור לדיירים או לוועד"
+      placeholder: "הסבירו מה הבעיה שנפתרת או מה היתרון של התוספת..."
+    validations:
+      required: true

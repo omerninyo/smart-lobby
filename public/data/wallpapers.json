@@ -1,0 +1,93 @@
+{
+  "shabbat": [
+    {
+      "id": "shabbat-1",
+      "title": "נרות שבת, חלה וגביע קידוש מהודר",
+      "url": "images/wallpapers/shabbat/shabbat_candles_luxury.jpg"
+    }
+  ],
+  "rosh-hashanah": [
+    {
+      "id": "rh-1",
+      "title": "רימונים, תפוחים וצנצנת דבש",
+      "url": "images/wallpapers/holidays/rosh_hashanah.jpg"
+    }
+  ],
+  "sukkot": [
+    {
+      "id": "sukkot-1",
+      "title": "ארבעת המינים בסוכה מסורתית",
+      "url": "images/wallpapers/holidays/sukkot.jpg"
+    }
+  ],
+  "hanukkah": [
+    {
+      "id": "hanukkah-1",
+      "title": "חנוכיית כסף מאירה וסופגניות",
+      "url": "images/wallpapers/holidays/hanukkah.jpg"
+    }
+  ],
+  "pesach": [
+    {
+      "id": "pesach-1",
+      "title": "קערת ליל הסדר, מצות וגביעי יין",
+      "url": "images/wallpapers/holidays/pesach.jpg"
+    }
+  ],
+  "shavuot": [
+    {
+      "id": "shavuot-1",
+      "title": "סל ביכורים, שבעת המינים וגבינות",
+      "url": "images/wallpapers/holidays/shavuot.jpg"
+    }
+  ],
+  "default": [
+    {
+      "id": "def-1",
+      "title": "גלי ספיר וזהב יוקרתי",
+      "url": "images/wallpapers/abstract/luxury_fluid_gold.jpg"
+    },
+    {
+      "id": "def-2",
+      "title": "ירושלים של זהב בשקיעה",
+      "url": "images/wallpapers/landscapes/jerusalem_sunset.jpg"
+    },
+    {
+      "id": "def-3",
+      "title": "כרמי זיתים ופריחת הגליל בזריחה",
+      "url": "images/wallpapers/landscapes/galilee_olive_sunrise.jpg"
+    }
+  ],
+  "notice_topics": [
+    {
+      "id": "notice-peaceful-lobby",
+      "name": "בוקר טוב ויום רגוע",
+      "url": "images/notices/peaceful_morning_lobby.jpg"
+    },
+    {
+      "id": "notice-hallway-clean",
+      "name": "ניקיון מסדרון ומעלית",
+      "url": "images/notices/clean_hallway_care.jpg"
+    },
+    {
+      "id": "notice-pets",
+      "name": "חיות מחמד וגינה",
+      "url": "images/notices/pets_cleanliness.jpg"
+    },
+    {
+      "id": "notice-pruning",
+      "name": "פינוי גזם וגינון",
+      "url": "images/notices/pruning_waste.jpg"
+    },
+    {
+      "id": "notice-gardening",
+      "name": "גינון וטיפוח סביבתי",
+      "url": "images/notices/gardening_cleaning.jpg"
+    },
+    {
+      "id": "notice-maintenance",
+      "name": "תחזוקה ומערכות",
+      "url": "images/notices/maintenance.jpg"
+    }
+  ]
+}

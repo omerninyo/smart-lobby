@@ -1,0 +1,20 @@
+name: 🐛 דיווח על באג (Bug Report)
+description: דיווח על בעיה או תקלה במערכת השילוט או ב-Admin
+title: "🐛 [באג]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "תודה שעוזרים לנו לשפר את המערכת! אנא ספקו כמה שיותר פרטים לשחזור."
+  - type: textarea
+    id: bug_desc
+    attributes:
+      label: "תיאור הבאג"
+      placeholder: "מה קרה בפועל?"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: "סביבת הרצה (מכשיר / דפדפן)"
+      placeholder: "למשל: Chrome באנדרואיד / Safari באייפון / Fully Kiosk"

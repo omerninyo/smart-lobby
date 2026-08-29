@@ -1,0 +1,14 @@
+node_modules/
+npm-debug.log
+.DS_Store
+*.log
+.env
+
+backup_full_history.bundle
+
+local_backups/
+docs/GIT_HISTORY_LOG.md
+
+AGENT_CONTEXT_HANDBOOK.md
+PROJECT_DOCUMENTATION.md
+local_docs/

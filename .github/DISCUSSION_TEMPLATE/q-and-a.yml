@@ -1,0 +1,13 @@
+title: "❓ [שאלה / עזרה בהתקנה]: "
+labels: ["question", "help-wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: "צריכים עזרה בהגדרת ה-Firebase, התאמת זמני שבת, או התקנה על טאבלט? שאלו כאן!"
+  - type: textarea
+    id: question_body
+    attributes:
+      label: "מה השאלה או הבעיה בה נתקלתם?"
+      placeholder: "תארו את הצעד שבו אתם נמצאים ומה ברצונכם להגדיר..."
+    validations:
+      required: true

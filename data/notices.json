@@ -1,0 +1,57 @@
+[
+  {
+    "id": "notice-welcome-calm",
+    "type": "announcement",
+    "title": "ועד הבית מאחל יום נעים ורגוע",
+    "content": "ועד הבית מברך את כל הדיירים, המשפחות והאורחים בברכת יום נעים, שקט ופורה. לכל שאלה, פנייה או דיווח ניתן לפנות לחברי הוועד.",
+    "author": "ועד הבית",
+    "isUrgent": false,
+    "imageUrl": "images/notices/peaceful_morning_lobby.jpg?v=20260829_vertical",
+    "createdAt": "2026-08-29T10:00:00.000Z",
+    "expiresAt": null
+  },
+  {
+    "id": "notice-shabbat-shalom",
+    "type": "announcement",
+    "title": "שבת שלום ומבורכת",
+    "content": "ועד הבית מאחל לכל דיירי ואורחי הבניין שבת שלום, סוף שבוע נעים, שלווה ומנוחה.",
+    "author": "ועד הבית",
+    "isUrgent": false,
+    "imageUrl": "images/notices/shabbat_candles_vertical.jpg?v=20260829_vertical",
+    "createdAt": "2026-08-29T10:00:00.000Z",
+    "expiresAt": null
+  },
+  {
+    "id": "notice-cleanliness-trash",
+    "type": "reminder",
+    "title": "שמירה על ניקיון וסדר בבניין",
+    "content": "נא להקפיד על קשירת שקיות האשפה היטב כדי למנוע טפטופים ולכלוך במעלית ובמסדרונות הקומות בדרך לפח המרכזי. תודה על שיתוף הפעולה!",
+    "author": "ועד הבית",
+    "isUrgent": false,
+    "imageUrl": "images/notices/clean_hallway_care.jpg?v=20260829_vertical",
+    "createdAt": "2026-08-29T10:00:00.000Z",
+    "expiresAt": null
+  },
+  {
+    "id": "notice-pets-cleanliness",
+    "type": "reminder",
+    "title": "שמירה על ניקיון עם חיות מחמד",
+    "content": "דיירים יקרים בעלי כלבים: נא להקפיד על הולכת כלבים ברצועה בשטחים המשותפים, ולדאוג לשמירה קפדנית על ניקיון הלובי, המעלית והחצר. יחד נשמור על סביבה נקייה ונעימה לכולם!",
+    "author": "ועד הבית",
+    "isUrgent": false,
+    "imageUrl": "images/notices/pets_cleanliness.jpg?v=20260829_vertical",
+    "createdAt": "2026-08-29T10:00:00.000Z",
+    "expiresAt": null
+  },
+  {
+    "id": "notice-pruning-schedule",
+    "type": "announcement",
+    "title": "פינוי גזם וגרוטאות - ימי פינוי",
+    "content": "פינוי גזם וגרוטאות ברחוב הירדן מתבצע ע\"י עיריית חדרה בימי שני בבוקר. אנא הוציאו גזם וגרוטאות לפינת הפינוי ברחוב אך ורק ביום ראשון החל משעות הערב, כדי לשמור על מדרכה פנויה ומסודרת במהלך השבוע.",
+    "author": "ועד הבית",
+    "isUrgent": false,
+    "imageUrl": "images/notices/pruning_waste.jpg?v=20260829_vertical",
+    "createdAt": "2026-08-29T10:00:00.000Z",
+    "expiresAt": null
+  }
+]
