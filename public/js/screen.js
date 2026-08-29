@@ -1382,20 +1382,32 @@ class BuildingSignageApp {
           </div>
         `;
       }
-      // SLIDE TYPE 5: HOLIDAY CELEBRATION (With Photographic Hero)
+      // SLIDE TYPE 5: HOLIDAY CELEBRATION (With Grand Photographic Hero)
       else if (slide.type === 'holiday_greeting') {
         const photoHero = slide.data.image ? `
-          <div style="width: 100%; height: 12rem; border-radius: 1rem; overflow: hidden; margin-bottom: 1rem; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
-            <img src="${slide.data.image}" alt="חג" style="width: 100%; height: 100%; object-fit: cover;" />
+          <div class="holiday-grand-hero-box">
+            <img src="${slide.data.image}" alt="חג" class="holiday-grand-hero-img" />
+            <div class="holiday-hero-gradient"></div>
+            <div class="holiday-hero-overlay-content">
+              <div class="holiday-hero-icon">${slide.data.icon}</div>
+              <h2 class="holiday-hero-title">${slide.data.title}</h2>
+            </div>
           </div>
-        ` : '';
+        ` : `
+          <div style="font-size: 3.5rem; animation: pulse-glow 3s infinite; margin-bottom: 0.5rem;">${slide.data.icon}</div>
+          <h2 style="font-family: var(--font-heading); font-size: 2.8rem; font-weight: 900; color: #fbbf24;">${slide.data.title}</h2>
+        `;
 
         contentHtml = `
-          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%; height: 100%; gap: 0.75rem;">
+          <div class="holiday-slide-grand-layout">
             ${photoHero}
-            <div style="font-size: 3rem; animation: pulse-glow 3s infinite;">${slide.data.icon}</div>
-            <h2 style="font-family: var(--font-heading); font-size: 2.4rem; font-weight: 900; color: #fbbf24; text-shadow: 0 4px 16px rgba(251,191,36,0.3);">${slide.data.title}</h2>
-            <p style="font-size: 1.25rem; color: #f1f5f9; max-width: 85%; line-height: 1.4;">${slide.data.subtitle}</p>
+            <div class="holiday-slide-body">
+              <p class="holiday-slide-subtitle">${slide.data.subtitle}</p>
+            </div>
+            <div class="stage-notice-footer">
+              <span>הירדן 5, חדרה</span>
+              <span>שבת ומועדי ישראל</span>
+            </div>
           </div>
         `;
       }
