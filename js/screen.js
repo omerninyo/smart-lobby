@@ -1145,9 +1145,10 @@ class BuildingSignageApp {
     const countBadge = document.getElementById('notices-count-badge');
     if (!feedContainer) return;
 
-    if (countBadge) countBadge.textContent = `${this.notices.length} הודעות`;
+    const activeNotices = (this.notices || []).filter(n => !n.hidden);
+    if (countBadge) countBadge.textContent = `${activeNotices.length} הודעות`;
 
-    if (this.notices.length === 0) {
+    if (activeNotices.length === 0) {
       feedContainer.innerHTML = `
         <div style="padding: 1.25rem 0.5rem; text-align: center; color: #94a3b8; font-size: 0.85rem;">
           <p>אין הודעות ועד מיוחדות כרגע</p>
@@ -1157,7 +1158,7 @@ class BuildingSignageApp {
       return;
     }
 
-    feedContainer.innerHTML = activeNotices.slice(0, 2).map((n, idx) => {
+    feedContainer.innerHTML = activeNotices.map((n, idx) => {
       const urgentClass = n.isUrgent ? 'urgent' : '';
       const badgeIcon = n.isUrgent ? '⚠️' : '📢';
       const imgIndicator = n.imageUrl ? '<span style="font-size: 0.72rem; color: #38bdf8;">🖼️ תמונה</span>' : '';
@@ -1165,10 +1166,10 @@ class BuildingSignageApp {
       return `
         <div class="mini-notice-item ${urgentClass}" onclick="window.signageApp.jumpToNotice('${n.id}')" title="לחץ לקריאה מלאה">
           <div class="mini-notice-title">
-            <span>${badgeIcon} ${n.title}</span>
-            <span style="font-size: 0.72rem; color: #94a3b8;">${n.author || 'ועד'}</span>
+            <span>${badgeIcon} ${escapeHtml(n.title)}</span>
+            <span style="font-size: 0.72rem; color: #94a3b8;">${escapeHtml(n.author || 'ועד')}</span>
           </div>
-          <div class="mini-notice-snippet">${n.content}</div>
+          <div class="mini-notice-snippet">${escapeHtml(n.content)}</div>
           ${imgIndicator}
         </div>
       `;

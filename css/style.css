@@ -1034,8 +1034,14 @@ body.high-contrast-side .env-stat-box {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  overflow: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   flex: 1;
+}
+
+.side-notices-container::-webkit-scrollbar {
+  display: none;
 }
 
 .mini-notice-item {
