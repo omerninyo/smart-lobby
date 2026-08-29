@@ -17,17 +17,37 @@
 
 ---
 
+## 📸 Comprehensive Visual Showcase
+
+### 🖥️ 1. Main Lobby Touchscreen Kiosk Display (1080p Interactive Stage)
+
+| 🐕 Notice: Pets & Lawn Care (Vertical 3:4 Layout) | 🌿 Notice: Pruning & Waste Schedule (Hadera) |
+| :---: | :---: |
+| ![Pets Notice](docs/screenshots/01_kiosk_notice_pets.png) | ![Pruning Notice](docs/screenshots/02_kiosk_notice_pruning.png) |
+
+| 🧹 Notice: Corridor & Elevator Care | ✨ Notice: Daily Welcome & Building Greeting |
+| :---: | :---: |
+| ![Hallway Notice](docs/screenshots/03_kiosk_notice_hallway.png) | ![Welcome Notice](docs/screenshots/04_kiosk_notice_lobby.png) |
+
+| 🕯️ Grand Hero Slide: Shabbat & Candle Lighting | 📞 Building Service & Emergency Contacts Directory |
+| :---: | :---: |
+| ![Shabbat Grand Hero](docs/screenshots/05_kiosk_shabbat_hero.png) | ![Emergency Contacts Directory](docs/screenshots/06_kiosk_contacts_directory.png) |
+
 ---
 
-## 📸 Visual Showcase & Interface Previews
+### 📱 2. Mobile & Tablet Committee Administration Panel (iOS / Android)
 
-| 🖥️ Main Lobby Touchscreen Kiosk Display | 🌤️ 4-Day Forecast & Shabbat Timings |
+| 🔐 1. Dual-PIN Access Keypad | 📢 2. Notice Management Tab |
 | :---: | :---: |
-| ![Lobby Kiosk Display](docs/screenshots/01_kiosk_display_main.png) | ![Weather & Jewish Calendar](docs/screenshots/02_kiosk_weather_forecast.png) |
+| ![PIN Login](docs/screenshots/07_admin_mobile_pin_login.png) | ![Notices Tab](docs/screenshots/08_admin_mobile_notices_tab.png) |
 
-| 📱 Committee Admin Panel (Dual-PIN Auth) | 🖼️ Built-in AI Photographic Gallery Picker |
+| 🎨 3. Display & Opacity Calibration | 📻 4. Background Radio & 103FM Player |
 | :---: | :---: |
-| ![Admin Panel Overview](docs/screenshots/03_admin_panel_overview.png) | ![Gallery Picker Modal](docs/screenshots/04_admin_gallery_picker.png) |
+| ![Display Tab](docs/screenshots/09_admin_mobile_display_tab.png) | ![Radio Tab](docs/screenshots/10_admin_mobile_radio_tab.png) |
+
+| 💡 5. Touch Gestures & Hardware Map | 🖼️ 6. Curated AI Image Gallery Picker |
+| :---: | :---: |
+| ![Touch Guide](docs/screenshots/11_admin_mobile_touch_guide.png) | ![Gallery Picker](docs/screenshots/04_admin_gallery_picker.png) |
 
 ---
 
