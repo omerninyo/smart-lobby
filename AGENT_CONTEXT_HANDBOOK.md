@@ -166,3 +166,9 @@ All images in the system are 100% human-free, photorealistic, and tailor-made:
 * `images/notices/pruning_waste.jpg`: Neatly bundled green pruning branches on clean sidewalk edge.
 * `images/notices/gardening_cleaning.jpg`: Blooming residential garden and walkway.
 * `images/notices/maintenance.jpg`: Modern architectural building systems and clean entryway.
+
+---
+
+## 📐 6. Notice & Theme Layout Proportions
+* **Notice Attached Images:** Structured in vertical portrait ratio (3:4 / 9:16). Fills the 46% split card vertically with `object-fit: cover` and rounded corners, delivering a magazine/poster aesthetic.
+* **Theme & Holiday Slides:** Features an expansive, grand hero card with gradient glassmorphism overlay, providing substantial height and cinematic presence.
