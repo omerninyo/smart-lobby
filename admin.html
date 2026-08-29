@@ -186,6 +186,13 @@
         </div>
       </div>
       <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <!-- Live Cloud Sync Status Badge -->
+        <div id="cloud-sync-status-badge" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-600/50 shadow-sm" title="מסד הנתונים מחובר לענן - סנכרון חי בזמן אמת">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="cloud-sync-text" class="hidden sm:inline">סנכרון ענן פעיל</span>
+          <span class="sm:hidden">ענן</span>
+        </div>
+
         <!-- Quick Radio Mute/Play Toggle -->
         <button id="header-quick-radio-btn" class="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm" title="השתקה או הפעלה מהירה של הרדיו">
           <span id="header-radio-icon">📻</span>
@@ -1061,6 +1068,11 @@
 
   </div>
 
-  <script src="js/admin.js?v=20260829_dualpin"></script>
+  <!-- Firebase Cloud Firestore SDK (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-sync.js?v=20260829_cloudsync"></script>
+
+  <script src="js/admin.js?v=20260829_cloudsync"></script>
 </body>
 </html>
