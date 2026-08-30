@@ -139,9 +139,8 @@ function setupAuth() {
     const pin = pinInput.value.trim();
     if (!pin) return;
 
-    if (!settingsData) {
-      await loadSettings();
-    }
+    // Always ensure fresh settings from Cloud Firestore before checking PIN
+    await loadSettings();
 
     const adminPin = settingsData?.security?.adminPin || '1234';
     const editorPin = settingsData?.security?.editorPin || '1111';
@@ -420,26 +419,24 @@ function setupNoticesForm() {
         }
         throw new Error('API unavailable');
       } catch (err) {
-        // LocalStorage & Firebase Cloud Sync
-        const localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
+        // Cloud-First Notice Saving
+        let currentNotices = Object.values(window._adminNoticesMap || {});
+        if (currentNotices.length === 0) {
+          currentNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
+        }
         if (!noticeData.id) noticeData.id = 'notice_' + Date.now();
 
-        // If editing/re-adding, remove from deleted notices list
-        const deletedIds = JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]');
-        const updatedDeleted = deletedIds.filter(dId => dId !== noticeData.id);
-        localStorage.setItem('smart_lobby_deleted_notices', JSON.stringify(updatedDeleted));
-
-        const existingIdx = localNotices.findIndex(n => n.id === noticeData.id);
+        const existingIdx = currentNotices.findIndex(n => n.id === noticeData.id);
         if (existingIdx !== -1) {
-          localNotices[existingIdx] = noticeData;
+          currentNotices[existingIdx] = noticeData;
         } else {
-          localNotices.unshift(noticeData);
+          currentNotices.unshift(noticeData);
         }
-        localStorage.setItem('smart_lobby_notices', JSON.stringify(localNotices));
+        localStorage.setItem('smart_lobby_notices', JSON.stringify(currentNotices));
 
-        // Sync to Firebase Cloud
+        // Sync to Firebase Cloud for all devices
         if (window.FirebaseSync) {
-          await window.FirebaseSync.saveNotices(localNotices);
+          await window.FirebaseSync.saveNotices(currentNotices);
         }
 
         try { window.dispatchEvent(new Event('storage')); } catch (e) {}
@@ -448,7 +445,7 @@ function setupNoticesForm() {
         selectedNoticeFile = null;
         if (fileInput) fileInput.value = '';
         await loadNotices();
-        showAdminToast('ההודעה נשמרה וסונכרנה ללובי בהצלחה!', '📢');
+        showAdminToast('ההודעה נשמרה וסונכרנה לכל המכשירים בהצלחה!', '📢');
       }
     });
   }
@@ -459,47 +456,47 @@ async function loadNotices() {
   if (!list) return;
 
   try {
-    let notices = [];
+    let notices = null;
 
-    // 1. Try Firebase Cloud first
-    if (window.FirebaseSync && window.FirebaseSync.isInitialized) {
+    // 1. Try Firebase Cloud Firestore first (Single Source of Truth across all devices!)
+    if (window.FirebaseSync) {
       try {
+        if (!window.FirebaseSync.isInitialized) {
+          await window.FirebaseSync.init();
+        }
         const cloudNotices = await window.FirebaseSync.getNotices();
-        if (Array.isArray(cloudNotices) && cloudNotices.length > 0) {
+        if (Array.isArray(cloudNotices)) {
           notices = cloudNotices;
+          localStorage.setItem('smart_lobby_notices', JSON.stringify(cloudNotices));
+        }
+      } catch (fbErr) {
+        console.warn('[Admin] Firebase notices fetch error, falling back to cache:', fbErr);
+      }
+    }
+
+    // 2. If cloud unreachable, fallback to localStorage cache
+    if (!notices) {
+      try {
+        const local = JSON.parse(localStorage.getItem('smart_lobby_notices') || 'null');
+        if (Array.isArray(local) && local.length > 0) {
+          notices = local;
         }
       } catch (e) {}
     }
 
-    // 2. Try Local Node API
-    if (notices.length === 0 && window.location.protocol.startsWith('http') && !window.location.hostname.includes('github.io')) {
-      try {
-        const res = await fetch('/api/notices');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.notices) notices = data.notices;
-        }
-      } catch (apiErr) {}
-    }
-    
-    // 3. Fallback to data/notices.json
-    if (notices.length === 0) {
+    // 3. If still empty, load initial seed from data/notices.json
+    if (!notices || notices.length === 0) {
       try {
         const res = await fetch('data/notices.json?v=' + Date.now());
-        if (res.ok) notices = await res.json();
+        if (res.ok) {
+          notices = await res.json();
+          // Seed cloud if empty
+          if (window.FirebaseSync && window.FirebaseSync.isInitialized) {
+            await window.FirebaseSync.saveNotices(notices);
+          }
+        }
       } catch (e) {}
     }
-
-    // Merge localStorage notices and filter deleted notices
-    try {
-      const localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
-      if (Array.isArray(localNotices) && localNotices.length > 0) {
-        const localIds = new Set(localNotices.map(n => n.id));
-        notices = [...localNotices, ...notices.filter(n => !localIds.has(n.id))];
-      }
-      const deletedIds = new Set(JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]'));
-      notices = notices.filter(n => !deletedIds.has(n.id));
-    } catch (e) {}
     
     if (!notices || notices.length === 0) {
       list.innerHTML = `
@@ -592,7 +589,8 @@ window.editNotice = function(id, encodedNotice) {
 };
 
 window.deleteNotice = async function(id) {
-  if (!confirm('האם למחוק הודעה זו מהמסך?')) return;
+  if (!confirm('האם למחוק הודעה זו לצמיתות?')) return;
+
   try {
     await fetch(`/api/notices/${id}`, {
       method: 'DELETE',
@@ -600,28 +598,23 @@ window.deleteNotice = async function(id) {
     });
   } catch (err) {}
 
-  // Always update LocalStorage & track deleted notice ID persistently
-  try {
-    const deletedIds = JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]');
-    if (!deletedIds.includes(id)) {
-      deletedIds.push(id);
-      localStorage.setItem('smart_lobby_deleted_notices', JSON.stringify(deletedIds));
-    }
-    const localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
-    const updated = localNotices.filter(n => n.id !== id);
-    localStorage.setItem('smart_lobby_notices', JSON.stringify(updated));
+  // Single Source of Truth deletion from memory & cloud
+  let currentNotices = Object.values(window._adminNoticesMap || {});
+  if (currentNotices.length === 0) {
+    currentNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
+  }
+  const updated = currentNotices.filter(n => n.id !== id);
+  localStorage.setItem('smart_lobby_notices', JSON.stringify(updated));
 
-    // Sync deletion to Firebase Cloud
-    if (window.FirebaseSync) {
-      await window.FirebaseSync.saveNotices(updated);
-    }
+  // Sync deletion directly to Firebase Cloud for all devices
+  if (window.FirebaseSync) {
+    await window.FirebaseSync.saveNotices(updated);
+  }
 
-    // Dispatch event to notify other open screens
-    window.dispatchEvent(new Event('storage'));
-  } catch (e) {}
+  try { window.dispatchEvent(new Event('storage')); } catch (e) {}
 
   await loadNotices();
-  showAdminToast('ההודעה נמחקה וסונכרנה מהלובי בהצלחה!', '🗑️');
+  showAdminToast('ההודעה נמחקה וסונכרנה מכל המכשירים בהצלחה!', '🗑️');
 };
 
 // ==========================================
@@ -1033,34 +1026,52 @@ function setupGeneralSettings() {
 // ==========================================
 async function loadSettings() {
   try {
-    const res = await fetch('/api/settings');
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success && data.settings) {
-        settingsData = data.settings;
+    let cloudSettings = null;
+
+    // 1. Try Firebase Cloud Firestore first (Single Source of Truth across all devices!)
+    if (window.FirebaseSync) {
+      try {
+        if (!window.FirebaseSync.isInitialized) {
+          await window.FirebaseSync.init();
+        }
+        cloudSettings = await window.FirebaseSync.getSettings();
+        if (cloudSettings && typeof cloudSettings === 'object' && Object.keys(cloudSettings).length > 0) {
+          settingsData = cloudSettings;
+          localStorage.setItem('smart_lobby_settings', JSON.stringify(cloudSettings));
+          populateSettingsUI();
+          return;
+        }
+      } catch (fbErr) {
+        console.warn('[Admin] Firebase settings fetch error, falling back to cache:', fbErr);
+      }
+    }
+
+    // 2. If cloud unreachable, fallback to localStorage cache
+    try {
+      const local = JSON.parse(localStorage.getItem('smart_lobby_settings') || 'null');
+      if (local && typeof local === 'object') {
+        settingsData = local;
         populateSettingsUI();
         return;
       }
-    }
-    throw new Error('API settings unavailable');
-  } catch (err) {
+    } catch (e) {}
+
+    // 3. Fallback to initial seed from data/settings.json
     try {
       const res = await fetch('data/settings.json?v=' + Date.now());
       if (res.ok) {
         settingsData = await res.json();
+        // Seed cloud if empty
+        if (window.FirebaseSync && window.FirebaseSync.isInitialized) {
+          await window.FirebaseSync.saveSettings(settingsData);
+        }
       }
-    } catch (fbErr) {}
+    } catch (e) {}
+
+    populateSettingsUI();
+  } catch (err) {
+    console.error('Error in loadSettings:', err);
   }
-
-  // Merge localStorage settings
-  try {
-    const local = JSON.parse(localStorage.getItem('smart_lobby_settings') || 'null');
-    if (local) {
-      settingsData = { ...settingsData, ...local };
-    }
-  } catch (e) {}
-
-  populateSettingsUI();
 }
 
 function populateSettingsUI() {
@@ -1261,18 +1272,26 @@ function updateHeaderRadioStatus(isEnabled) {
 }
 
 async function saveSettingsToServer(newSettings, successMessage) {
-  // Always update local in-memory & localStorage
-  const local = JSON.parse(localStorage.getItem('smart_lobby_settings') || '{}');
-  const merged = { ...local, ...newSettings };
-  localStorage.setItem('smart_lobby_settings', JSON.stringify(merged));
-  settingsData = { ...settingsData, ...newSettings };
+  // Merge cleanly into global settingsData
+  settingsData = {
+    ...(settingsData || {}),
+    ...newSettings,
+    building: { ...(settingsData?.building || {}), ...(newSettings.building || {}) },
+    display: { ...(settingsData?.display || {}), ...(newSettings.display || {}) },
+    radio: { ...(settingsData?.radio || {}), ...(newSettings.radio || {}) },
+    security: { ...(settingsData?.security || {}), ...(newSettings.security || {}) },
+    contacts: newSettings.contacts || settingsData?.contacts || []
+  };
+
+  // Cache to localStorage
+  localStorage.setItem('smart_lobby_settings', JSON.stringify(settingsData));
   populateSettingsUI();
 
   // 1. Sync to Firebase Real-time Global Cloud
   if (window.FirebaseSync) {
     try {
-      await window.FirebaseSync.saveSettings(merged);
-      console.log('⚡ Settings synced to Firebase Cloud successfully!');
+      await window.FirebaseSync.saveSettings(settingsData);
+      console.log('⚡ Settings synced to Firebase Cloud successfully across all devices!');
     } catch (e) {
       console.warn('Firebase save settings warning:', e);
     }
@@ -1283,33 +1302,34 @@ async function saveSettingsToServer(newSettings, successMessage) {
     await fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin: currentPin, newSettings })
+      body: JSON.stringify({ pin: currentPin, newSettings: settingsData })
     });
   } catch (err) {}
 
-  showAdminToast(successMessage || 'ההגדרות נשמרו וסונכרנו ללובי בהצלחה!', '⚡');
+  try { window.dispatchEvent(new Event('storage')); } catch (e) {}
+
+  showAdminToast(successMessage || 'ההגדרות נשמרו וסונכרנו לכל המכשירים בהצלחה!', '⚡');
   return true;
 }
 
 
 window.toggleNoticeHidden = async function(id) {
-  const n = window._adminNoticesMap[id];
+  const n = window._adminNoticesMap ? window._adminNoticesMap[id] : null;
   if (!n) return;
 
   const newState = !Boolean(n.hidden);
   n.hidden = newState;
 
-  let localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
-  const idx = localNotices.findIndex(item => item.id === id);
+  let currentNotices = Object.values(window._adminNoticesMap || {});
+  const idx = currentNotices.findIndex(item => item.id === id);
   if (idx !== -1) {
-    localNotices[idx].hidden = newState;
-  } else {
-    localNotices.unshift(n);
+    currentNotices[idx].hidden = newState;
   }
-  localStorage.setItem('smart_lobby_notices', JSON.stringify(localNotices));
+
+  localStorage.setItem('smart_lobby_notices', JSON.stringify(currentNotices));
 
   if (window.FirebaseSync) {
-    await window.FirebaseSync.saveNotices(localNotices);
+    await window.FirebaseSync.saveNotices(currentNotices);
   }
 
   try { window.dispatchEvent(new Event('storage')); } catch (e) {}
