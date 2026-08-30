@@ -157,7 +157,7 @@ function setupAuth() {
     }
 
     // 2. Check Master Admin PIN (Full access to all tabs & display controls)
-    if (pin === adminPin || pin === '1234') {
+    if (pin === adminPin || (adminPin === '1234' && pin === '1234')) {
       currentRole = 'admin';
       currentPin = pin;
       sessionStorage.setItem('admin_pin', pin);

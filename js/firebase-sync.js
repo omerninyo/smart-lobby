@@ -210,6 +210,23 @@
       }
     }
 
+    // Trigger remote screen reload via cloud
+    async triggerRemoteReload() {
+      if (!this.db) await this.init();
+      if (!this.db) return false;
+      try {
+        const now = Date.now();
+        await this.db.collection("smart_lobby").doc("settings").set({
+          system: { forceReloadAt: now }
+        }, { merge: true });
+        console.log("[FirebaseSync] 🔄 Triggered remote reload on cloud:", now);
+        return true;
+      } catch (err) {
+        console.error("[FirebaseSync] Error triggering remote reload:", err);
+        return false;
+      }
+    }
+
     // Automatically seeds default JSON files into Firestore if cloud collection is currently empty
     async seedIfEmpty(defaultSettings, defaultNotices) {
       if (!this.db) await this.init();
@@ -234,23 +251,5 @@
   }
 
   window.FirebaseSync = new FirebaseSyncManager();
-
-
-    // Trigger remote screen reload via cloud
-    async triggerRemoteReload() {
-      if (!this.db) await this.init();
-      if (!this.db) return false;
-      try {
-        const now = Date.now();
-        await this.db.collection("smart_lobby").doc("settings").set({
-          system: { forceReloadAt: now }
-        }, { merge: true });
-        console.log("[FirebaseSync] 🔄 Triggered remote reload on cloud:", now);
-        return true;
-      } catch (err) {
-        console.error("[FirebaseSync] Error triggering remote reload:", err);
-        return false;
-      }
-    }
 
 })(window);
