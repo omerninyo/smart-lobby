@@ -168,14 +168,22 @@ graph TD
 
 ## 📺 Recommended Hardware & Android Kiosk Setup Guide
 
-For permanent residential lobby installations (wall-mounted Android tablets, smart TVs, or commercial signage touchscreens), we **strongly recommend using [Fully Kiosk Browser](https://www.fully-kiosk.com/)** (Tested, Verified, and Approved in Production).
+For permanent residential lobby installations (wall-mounted Android tablets, smart TVs, or commercial signage touchscreens running 24/7), we recommend two excellent kiosk applications:
 
-### 🏆 Why Fully Kiosk Browser is the Gold Standard:
-* ⚡ **Legacy Hardware Compatibility:** Seamless 60fps hardware-accelerated rendering even on older Android 7+ devices and budget tablets.
-* 🔒 **Locked Kiosk Mode:** Prevents residents or children from exiting the signage app, accessing Android settings, or opening unauthorized apps.
-* 🔌 **Auto-Start & Power-Loss Recovery:** Automatically launches the lobby dashboard immediately upon device boot or power restoration.
-* 💡 **Display & Screen Management:** Keeps the screen on 24/7 or configures automated sleep/wake schedules and screen saver dimming.
-* 🔄 **Remote Management & Reload:** Allows remote reloads, cache clearing, and URL updates directly from the network or web portal.
+### 🥇 1. [Webview Kiosk](https://webviewkiosk.nktnet.uk) (Top Recommended - 100% Free & Open Source)
+* 🆓 **100% Free & Open Source (FOSS):** No licensing fees, no watermarks, no paywalls.
+* 📱 **Ultra-Lightweight & Legacy-Friendly:** Runs exceptionally smoothly on older Android tablets with minimal RAM and CPU overhead.
+* 🔒 **Lock Task Mode (Screen Pinning):** Locks the display strictly to the lobby web app, hides system bars, and prevents exiting.
+* 🛡️ **Password & Biometric Protected Settings:** Prevents unauthorized tampering with kiosk configuration.
+* 📦 **Easy Installation:** Available on [Google Play](https://play.google.com/store/apps/details?id=uk.nktnet.webviewkiosk), [F-Droid](https://f-droid.org/), and direct APK releases on [GitHub](https://github.com/nktnet1/webview-kiosk).
+
+---
+
+### 🥈 2. [Fully Kiosk Browser](https://www.fully-kiosk.com/) (Advanced Commercial Option)
+* ⚡ **Legacy Hardware Compatibility:** Seamless 60fps hardware-accelerated rendering.
+* 🔒 **Locked Kiosk Mode:** Full kiosk lockdown and navigation bar concealment.
+* 🔌 **Auto-Start & Power-Loss Recovery:** Automatically launches the lobby dashboard immediately upon device boot.
+* 💡 **Motion Detection via Front Camera:** Automatically wakes the display when residents approach.
 
 ### ⚙️ Recommended Fully Kiosk Browser Configuration:
 1. **Web Browsing Settings:**
