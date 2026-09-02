@@ -70,6 +70,7 @@ class BuildingSignageApp {
     this.setupTouchInteractions();
     this.setupForceReloadListener();
     this.setupWatchdog();
+    this.initWakeLock();
 
     // Initial Data Fetch
     await this.fetchSettings();
@@ -135,6 +136,25 @@ class BuildingSignageApp {
   // =========================================================
   // 1. CLOCK & SECRET ADMIN SHORTCUT (5-Tap)
   // =========================================================
+  // =========================================================
+  // SCREEN WAKE LOCK API (TVs, Tablets & Kiosks)
+  // =========================================================
+  async initWakeLock() {
+    if ('wakeLock' in navigator) {
+      try {
+        this.wakeLock = await navigator.wakeLock.request('screen');
+        console.log('⚡ [Screen] Native Screen Wake Lock active (sleep prevented)');
+        document.addEventListener('visibilitychange', async () => {
+          if (document.visibilityState === 'visible' && (!this.wakeLock || this.wakeLock.released)) {
+            try { this.wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+          }
+        });
+      } catch (err) {
+        console.warn('[Screen] Wake Lock request note:', err.message);
+      }
+    }
+  }
+
   startClock() {
     const updateTime = () => {
       const now = new Date();
