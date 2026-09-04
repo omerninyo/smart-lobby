@@ -531,6 +531,26 @@
           </div>
         </div>
 
+        <!-- Hardware Optimization & Crash Prevention (Lite Mode) Toggle -->
+        <div class="bg-amber-950/30 border border-amber-800/60 p-3.5 sm:p-4 rounded-xl space-y-2.5">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="text-xl shrink-0">⚡</span>
+              <div>
+                <h3 class="font-bold text-xs sm:text-sm text-amber-200">מצב חיסכון וביצועים למסכים ישנים (Lite Mode)</h3>
+                <p class="text-[11px] sm:text-xs text-gray-300">ביטול אפקטי טשטוש כבדים (Blur) וייעול זיכרון למניעת קריסות בטאבלטים חלשים</p>
+              </div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer shrink-0">
+              <input type="checkbox" id="setting-lite-mode" class="sr-only peer">
+              <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+            </label>
+          </div>
+          <p class="text-[10px] text-amber-400/90 leading-relaxed">
+            מומלץ להפעיל בטאבלטים ישנים או ב-Webview Kiosk החווים קריסות פתאומיות. הפיך לחלוטין בכל עת.
+          </p>
+        </div>
+
         <!-- Left Screen Backlight Burn Compensation -->
         <div class="bg-blue-950 bg-opacity-40 border border-blue-800 p-3.5 sm:p-4 rounded-xl space-y-3">
           <div class="flex items-center gap-2">
@@ -1080,8 +1100,8 @@
   <!-- Firebase Cloud Firestore SDK (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-  <script src="js/firebase-sync.js?v=20260831_firebase_fix"></script>
+  <script src="js/firebase-sync.js?v=20260904_litemode"></script>
 
-  <script src="js/admin.js?v=20260831_firebase_fix"></script>
+  <script src="js/admin.js?v=20260904_litemode"></script>
 </body>
 </html>

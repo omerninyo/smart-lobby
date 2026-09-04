@@ -1427,3 +1427,42 @@ body.high-contrast-side .side-column .env-stat-box {
   border: 1px solid rgba(15, 23, 42, 0.15) !important;
 }
 
+
+/* =========================================================
+   LITE MODE (Low-spec hardware & Crash Prevention)
+   100% Reversible via Admin Display Toggle
+   ========================================================= */
+body.lite-mode * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.lite-mode .header-container {
+  background: rgba(15, 23, 42, 0.96) !important;
+}
+
+body.lite-mode .stage-container {
+  background: rgba(15, 23, 42, 0.94) !important;
+}
+
+body.lite-mode .side-widget-card {
+  background: rgba(15, 23, 42, 0.95) !important;
+}
+
+body.lite-mode .bottom-ticker-bar {
+  background: rgba(15, 23, 42, 0.97) !important;
+}
+
+body.lite-mode .admin-card,
+body.lite-mode .modal-content {
+  background: rgba(15, 23, 42, 0.98) !important;
+}
+
+body.lite-mode .slide-card {
+  transition: opacity 0.3s ease !important;
+  transform: none !important;
+}
+
+body.lite-mode .stage-progress-fill {
+  transition: width 0.5s linear !important;
+}

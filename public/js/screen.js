@@ -543,6 +543,10 @@ class BuildingSignageApp {
     const boostOpacity = (leftBoostPct / 100) * 0.75;
     document.documentElement.style.setProperty('--left-boost', boostOpacity);
 
+    // Lite Mode (Low-spec hardware & Crash Prevention)
+    const isLiteMode = Boolean(this.settings.display?.liteMode);
+    document.body.classList.toggle('lite-mode', isLiteMode);
+
     // High-Contrast Light Side Cards (false default)
     const isHighContrast = Boolean(this.settings.display?.highContrastSideCards);
     document.body.classList.toggle('high-contrast-side', isHighContrast);
@@ -1495,12 +1499,13 @@ class BuildingSignageApp {
     this.slideStartTime = Date.now();
     const progressFill = document.getElementById('stage-progress-fill');
 
+    const progressStepMs = this.settings?.display?.liteMode ? 400 : 100;
     this.progressTimer = setInterval(() => {
       if (this.isPaused) return;
       const elapsed = Date.now() - this.slideStartTime;
       const pct = Math.min(100, (elapsed / this.slideDurationMs) * 100);
       if (progressFill) progressFill.style.width = `${pct}%`;
-    }, 100);
+    }, progressStepMs);
 
     this.slideTimer = setInterval(() => {
       if (!this.isPaused) {
@@ -1663,11 +1668,13 @@ class BuildingSignageApp {
   // =========================================================
   startPeriodicUpdates() {
     setInterval(async () => {
+      // In Lite Mode: skip aggressive periodic rebuilding to protect low RAM. Firebase pushes updates live!
+      if (this.settings?.display?.liteMode) return;
       await this.fetchSettings();
       await this.fetchNotices();
       await this.fetchPhotos();
       this.buildSlides();
-    }, 45 * 1000);
+    }, 120 * 1000);
 
     setInterval(() => {
       this.fetchWeather();

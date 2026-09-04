@@ -779,6 +779,7 @@ function setupDisplayControls() {
           bgOpacity: parseInt(bgOpacityInput?.value || '85', 10),
           leftBurnCompensation: parseInt(burnCompInput?.value || '0', 10),
           highContrastSideCards: document.getElementById('setting-high-contrast-side')?.checked || false,
+          liteMode: document.getElementById('setting-lite-mode')?.checked || false,
           layoutSide: document.getElementById('setting-layout-side')?.value || 'left',
           headerClockPosition: document.getElementById('setting-pos-clock')?.value || 'left',
           headerBrandPosition: document.getElementById('setting-pos-brand')?.value || 'right',
@@ -1098,6 +1099,9 @@ function populateSettingsUI() {
 
   const highContrast = document.getElementById('setting-high-contrast-side');
   if (highContrast) highContrast.checked = Boolean(settingsData.display?.highContrastSideCards);
+
+  const liteModeInput = document.getElementById('setting-lite-mode');
+  if (liteModeInput) liteModeInput.checked = Boolean(settingsData.display?.liteMode);
 
   const layoutSide = document.getElementById('setting-layout-side');
   if (layoutSide) layoutSide.value = settingsData.display?.layoutSide || 'left';

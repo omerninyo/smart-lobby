@@ -29,7 +29,8 @@
     "sideColumnWidth": "normal",
     "showStageArrows": true,
     "newsSource": "ynet",
-    "customTickerText": "ועד הבית מאחל יום נעים ובטוח לכל הדיירים והאורחים!"
+    "customTickerText": "ועד הבית מאחל יום נעים ובטוח לכל הדיירים והאורחים!",
+    "liteMode": true
   },
   "contacts": [
     {
