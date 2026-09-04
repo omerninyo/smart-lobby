@@ -11,6 +11,46 @@
   <link rel="stylesheet" href="css/style.css?v=20260828i">
   
   <style>
+    /* Reliable Pure CSS Switch (Compatible with all browsers & Tailwind v2) */
+    .switch-toggle {
+      position: relative;
+      display: inline-block;
+      width: 52px;
+      height: 28px;
+    }
+    .switch-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .switch-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #374151;
+      transition: .3s;
+      border-radius: 28px;
+      border: 1px solid #4b5563;
+    }
+    .switch-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    .switch-toggle input:checked + .switch-slider {
+      background-color: #d97706;
+      border-color: #f59e0b;
+    }
+    .switch-toggle input:checked + .switch-slider:before {
+      transform: translateX(22px);
+    }
+
     html, body {
       height: auto !important;
       min-height: 100% !important;
@@ -201,6 +241,12 @@
           <span id="header-radio-text" class="hidden sm:inline">רדיו</span>
         </button>
 
+                <!-- Quick Lite Mode Toggle in Header (Direct 1-Click Access) -->
+        <button id="header-litemode-btn" class="bg-amber-950 bg-opacity-70 hover:bg-amber-900 border border-amber-700 text-amber-300 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm" title="הפעלה/כיבוי מהיר של מצב ביצועים וחיסכון למניעת קריסות">
+          <span>⚡</span>
+          <span id="header-litemode-text">Lite: פעיל</span>
+        </button>
+
         <!-- Emergency Screen Remote Refresh -->
         <button id="header-refresh-screen-btn" class="bg-blue-950 bg-opacity-70 hover:bg-blue-900 border border-blue-700 text-blue-300 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm" title="רענון מסך השילוט מרחוק (במקרה חירום)">
           <span>🔄</span>
@@ -380,6 +426,27 @@
         <div>
           <h2 class="text-base sm:text-lg font-bold mb-1">🎨 תצוגה, שקיפות רקע וערכות נושא</h2>
           <p class="text-xs text-gray-400">שליטה על בהירות הרקע, חגי ישראל, זמני שבת והתאמה למסך</p>
+        </div>
+
+                <!-- Hardware Optimization & Crash Prevention (Lite Mode) Toggle - TOP OF TAB 2 -->
+        <div class="bg-gradient-to-r from-amber-950/50 to-gray-900 border-2 border-amber-600/70 p-4 rounded-xl space-y-2.5 shadow-lg">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="text-2xl shrink-0">⚡</span>
+              <div>
+                <h3 class="font-bold text-sm sm:text-base text-amber-300">מצב חיסכון וביצועים (Lite Mode)</h3>
+                <p class="text-xs text-gray-300">ביטול אפקטי טשטוש כבדים (Blur) וייעול זיכרון למניעת קריסות במסך בלובי</p>
+              </div>
+            </div>
+            <label class="switch-toggle shrink-0" title="הפעל או כבה מצב ביצועים">
+              <input type="checkbox" id="setting-lite-mode">
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+          <div class="flex items-center justify-between text-[11px] text-amber-200/90 pt-1 border-t border-amber-900/50">
+            <span>סטטוס: <b id="lite-mode-status-text" class="text-amber-400">מופעל (מוגן מקריסות)</b></span>
+            <span class="text-gray-400">100% הפיך בלחיצה</span>
+          </div>
         </div>
 
         <!-- Background Opacity / Brightness Slider -->
@@ -1100,8 +1167,8 @@
   <!-- Firebase Cloud Firestore SDK (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-  <script src="js/firebase-sync.js?v=20260904_litemode"></script>
+  <script src="js/firebase-sync.js?v=20260904_litemode_v2"></script>
 
-  <script src="js/admin.js?v=20260904_litemode"></script>
+  <script src="js/admin.js?v=20260904_litemode_v2"></script>
 </body>
 </html>

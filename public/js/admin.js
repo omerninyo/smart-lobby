@@ -221,6 +221,8 @@ function applyRolePermissions() {
   if (currentRole === 'editor') {
     if (roleBanner) roleBanner.classList.remove('hidden');
     if (refreshBtn) refreshBtn.classList.add('hidden');
+    const liteBtn = document.getElementById('header-litemode-btn');
+    if (liteBtn) liteBtn.classList.add('hidden');
 
     // Hide tabs: display, contacts, settings, help
     tabBtns.forEach(btn => {
@@ -241,6 +243,8 @@ function applyRolePermissions() {
     // Admin mode - full access
     if (roleBanner) roleBanner.classList.add('hidden');
     if (refreshBtn) refreshBtn.classList.remove('hidden');
+    const liteBtn = document.getElementById('header-litemode-btn');
+    if (liteBtn) liteBtn.classList.remove('hidden');
     tabBtns.forEach(btn => btn.classList.remove('hidden'));
   }
 }
@@ -749,6 +753,29 @@ function setupGalleryPicker() {
 // ==========================================
 // 4. TAB 2: DISPLAY, THEMES & BACKGROUND OPACITY
 // ==========================================
+function updateLiteModeUI(isLite) {
+  const checkbox = document.getElementById('setting-lite-mode');
+  if (checkbox) checkbox.checked = isLite;
+
+  const statusText = document.getElementById('lite-mode-status-text');
+  if (statusText) {
+    statusText.textContent = isLite ? 'מופעל (מוגן מקריסות)' : 'כבוי (עיצוב מלא)';
+    statusText.className = isLite ? 'text-amber-400 font-bold' : 'text-gray-400 font-bold';
+  }
+
+  const headerBtn = document.getElementById('header-litemode-btn');
+  const headerText = document.getElementById('header-litemode-text');
+  if (headerBtn && headerText) {
+    if (isLite) {
+      headerBtn.className = 'bg-amber-950 bg-opacity-70 hover:bg-amber-900 border border-amber-700 text-amber-300 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm';
+      headerText.textContent = 'Lite: פעיל';
+    } else {
+      headerBtn.className = 'bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm';
+      headerText.textContent = 'Lite: כבוי';
+    }
+  }
+}
+
 function setupDisplayControls() {
   const bgOpacityInput = document.getElementById('setting-bg-opacity');
   const bgOpacityLabel = document.getElementById('bg-opacity-label');
@@ -1101,7 +1128,13 @@ function populateSettingsUI() {
   if (highContrast) highContrast.checked = Boolean(settingsData.display?.highContrastSideCards);
 
   const liteModeInput = document.getElementById('setting-lite-mode');
-  if (liteModeInput) liteModeInput.checked = Boolean(settingsData.display?.liteMode);
+  if (liteModeInput) {
+    liteModeInput.checked = Boolean(settingsData.display?.liteMode);
+    liteModeInput.addEventListener('change', () => {
+      updateLiteModeUI(liteModeInput.checked);
+    });
+  }
+  updateLiteModeUI(Boolean(settingsData.display?.liteMode));
 
   const layoutSide = document.getElementById('setting-layout-side');
   if (layoutSide) layoutSide.value = settingsData.display?.layoutSide || 'left';
@@ -1210,6 +1243,28 @@ function populateSettingsUI() {
 // 8. HEADER QUICK CONTROLS (Radio & Emergency Refresh)
 // ==========================================
 function setupHeaderQuickActions() {
+  const liteModeBtn = document.getElementById('header-litemode-btn');
+  if (liteModeBtn) {
+    liteModeBtn.addEventListener('click', async () => {
+      if (!settingsData) return;
+      const currentLite = Boolean(settingsData.display?.liteMode);
+      const newLite = !currentLite;
+
+      const updatedDisplay = {
+        ...(settingsData.display || {}),
+        liteMode: newLite
+      };
+
+      const ok = await saveSettingsToServer(
+        { display: updatedDisplay },
+        newLite ? '⚡ מצב חיסכון וביצועים הופעל בהצלחה!' : '✨ מצב עיצוב מלא (Glassmorphism) הופעל!'
+      );
+      if (ok) {
+        updateLiteModeUI(newLite);
+      }
+    });
+  }
+
   const radioBtn = document.getElementById('header-quick-radio-btn');
   const refreshBtn = document.getElementById('header-refresh-screen-btn');
 
