@@ -51,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupAuth();
   setupTabs();
   setupHeaderQuickActions();
+  setupDeviceHealthMonitoring();
   setupNoticesForm();
   setupGalleryPicker();
   setupDisplayControls();
@@ -1400,3 +1401,78 @@ window.toggleNoticeHidden = async function(id) {
     showAdminToast('ההודעה מוצגת כעת במסך הלובי!', '👁️');
   }
 };
+
+// ==========================================
+// 9. DEVICE HEALTH TELEMETRY MONITOR
+// ==========================================
+function setupDeviceHealthMonitoring() {
+  if (!window.FirebaseSync) return;
+
+  const updateHealthUI = (health) => {
+    if (!health) return;
+    const badge = document.getElementById('health-live-badge');
+    const statusText = document.getElementById('health-status-text');
+    const uptimeElem = document.getElementById('health-uptime');
+    const memoryElem = document.getElementById('health-memory');
+    const radioElem = document.getElementById('health-radio');
+    const lastSeenElem = document.getElementById('health-last-seen');
+
+    const diffSeconds = Math.floor((Date.now() - (health.lastSeen || 0)) / 1000);
+    const isOnline = diffSeconds < 360; // seen within 6 minutes
+
+    if (badge && statusText) {
+      if (isOnline) {
+        badge.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-green-950 text-green-300 border border-green-700 flex items-center gap-1.5';
+        statusText.textContent = 'מקוון ותקין';
+      } else {
+        badge.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-red-950 text-red-300 border border-red-700 flex items-center gap-1.5';
+        statusText.textContent = `לא נצפה ${Math.floor(diffSeconds / 60)} דק'`;
+      }
+    }
+
+    if (uptimeElem) {
+      const mins = health.uptimeMinutes || 0;
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      uptimeElem.textContent = h > 0 ? `${h} שעות ו-${m} דק'` : `${m} דקות`;
+    }
+
+    if (memoryElem) {
+      if (health.heap) {
+        memoryElem.textContent = `${health.heap.usedMB} MB / ${health.heap.limitMB} MB`;
+      } else {
+        memoryElem.textContent = 'תקין (Lite Mode)';
+      }
+    }
+
+    if (radioElem) {
+      if (health.radio?.playing) {
+        radioElem.textContent = `🔊 מנגן (${health.radio.station})`;
+        radioElem.className = 'text-sm font-bold text-emerald-300';
+      } else if (health.radio?.inSchedule) {
+        radioElem.textContent = '🔇 מושתק ע"י משתמש';
+        radioElem.className = 'text-sm font-bold text-amber-300';
+      } else {
+        radioElem.textContent = '🌙 לילה (מחוץ לשעות)';
+        radioElem.className = 'text-sm font-bold text-gray-400';
+      }
+    }
+
+    if (lastSeenElem) {
+      const d = new Date(health.lastSeen);
+      lastSeenElem.textContent = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+    }
+  };
+
+  window.FirebaseSync.onDeviceHealthChanged(updateHealthUI);
+  window.FirebaseSync.getDeviceHealth().then(updateHealthUI);
+
+  const flushBtn = document.getElementById('health-flush-memory-btn');
+  if (flushBtn) {
+    flushBtn.addEventListener('click', async () => {
+      flushBtn.textContent = 'מרענן זיכרון...';
+      await window.FirebaseSync.triggerRemoteReload();
+      setTimeout(() => { flushBtn.textContent = 'רענן זיכרון עכשיו'; }, 3000);
+    });
+  }
+}

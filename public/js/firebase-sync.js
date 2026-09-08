@@ -100,6 +100,20 @@
         console.warn("[FirebaseSync] Could not attach settings listener:", e);
       }
 
+            // 3. Listen to Device Health
+      try {
+        this.db.collection("smart_lobby").doc("device_health").onSnapshot((doc) => {
+          if (doc.exists) {
+            const data = doc.data();
+            if (this.healthListeners) {
+              this.healthListeners.forEach(fn => {
+                try { fn(data); } catch (e) {}
+              });
+            }
+          }
+        }, (err) => {});
+      } catch (e) {}
+
       // 2. Listen to Notices changes
       try {
         this.db.collection("smart_lobby").doc("notices").onSnapshot((doc) => {
@@ -207,6 +221,41 @@
       } catch (err) {
         console.error("[FirebaseSync] ❌ Error saving notices to cloud:", err);
         return false;
+      }
+    }
+
+    // Report screen hardware & memory health to cloud
+    async reportDeviceHealth(healthData) {
+      if (!this.db) await this.init();
+      if (!this.db) return false;
+      try {
+        await this.db.collection("smart_lobby").doc("device_health").set({
+          ...healthData,
+          reportedAt: new Date().toISOString()
+        }, { merge: true });
+        return true;
+      } catch (err) {
+        console.warn("[FirebaseSync] Device health report note:", err.message);
+        return false;
+      }
+    }
+
+    // Read device health
+    async getDeviceHealth() {
+      if (!this.db) await this.init();
+      if (!this.db) return null;
+      try {
+        const doc = await this.db.collection("smart_lobby").doc("device_health").get();
+        return doc.exists ? doc.data() : null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    onDeviceHealthChanged(callback) {
+      if (typeof callback === "function") {
+        this.healthListeners = this.healthListeners || [];
+        this.healthListeners.push(callback);
       }
     }
 

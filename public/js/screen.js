@@ -70,6 +70,7 @@ class BuildingSignageApp {
     this.setupTouchInteractions();
     this.setupForceReloadListener();
     this.setupWatchdog();
+    this.startHeartbeat();
     this.initWakeLock();
 
     // Initial Data Fetch
@@ -1573,9 +1574,11 @@ class BuildingSignageApp {
     if (radioToggle && this.audioPlayer) {
       radioToggle.addEventListener('click', () => {
         if (this.audioPlayer.paused) {
-          this.audioPlayer.play().catch(e => console.log('Playback error:', e));
+          this.isSecretMuted = false;
+          this.startRadioStream();
         } else {
-          this.audioPlayer.pause();
+          this.isSecretMuted = true;
+          this.stopRadioImmediate();
         }
       });
     }
@@ -1585,36 +1588,39 @@ class BuildingSignageApp {
         this.unlockAudio();
       });
     }
+
+    // Cycle audio stream buffer every 2 hours during playback to prevent memory leaks
+    setInterval(() => {
+      this.recycleAudioBuffer();
+    }, 2 * 60 * 60 * 1000);
   }
 
   unlockAudio() {
     const prompt = document.getElementById('audio-unmute-prompt');
-    if (this.audioPlayer && this.settings?.radio?.enabled) {
-      this.audioPlayer.play().then(() => {
-        this.audioUnlocked = true;
-        if (prompt) prompt.style.display = 'none';
-      }).catch(err => {
-        console.log('Audio unlock failed:', err);
-      });
+    if (this.audioPlayer && this.isRadioInSchedule() && !this.isSecretMuted) {
+      this.startRadioStream();
+      this.audioUnlocked = true;
+      if (prompt) prompt.style.display = 'none';
     }
   }
 
-  updateRadioState() {
-    if (!this.settings?.radio || !this.audioPlayer) return;
+  isRadioInSchedule() {
+    if (!this.settings?.radio?.enabled) return false;
+    if (!this.settings.radio.autoPlaySchedule) return true;
 
-    const radio = this.settings.radio;
-    const radioWidget = document.getElementById('radio-indicator');
-    const stationNameElem = document.getElementById('radio-station-name');
-    const unmutePrompt = document.getElementById('audio-unmute-prompt');
+    let startH = this.settings.radio.startHour || '08:00';
+    let endH = this.settings.radio.endHour || '21:00';
+    if (startH === '00:08') startH = '08:00';
+    if (endH === '00:21') endH = '21:00';
 
-    if (!radio.enabled) {
-      this.audioPlayer.pause();
-      if (radioWidget) radioWidget.style.display = 'none';
-      if (unmutePrompt) unmutePrompt.style.display = 'none';
-      return;
-    }
+    const now = new Date();
+    const currentHour = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    return currentHour >= startH && currentHour <= endH;
+  }
 
-    if (radioWidget) radioWidget.style.display = 'flex';
+  getCurrentRadioStation() {
+    const radio = this.settings?.radio;
+    if (!radio) return null;
 
     const fallbackStations = [
       { id: 'galgalatz', name: 'גלגלצ', url: 'https://glzwizzlv.bynetcdn.com/glglz_mp3' },
@@ -1629,38 +1635,88 @@ class BuildingSignageApp {
       { id: 'dance', name: 'Dance Hits', url: 'https://streams.ilovemusic.de/iloveradio2.mp3' }
     ];
 
-    const currentSt = radio.stations?.find(s => s.id === radio.currentStation) 
+    return radio.stations?.find(s => s.id === radio.currentStation) 
       || fallbackStations.find(s => s.id === radio.currentStation) 
       || fallbackStations[0];
+  }
 
-    if (currentSt) {
-      if (stationNameElem) stationNameElem.textContent = currentSt.name.split(' ')[0];
-      if (this.audioPlayer.src !== currentSt.url) {
-        this.audioPlayer.src = currentSt.url;
-      }
-      this.audioPlayer.volume = radio.volume || 0.4;
+  stopRadioImmediate() {
+    if (!this.audioPlayer) return;
+    this.audioPlayer.pause();
+    if (this.audioPlayer.src) {
+      this.audioPlayer.removeAttribute('src');
+      this.audioPlayer.load();
+    }
+    const radioWidget = document.getElementById('radio-indicator');
+    const unmutePrompt = document.getElementById('audio-unmute-prompt');
+    if (radioWidget) radioWidget.style.display = 'none';
+    if (unmutePrompt) unmutePrompt.style.display = 'none';
+  }
 
-      let startH = radio.startHour || '08:00';
-      let endH = radio.endHour || '21:00';
-      if (startH === '00:08') startH = '08:00';
-      if (endH === '00:21') endH = '21:00';
+  startRadioStream() {
+    if (!this.audioPlayer || !this.isRadioInSchedule() || this.isSecretMuted) return;
 
-      const now = new Date();
-      const currentHour = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      const inSchedule = (!radio.autoPlaySchedule) || (currentHour >= startH && currentHour <= endH);
+    const radio = this.settings?.radio;
+    const currentSt = this.getCurrentRadioStation();
+    if (!currentSt) return;
 
-      if (inSchedule) {
-        this.audioPlayer.play().then(() => {
-          if (unmutePrompt) unmutePrompt.style.display = 'none';
-        }).catch(err => {
-          console.log('Browser blocked autoplay:', err.message);
-          if (unmutePrompt) unmutePrompt.style.display = 'flex';
-        });
-      } else {
-        this.audioPlayer.pause();
+    const radioWidget = document.getElementById('radio-indicator');
+    const stationNameElem = document.getElementById('radio-station-name');
+    const unmutePrompt = document.getElementById('audio-unmute-prompt');
+
+    if (radioWidget) radioWidget.style.display = 'flex';
+    if (stationNameElem) stationNameElem.textContent = currentSt.name.split(' ')[0];
+
+    this.audioPlayer.volume = radio?.volume !== undefined ? radio.volume : 0.4;
+
+    if (this.audioPlayer.src !== currentSt.url) {
+      this.audioPlayer.src = currentSt.url;
+    }
+
+    if (this.audioPlayer.paused) {
+      this.audioPlayer.play().then(() => {
         if (unmutePrompt) unmutePrompt.style.display = 'none';
+      }).catch(err => {
+        console.log('[Radio] Autoplay note:', err.message);
+        if (unmutePrompt) unmutePrompt.style.display = 'flex';
+      });
+    }
+  }
+
+  recycleAudioBuffer() {
+    if (!this.isRadioInSchedule() || !this.audioPlayer || this.audioPlayer.paused || this.isSecretMuted) return;
+    console.log('♻️ [Radio] Recycling live audio stream buffer to prevent memory bloat...');
+    const currentSt = this.getCurrentRadioStation();
+    if (!currentSt) return;
+
+    this.audioPlayer.pause();
+    this.audioPlayer.removeAttribute('src');
+    this.audioPlayer.load();
+
+    setTimeout(() => {
+      if (this.isRadioInSchedule() && !this.isSecretMuted && this.audioPlayer) {
+        this.audioPlayer.src = currentSt.url;
+        this.audioPlayer.play().catch(() => {});
+      }
+    }, 400);
+  }
+
+  checkRadioSchedule() {
+    const inSchedule = this.isRadioInSchedule();
+    if (!inSchedule) {
+      if (this.audioPlayer && (!this.audioPlayer.paused || this.audioPlayer.src)) {
+        console.log('🔇 [Radio] Outside permitted hours -> pausing and clearing stream buffer.');
+        this.stopRadioImmediate();
+      }
+    } else {
+      if (this.audioPlayer && this.audioPlayer.paused && !this.isSecretMuted) {
+        this.startRadioStream();
       }
     }
+  }
+
+  updateRadioState() {
+    this.checkRadioSchedule();
   }
 
   // =========================================================
@@ -1717,13 +1773,67 @@ class BuildingSignageApp {
   }
 
   setupWatchdog() {
+    // Scheduled 4-hour soft maintenance refresh (04:00, 10:00, 16:00, 22:00)
+    // Flushes all RAM & GPU VRAM accumulation back to 0MB cleanly
+    const maintenanceHours = [4, 10, 16, 22];
+
     setInterval(() => {
       const now = new Date();
-      if (now.getHours() === 4 && now.getMinutes() === 0 && now.getSeconds() < 10) {
-        console.log('🔄 Maintenance reload (04:00 AM)...');
-        window.location.reload();
+      const currentH = now.getHours();
+      const currentM = now.getMinutes();
+      const currentS = now.getSeconds();
+
+      if (maintenanceHours.includes(currentH) && currentM === 0 && currentS < 12) {
+        const modal = document.getElementById('content-modal');
+        const isModalOpen = modal && !modal.classList.contains('hidden');
+        if (!this.isPaused && !isModalOpen) {
+          console.log(`🔄 [Watchdog] Scheduled 4-hour soft refresh at ${String(currentH).padStart(2, '0')}:00...`);
+          window.location.reload();
+        }
       }
     }, 10000);
+  }
+
+  // =========================================================
+  // 8. DEVICE HEALTH & CLOUD TELEMETRY
+  // =========================================================
+  startHeartbeat() {
+    const reportHealth = async () => {
+      if (!window.FirebaseSync) return;
+
+      let heap = null;
+      if (window.performance && window.performance.memory) {
+        heap = {
+          usedMB: Math.round(window.performance.memory.usedJSHeapSize / 1048576 * 10) / 10,
+          totalMB: Math.round(window.performance.memory.totalJSHeapSize / 1048576 * 10) / 10,
+          limitMB: Math.round(window.performance.memory.jsHeapSizeLimit / 1048576 * 10) / 10
+        };
+      }
+
+      const uptimeMinutes = Math.floor((Date.now() - (this.bootTimestamp || Date.now())) / 60000);
+      const isRadioPlaying = Boolean(this.audioPlayer && !this.audioPlayer.paused && this.audioPlayer.src);
+
+      const health = {
+        lastSeen: Date.now(),
+        uptimeMinutes,
+        heap,
+        radio: {
+          playing: isRadioPlaying,
+          station: this.settings?.radio?.currentStation || 'unknown',
+          inSchedule: this.isRadioInSchedule()
+        },
+        online: navigator.onLine,
+        liteMode: Boolean(this.settings?.display?.liteMode),
+        currentSlide: this.currentSlideIndex,
+        totalSlides: this.slides.length
+      };
+
+      await window.FirebaseSync.reportDeviceHealth(health);
+    };
+
+    // First report after 5 seconds, then every 3 minutes
+    setTimeout(reportHealth, 5000);
+    setInterval(reportHealth, 3 * 60 * 1000);
   }
 }
 
