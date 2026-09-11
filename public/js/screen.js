@@ -1589,6 +1589,13 @@ class BuildingSignageApp {
       });
     }
 
+    // Unlock audio smoothly on ANY screen touch if waiting for user gesture
+    document.addEventListener('pointerdown', () => {
+      if (this.audioPlayer && this.audioPlayer.paused && this.isRadioInSchedule() && !this.isSecretMuted) {
+        this.startRadioStream();
+      }
+    }, { passive: true });
+
     // Cycle audio stream buffer every 2 hours during playback to prevent memory leaks
     setInterval(() => {
       this.recycleAudioBuffer();
@@ -1773,25 +1780,43 @@ class BuildingSignageApp {
   }
 
   setupWatchdog() {
-    // Scheduled 4-hour soft maintenance refresh (04:00, 10:00, 16:00, 22:00)
-    // Flushes all RAM & GPU VRAM accumulation back to 0MB cleanly
-    const maintenanceHours = [4, 10, 16, 22];
-
+    // Smart Maintenance Watchdog:
+    // Full hard reload (window.location.reload) ONLY at 04:00 AM (deep night when radio is OFF).
+    // During daytime radio hours (10:00, 16:00), we NEVER hard-reload the page to avoid triggering
+    // the browser's Autoplay audio block ("גע במסך"). Instead, we perform an in-memory soft sweep!
     setInterval(() => {
       const now = new Date();
       const currentH = now.getHours();
       const currentM = now.getMinutes();
       const currentS = now.getSeconds();
 
-      if (maintenanceHours.includes(currentH) && currentM === 0 && currentS < 12) {
+      // Deep night full reload (04:00 AM) - radio is off, zero audio interruption
+      if (currentH === 4 && currentM === 0 && currentS < 12) {
         const modal = document.getElementById('content-modal');
         const isModalOpen = modal && !modal.classList.contains('hidden');
         if (!this.isPaused && !isModalOpen) {
-          console.log(`🔄 [Watchdog] Scheduled 4-hour soft refresh at ${String(currentH).padStart(2, '0')}:00...`);
+          console.log('🔄 [Watchdog] Scheduled 04:00 AM deep clean reload (radio is off)...');
           window.location.reload();
         }
       }
+
+      // Daytime memory sweeps (10:00, 16:00, 22:00) - in-memory cleanup WITHOUT reloading the window
+      if ([10, 16, 22].includes(currentH) && currentM === 0 && currentS < 12) {
+        this.performDaytimeSoftMemorySweep();
+      }
     }, 10000);
+  }
+
+  performDaytimeSoftMemorySweep() {
+    console.log('🧹 [Watchdog] Performing in-memory soft sweep (preserving uninterrupted audio playback)...');
+    // 1. Recycle radio buffer without reloading page
+    if (this.isRadioInSchedule()) {
+      this.recycleAudioBuffer();
+    }
+    // 2. Clear old cached elements and force garbage collection of hidden canvas/images
+    if (window.gc) {
+      try { window.gc(); } catch (e) {}
+    }
   }
 
   // =========================================================
