@@ -517,13 +517,19 @@ async function loadNotices() {
     notices.forEach(n => { window._adminNoticesMap[n.id] = n; });
 
     list.innerHTML = notices.map(n => {
-      const urgentBadge = n.isUrgent ? `<span class="bg-red-600 text-white text-xs px-2 py-0.5 rounded-md font-bold">⚠️ דחוף</span>` : '';
-      const imgBadge = n.imageUrl ? `<span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-md">🖼️ תמונה</span>` : '';
-      const hiddenBadge = n.hidden 
-        ? `<span class="bg-gray-700 text-amber-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-gray-600">👁️‍🗨️ מוסתרת</span>` 
-        : `<span class="bg-emerald-950 text-emerald-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-emerald-800">✅ מוצגת במסך</span>`;
-      const expDate = n.expiresAt ? `<span class="text-xs text-amber-400">תפוגה: ${new Date(n.expiresAt).toLocaleDateString('he-IL')}</span>` : '<span class="text-xs text-gray-500">ללא תפוגה</span>';
-      const cardBg = n.hidden ? 'opacity-65 bg-gray-950/70 border-dashed border-gray-700' : 'hover:border-gray-600';
+      const isExpired = Boolean(n.expiresAt && !isNaN(new Date(n.expiresAt).getTime()) && (new Date(n.expiresAt).getTime() <= Date.now()));
+      let statusBadge = '';
+      if (n.hidden) {
+        statusBadge = `<span class="bg-gray-700 text-amber-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-gray-600">👁️‍🗨️ מוסתרת ידנית</span>`;
+      } else if (isExpired) {
+        statusBadge = `<span class="bg-amber-950 text-amber-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-amber-800">⌛ פג תוקף (לא מוצגת במסך)</span>`;
+      } else {
+        statusBadge = `<span class="bg-emerald-950 text-emerald-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-emerald-800">✅ מוצגת במסך</span>`;
+      }
+      const expDate = n.expiresAt 
+        ? `<span class="text-xs ${isExpired ? 'text-rose-400 font-semibold' : 'text-amber-400'}">תפוגה: ${new Date(n.expiresAt).toLocaleDateString('he-IL')} ${new Date(n.expiresAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span>` 
+        : '<span class="text-xs text-gray-500">ללא תפוגה</span>';
+      const cardBg = (n.hidden || isExpired) ? 'opacity-65 bg-gray-950/70 border-dashed border-gray-700' : 'hover:border-gray-600';
 
       return `
         <div class="admin-card p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 transition ${cardBg}">
@@ -531,7 +537,7 @@ async function loadNotices() {
             <div class="flex items-center gap-2 flex-wrap">
               ${urgentBadge}
               ${imgBadge}
-              ${hiddenBadge}
+              ${statusBadge}
               <h3 class="font-bold text-sm sm:text-base text-white truncate">${escapeHtml(n.title)}</h3>
             </div>
             <p class="text-xs sm:text-sm text-gray-300 line-clamp-2">${escapeHtml(n.content)}</p>

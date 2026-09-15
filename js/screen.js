@@ -1212,12 +1212,23 @@ class BuildingSignageApp {
   // =========================================================
   // 4. SIDE COLUMN FEED (Touch-To-Jump)
   // =========================================================
+  isNoticeActive(notice) {
+    if (!notice || notice.hidden === true) return false;
+    if (notice.expiresAt) {
+      const expTime = new Date(notice.expiresAt).getTime();
+      if (!isNaN(expTime) && expTime <= Date.now()) {
+        return false; // Notice has expired!
+      }
+    }
+    return true;
+  }
+
   renderSideColumn() {
     const feedContainer = document.getElementById('side-notices-feed');
     const countBadge = document.getElementById('notices-count-badge');
     if (!feedContainer) return;
 
-    const activeNotices = (this.notices || []).filter(n => !n.hidden);
+    const activeNotices = (this.notices || []).filter(n => this.isNoticeActive(n));
     if (countBadge) countBadge.textContent = `${activeNotices.length} הודעות`;
 
     if (activeNotices.length === 0) {
@@ -1263,9 +1274,9 @@ class BuildingSignageApp {
   buildSlides() {
     this.slides = [];
 
-    // 1. Committee Notice Slides (Exclude hidden notices)
+    // 1. Committee Notice Slides (Exclude hidden and expired notices)
     this.notices.forEach(notice => {
-      if (notice.hidden === true) return;
+      if (!this.isNoticeActive(notice)) return;
       this.slides.push({
         type: 'notice',
         data: notice
@@ -1835,6 +1846,18 @@ class BuildingSignageApp {
     setInterval(() => {
       this.fetchShabbatAndHolidays();
     }, 60 * 60 * 1000);
+
+    // Check notice expirations every 60 seconds and refresh display if any notice expired
+    let lastActiveNoticesCount = -1;
+    setInterval(() => {
+      const activeCount = (this.notices || []).filter(n => this.isNoticeActive(n)).length;
+      if (lastActiveNoticesCount !== -1 && activeCount !== lastActiveNoticesCount) {
+        console.log('📢 [Screen] Notice expiration detected. Updating side column and slides...');
+        this.renderSideColumn();
+        this.buildSlides();
+      }
+      lastActiveNoticesCount = activeCount;
+    }, 60 * 1000);
   }
 
   setupForceReloadListener() {
