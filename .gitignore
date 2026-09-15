@@ -14,3 +14,8 @@ PROJECT_DOCUMENTATION.md
 local_docs/
 MASTER_WEBAPP_BLUEPRINT.md
 UNIVERSAL_WEBAPP_ARCHITECTURE_GUIDE.md
+
+# Private AI Rules & Local Operational Instructions
+RULES.md
+.gemini/
+.agent/
