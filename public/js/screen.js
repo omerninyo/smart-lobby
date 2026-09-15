@@ -112,9 +112,20 @@ class BuildingSignageApp {
           return;
         }
 
+        const oldNewsSource = this.settings?.display?.newsSource;
         this.settings = { ...this.settings, ...cloudSettings };
         this.applySettings();
-        this.renderNewsTicker();
+
+        // Trigger immediate news refresh if news source changed in cloud
+        if (cloudSettings.display?.newsSource && cloudSettings.display.newsSource !== oldNewsSource) {
+          console.log(`📰 [Screen] Live news source changed from ${oldNewsSource} to ${cloudSettings.display.newsSource}. Fetching fresh headlines...`);
+          this.fetchNews();
+        } else {
+          this.renderNewsTicker();
+        }
+
+        // Immediately evaluate radio schedule against clock
+        this.checkRadioSchedule();
         this.buildSlides();
       });
 
@@ -1090,13 +1101,14 @@ class BuildingSignageApp {
   }
 
   async fetchNews() {
+    const requestedSource = this.settings?.display?.newsSource || 'ynet';
+
     if (this.isLocalServer()) {
       try {
-        const source = this.settings?.display?.newsSource || 'ynet';
-        const res = await fetch(`/api/news?source=${source}`);
+        const res = await fetch(`/api/news?source=${requestedSource}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.success && data.items) {
+          if (data.success && data.items && data.items.length > 0) {
             this.newsItems = data.items;
             this.renderNewsTicker();
             return;
@@ -1105,24 +1117,58 @@ class BuildingSignageApp {
       } catch (e) {}
     }
 
-    // Client-side RSS proxy for GitHub Pages (with timeout & fallback)
-    try {
-      const proxyRes = await fetchWithTimeout('https://api.rss2json.com/v1/api.json?rss_url=https://www.ynet.co.il/Integration/StoryRss2.xml', {}, 8000);
-      if (proxyRes.ok) {
-        const data = await proxyRes.json();
-        if (data.items && data.items.length > 0) {
-          this.newsItems = data.items.slice(0, 10).map(i => ({ title: i.title }));
-          this.renderNewsTicker();
-          return;
-        }
+    // Client-side RSS feeds catalog (production on GitHub Pages)
+    const RSS_FEEDS = {
+      ynet: 'https://www.ynet.co.il/Integration/StoryRss2.xml',
+      walla: 'https://rss.walla.co.il/feed/1',
+      mako: 'https://rcs.mako.co.il/rss/news-israel.xml',
+      kan: 'https://www.kan.org.il/rss/news.xml'
+    };
+
+    let targetFeed = RSS_FEEDS[requestedSource] || RSS_FEEDS.ynet;
+    // Fallback to Walla or N12 if selected source fails (e.g. Kan Cloudflare WAF block)
+    let fallbackFeed = requestedSource === 'walla' ? RSS_FEEDS.mako : RSS_FEEDS.walla;
+
+    const fetchViaRss2Json = async (feedUrl) => {
+      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+      const res = await fetchWithTimeout(apiUrl, {}, 8000);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.status === 'ok' && data.items && data.items.length > 0) {
+        return data.items.slice(0, 12).map(i => {
+          const cleanTitle = (i.title || '')
+            .replace(/<[^>]*>?/gm, '')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&amp;/g, '&')
+            .trim();
+          return { title: cleanTitle };
+        }).filter(i => i.title && i.title.length > 5);
       }
-    } catch (proxyErr) {
-      console.warn('[Screen] Primary RSS fetch failed, checking backup proxy...', proxyErr.message);
+      throw new Error('No valid items in RSS response');
+    };
+
+    try {
+      // 1. Try selected news source
+      this.newsItems = await fetchViaRss2Json(targetFeed);
+      this.renderNewsTicker();
+      return;
+    } catch (primaryErr) {
+      console.warn(`[Screen] Primary news fetch failed for ${requestedSource} (${primaryErr.message}). Trying fallback feed...`);
+
+      // 2. Try reliable backup feed (Walla or N12)
+      try {
+        this.newsItems = await fetchViaRss2Json(fallbackFeed);
+        this.renderNewsTicker();
+        return;
+      } catch (fallbackErr) {
+        console.warn('[Screen] Backup news fetch failed:', fallbackErr.message);
+      }
     }
 
-    // Fallback Announcements Ticker
+    // 3. Fallback Announcements Ticker if all networks fail
     this.newsItems = [
-      { title: 'ועד הבית מברך את כל דיירי ואורחי הבניין בברכת שבת שלום וסוף שבוע נעים' },
+      { title: 'ועד הבית מברך את כל דיירי ואורחי הבניין בברכת יום נעים, בריאות ושקט' },
       { title: 'נא לוודא כי דלת הלובי הראשית והשער נסגרים כראוי לאחר כניסה ויציאה' },
       { title: 'שמירה על ניקיון וסדר בשטחים המשותפים תורמת לאיכות החיים של כולנו' }
     ];
@@ -1596,6 +1642,13 @@ class BuildingSignageApp {
       }
     }, { passive: true });
 
+    // High-frequency radio schedule watchdog (every 15 seconds):
+    // - Halts audio immediately at 23:00:00 (or configured endHour)
+    // - Forcefully attempts to start audio at 06:30:00 (or configured startHour)
+    setInterval(() => {
+      this.checkRadioSchedule();
+    }, 15000);
+
     // Cycle audio stream buffer every 2 hours during playback to prevent memory leaks
     setInterval(() => {
       this.recycleAudioBuffer();
@@ -1615,14 +1668,35 @@ class BuildingSignageApp {
     if (!this.settings?.radio?.enabled) return false;
     if (!this.settings.radio.autoPlaySchedule) return true;
 
-    let startH = this.settings.radio.startHour || '08:00';
-    let endH = this.settings.radio.endHour || '21:00';
-    if (startH === '00:08') startH = '08:00';
-    if (endH === '00:21') endH = '21:00';
+    let startStr = this.settings.radio.startHour || '06:30';
+    let endStr = this.settings.radio.endHour || '23:00';
+    if (startStr === '00:08') startStr = '08:00';
+    if (endStr === '00:21') endStr = '21:00';
+
+    let [sh, sm] = startStr.split(':').map(Number);
+    let [eh, em] = endStr.split(':').map(Number);
+    if (isNaN(sh)) sh = 6;
+    if (isNaN(sm)) sm = 30;
+    if (isNaN(eh)) eh = 23;
+    if (isNaN(em)) em = 0;
+
+    // Normalize any 00:xx hour errors
+    if (sh === 0 && sm > 0 && sm <= 23) { sh = sm; sm = 0; }
+    if (eh === 0 && em > 0 && em <= 23) { eh = em; em = 0; }
 
     const now = new Date();
-    const currentHour = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    return currentHour >= startH && currentHour <= endH;
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const startMinutes = sh * 60 + sm;
+    const endMinutes = eh * 60 + em;
+
+    if (startMinutes <= endMinutes) {
+      // Daytime window (e.g. 06:30 to 23:00):
+      // Precisely at 23:00:00 (currentMinutes === endMinutes) it evaluates to false!
+      return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+    } else {
+      // Overnight window (e.g. 22:00 to 02:00)
+      return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+    }
   }
 
   getCurrentRadioStation() {
@@ -1681,12 +1755,18 @@ class BuildingSignageApp {
     }
 
     if (this.audioPlayer.paused) {
-      this.audioPlayer.play().then(() => {
-        if (unmutePrompt) unmutePrompt.style.display = 'none';
-      }).catch(err => {
-        console.log('[Radio] Autoplay note:', err.message);
-        if (unmutePrompt) unmutePrompt.style.display = 'flex';
-      });
+      const playPromise = this.audioPlayer.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          if (unmutePrompt) unmutePrompt.style.display = 'none';
+        }).catch(err => {
+          console.log('[Radio] Autoplay policy note:', err.message);
+          // Show tap prompt only if we are in schedule and still paused
+          if (this.isRadioInSchedule() && unmutePrompt) {
+            unmutePrompt.style.display = 'flex';
+          }
+        });
+      }
     }
   }
 
@@ -1710,12 +1790,17 @@ class BuildingSignageApp {
 
   checkRadioSchedule() {
     const inSchedule = this.isRadioInSchedule();
+    const unmutePrompt = document.getElementById('audio-unmute-prompt');
+
     if (!inSchedule) {
+      // Outside permitted hours -> stop radio and ensure prompt is hidden
+      if (unmutePrompt) unmutePrompt.style.display = 'none';
       if (this.audioPlayer && (!this.audioPlayer.paused || this.audioPlayer.src)) {
-        console.log('🔇 [Radio] Outside permitted hours -> pausing and clearing stream buffer.');
+        console.log('🔇 [Radio] Outside permitted hours -> stopping radio immediately and freeing audio engine.');
         this.stopRadioImmediate();
       }
     } else {
+      // Inside permitted hours -> forcefully assert stream playback if not user-muted
       if (this.audioPlayer && this.audioPlayer.paused && !this.isSecretMuted) {
         this.startRadioStream();
       }
@@ -1781,7 +1866,10 @@ class BuildingSignageApp {
 
   setupWatchdog() {
     // Smart Maintenance Watchdog:
-    // Full hard reload (window.location.reload) ONLY at 04:00 AM (deep night when radio is OFF).
+    // Full hard reload (window.location.reload) at deep night:
+    // 1. 23:05 - Clean reload 5 minutes after radio shutoff at 23:00. Flushes audio engine,
+    //    DOM nodes, and GPU buffers accumulated during the day. Zero autoplay prompt risk!
+    // 2. 04:00 AM - Second deep night clean reload before morning broadcast.
     // During daytime radio hours (10:00, 16:00), we NEVER hard-reload the page to avoid triggering
     // the browser's Autoplay audio block ("גע במסך"). Instead, we perform an in-memory soft sweep!
     setInterval(() => {
@@ -1790,18 +1878,19 @@ class BuildingSignageApp {
       const currentM = now.getMinutes();
       const currentS = now.getSeconds();
 
-      // Deep night full reload (04:00 AM) - radio is off, zero audio interruption
-      if (currentH === 4 && currentM === 0 && currentS < 12) {
+      // Deep night full reloads (23:05 and 04:00 AM) - radio is off, zero audio interruption
+      const isNightCleanTime = (currentH === 23 && currentM === 5) || (currentH === 4 && currentM === 0);
+      if (isNightCleanTime && currentS < 12) {
         const modal = document.getElementById('content-modal');
         const isModalOpen = modal && !modal.classList.contains('hidden');
         if (!this.isPaused && !isModalOpen) {
-          console.log('🔄 [Watchdog] Scheduled 04:00 AM deep clean reload (radio is off)...');
+          console.log(`🔄 [Watchdog] Scheduled clean night reload at ${currentH}:${String(currentM).padStart(2, '0')} (radio is off)...`);
           window.location.reload();
         }
       }
 
-      // Daytime memory sweeps (10:00, 16:00, 22:00) - in-memory cleanup WITHOUT reloading the window
-      if ([10, 16, 22].includes(currentH) && currentM === 0 && currentS < 12) {
+      // Daytime memory sweeps (10:00, 16:00) - in-memory cleanup WITHOUT reloading the window
+      if ([10, 16].includes(currentH) && currentM === 0 && currentS < 12) {
         this.performDaytimeSoftMemorySweep();
       }
     }, 10000);

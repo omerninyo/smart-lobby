@@ -510,12 +510,13 @@ app.get('/api/shabbat-holidays', async (req, res) => {
 });
 
 // ==========================================
-// 6. RSS NEWS TICKER (Ynet / Kan / Walla)
+// 6. RSS NEWS TICKER (Ynet / Walla / Mako / Kan)
 // ==========================================
 const RSS_FEEDS = {
   ynet: 'https://www.ynet.co.il/Integration/StoryRss2.xml',
-  kan: 'https://www.kan.org.il/rss/news.xml',
-  walla: 'https://rss.walla.co.il/feed/1'
+  walla: 'https://rss.walla.co.il/feed/1',
+  mako: 'https://rcs.mako.co.il/rss/news-israel.xml',
+  kan: 'https://www.kan.org.il/rss/news.xml'
 };
 
 app.get('/api/news', async (req, res) => {
