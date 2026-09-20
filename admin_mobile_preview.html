@@ -252,6 +252,24 @@
     <!-- ===================================================== -->
     <div id="tab-content-display" class="hidden space-y-4">
       
+      <!-- Yom Kippur Mode Switch -->
+      <div class="card-surface p-4 border border-purple-500/50 bg-gradient-to-r from-purple-950/40 to-gray-900 space-y-2.5">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5">
+            <span class="text-2xl shrink-0">🕍</span>
+            <div>
+              <h3 class="font-bold text-sm text-purple-200">מצב יום כיפור (דממה ואפס תנועה)</h3>
+              <p class="text-[11px] text-gray-300">השתקה מוחלטת, ביטול מעברי שקופיות ועצירת טיקר החדשות</p>
+            </div>
+          </div>
+          <select id="mobile-yom-kippur-mode" class="bg-gray-900 border border-purple-500/50 text-purple-200 text-xs font-bold rounded-xl p-2 shrink-0" onchange="showToast('הגדרת מצב יום כיפור עודכנה!', '🕍')">
+            <option value="auto">🌟 אוטומטי</option>
+            <option value="on">🔒 פעיל כעת</option>
+            <option value="off">✕ כבוי</option>
+          </select>
+        </div>
+      </div>
+
       <!-- Lite Mode Hardware Acceleration Switch -->
       <div class="card-surface p-4 border border-amber-500/40 bg-gradient-to-r from-amber-950/40 to-gray-900 space-y-2">
         <div class="flex items-center justify-between gap-3">

@@ -1466,3 +1466,58 @@ body.lite-mode .slide-card {
 body.lite-mode .stage-progress-fill {
   transition: width 0.5s linear !important;
 }
+
+/* =========================================================
+   YOM KIPPUR MODE (Zero-Motion & Absolute Silence)
+   Strictly enforces NO MUSIC and NO ANIMATION / MOVEMENT
+   ========================================================= */
+body.yom-kippur-mode,
+body.yom-kippur-mode *,
+body.yom-kippur-mode *::before,
+body.yom-kippur-mode *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+body.yom-kippur-mode #stage-prev-btn,
+body.yom-kippur-mode #stage-next-btn,
+body.yom-kippur-mode .stage-progress-bar,
+body.yom-kippur-mode .radio-waves,
+body.yom-kippur-mode #audio-unmute-prompt,
+body.yom-kippur-mode .ticker-badge {
+  display: none !important;
+}
+
+body.yom-kippur-mode .ticker-scroll-wrapper {
+  overflow: hidden !important;
+  justify-content: center !important;
+}
+
+body.yom-kippur-mode .ticker-content {
+  animation: none !important;
+  transform: none !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+body.yom-kippur-mode #background-layer {
+  transform: none !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+body.yom-kippur-mode .yom-kippur-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2.5rem 2rem;
+  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.90) 0%, rgba(2, 6, 23, 0.97) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+}

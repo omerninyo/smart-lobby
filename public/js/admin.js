@@ -822,6 +822,7 @@ function setupDisplayControls() {
           showNewsTicker: document.getElementById('setting-show-news-ticker')?.checked !== false,
           showStageArrows: document.getElementById('setting-show-stage-arrows')?.checked !== false,
           customTickerText: document.getElementById('setting-custom-ticker')?.value.trim() || '',
+          yomKippurMode: document.getElementById('setting-yom-kippur-mode')?.value || 'auto',
           theme: selectedThemeMode,
           customTheme
         }
@@ -1142,6 +1143,9 @@ function populateSettingsUI() {
     });
   }
   updateLiteModeUI(Boolean(settingsData.display?.liteMode));
+
+  const ykModeInput = document.getElementById('setting-yom-kippur-mode');
+  if (ykModeInput) ykModeInput.value = settingsData.display?.yomKippurMode || 'auto';
 
   const layoutSide = document.getElementById('setting-layout-side');
   if (layoutSide) layoutSide.value = settingsData.display?.layoutSide || 'left';

@@ -603,8 +603,63 @@ class BuildingSignageApp {
     const durationSec = this.settings.display?.slideDurationSeconds || 12;
     this.slideDurationMs = durationSec * 1000;
 
+    // Yom Kippur Strict Mode: Zero Motion & Absolute Silence
+    const isYomKippur = this.isYomKippurModeActive();
+    document.body.classList.toggle('yom-kippur-mode', isYomKippur);
+    if (isYomKippur) {
+      this.stopRadioImmediate();
+      this.isSecretMuted = true;
+      if (this.slideTimer) clearInterval(this.slideTimer);
+      if (this.progressTimer) clearInterval(this.progressTimer);
+    }
+
     // Radio
     this.updateRadioState();
+  }
+
+  isYomKippurModeActive() {
+    const setting = this.settings?.display?.yomKippurMode;
+    if (setting === 'on' || setting === true) return true;
+    if (setting === 'off' || setting === false) return false;
+
+    // Automatic detection via Hebcal or Calendar
+    const holidays = this.shabbatData?.holidays || [];
+    const hasKippurHoliday = holidays.some(it => 
+      (it.title && it.title.includes('כיפור')) || 
+      (it.hebrew && it.hebrew.includes('כיפור')) ||
+      (it.title_orig && it.title_orig.toLowerCase().includes('kippur'))
+    );
+
+    const now = new Date();
+    if (hasKippurHoliday) {
+      const havdalahItem = holidays.find(it => it.category === 'havdalah' && ((it.memo || '').includes('כִּפּוּר') || (it.title || '').includes('כִּפּוּר')));
+      const erevDateItem = holidays.find(it => (it.title_orig || '').includes('Erev') || (it.hebrew || '').includes('ערב'));
+      const nowTime = now.getTime();
+
+      if (erevDateItem?.date) {
+        const erevStart = new Date(erevDateItem.date + 'T00:00:00+03:00').getTime();
+        const fastEnd = havdalahItem?.date ? new Date(havdalahItem.date).getTime() : (erevStart + 48 * 3600 * 1000);
+        if (nowTime >= erevStart && nowTime <= fastEnd) {
+          return true;
+        }
+      } else {
+        return true;
+      }
+    }
+
+    // Gregorian calendar fallback for 2026: Sep 20 00:00 to Sep 21 19:30
+    const y = now.getFullYear();
+    const m = now.getMonth() + 1;
+    const d = now.getDate();
+    if (y === 2026 && m === 9) {
+      if (d === 20) return true;
+      if (d === 21) {
+        const totalMin = now.getHours() * 60 + now.getMinutes();
+        if (totalMin <= 19 * 60 + 20) return true;
+      }
+    }
+
+    return false;
   }
 
   updateSideContact() {
@@ -958,6 +1013,7 @@ class BuildingSignageApp {
         // Update default wallpapers to match current holiday/special event theme!
         this.wallpapers = shuffledThemeImages.map((url, i) => ({ id: `theme-wall-${i}`, url }));
 
+        this.applyDisplaySettings();
         this.renderShabbatAndHolidays();
         this.buildSlides();
         this.rotateBackground();
@@ -1179,6 +1235,16 @@ class BuildingSignageApp {
     const tickerContent = document.getElementById('ticker-content');
     if (!tickerContent) return;
 
+    // Yom Kippur Strict Mode: Static dignified blessing with ZERO motion/marquee
+    if (this.isYomKippurModeActive()) {
+      tickerContent.innerHTML = `
+        <div style="width: 100%; text-align: center; font-weight: 800; font-size: 1.05rem; color: #f8fafc; letter-spacing: 0.5px;">
+          🕍 יום הכיפורים • גמר חתימה טובה ושנה מבורכת לכל דיירי ואורחי הבניין
+        </div>
+      `;
+      return;
+    }
+
     let itemsHtml = '';
 
     if (this.settings?.display?.customTickerText) {
@@ -1273,6 +1339,23 @@ class BuildingSignageApp {
   // =========================================================
   buildSlides() {
     this.slides = [];
+
+    // Yom Kippur Strict Mode: Exactly 1 static slide with ZERO transitions and ZERO motion
+    if (this.isYomKippurModeActive()) {
+      const candles = this.shabbatData?.candleLighting?.time || '18:19';
+      const havdalah = this.shabbatData?.havdalah?.time || '19:15';
+      this.slides.push({
+        type: 'yom_kippur_static',
+        data: {
+          candles,
+          havdalah,
+          year: 'תשפ"ז',
+          image: 'images/wallpapers/holidays/yom_kippur.jpg?v=20260830'
+        }
+      });
+      this.renderSlideCards();
+      return;
+    }
 
     // 1. Committee Notice Slides (Exclude hidden and expired notices)
     this.notices.forEach(notice => {
@@ -1544,6 +1627,38 @@ class BuildingSignageApp {
         `;
       }
 
+      // SLIDE TYPE 7: YOM KIPPUR DEDICATED STATIC CARD (100% Zero-Motion)
+      else if (slide.type === 'yom_kippur_static') {
+        const d = slide.data;
+        contentHtml = `
+          <div class="yom-kippur-card">
+            <div style="font-size: 3.2rem; margin-bottom: 0.6rem;">🕍</div>
+            <h2 style="font-size: 2.6rem; font-weight: 900; color: #ffffff; margin-bottom: 0.4rem; letter-spacing: -0.5px;">יום הכיפורים ${d.year}</h2>
+            <p style="font-size: 1.45rem; font-weight: 800; color: #facc15; margin-bottom: 1.8rem;">גמר חתימה טובה • צום קל ומועיל</p>
+
+            <div style="display: flex; gap: 1.5rem; justify-content: center; margin-bottom: 2rem; width: 100%; max-width: 580px;">
+              <div style="flex: 1; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(250, 204, 21, 0.5); border-radius: 16px; padding: 1.1rem; text-align: center;">
+                <span style="display: block; font-size: 0.95rem; color: #cbd5e1; margin-bottom: 0.35rem; font-weight: 600;">🕯️ כניסת הצום והדלקת נרות</span>
+                <span style="font-size: 2.1rem; font-weight: 900; color: #ffffff; font-family: monospace;">${d.candles}</span>
+              </div>
+              <div style="flex: 1; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.5); border-radius: 16px; padding: 1.1rem; text-align: center;">
+                <span style="display: block; font-size: 0.95rem; color: #cbd5e1; margin-bottom: 0.35rem; font-weight: 600;">✨ צאת הצום והבדלה</span>
+                <span style="font-size: 2.1rem; font-weight: 900; color: #ffffff; font-family: monospace;">${d.havdalah}</span>
+              </div>
+            </div>
+
+            <div style="max-width: 600px; background: rgba(30, 41, 59, 0.65); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 16px; padding: 1.1rem 1.6rem; text-align: center;">
+              <p style="font-size: 1.05rem; color: #f1f5f9; line-height: 1.6; margin-bottom: 0.6rem; font-weight: 600;">
+                ועד הבית מאחל לכל הדיירים, המשפחות והאורחים שנת סליחה, בריאות, שלום ובשורות טובות.
+              </p>
+              <p style="font-size: 0.95rem; color: #94a3b8; font-weight: 500;">
+                נא לשמור על קדושת היום ועל השקט המוחלט בלובי, במעליות ובשטחים הציבוריים.
+              </p>
+            </div>
+          </div>
+        `;
+      }
+
       card.innerHTML = contentHtml;
       container.appendChild(card);
     });
@@ -1552,7 +1667,7 @@ class BuildingSignageApp {
   startSlideshow() {
     if (this.slideTimer) clearInterval(this.slideTimer);
     if (this.progressTimer) clearInterval(this.progressTimer);
-    if (this.slides.length <= 1) return;
+    if (this.isYomKippurModeActive() || this.slides.length <= 1) return;
 
     this.slideStartTime = Date.now();
     const progressFill = document.getElementById('stage-progress-fill');
@@ -1605,6 +1720,12 @@ class BuildingSignageApp {
     const bgLayer = document.getElementById('background-layer');
     if (!bgLayer) return;
 
+    if (this.isYomKippurModeActive()) {
+      bgLayer.style.backgroundImage = "url('images/wallpapers/holidays/yom_kippur.jpg?v=20260830')";
+      bgLayer.classList.remove('zoom-effect');
+      return;
+    }
+
     // Use theme wallpapers collection if available
     const activeList = (this.shabbatData?.themeImages && this.shabbatData.themeImages.length > 0)
       ? this.shabbatData.themeImages.map((u, i) => ({ id: `th-${i}`, url: u }))
@@ -1630,6 +1751,7 @@ class BuildingSignageApp {
 
     if (radioToggle && this.audioPlayer) {
       radioToggle.addEventListener('click', () => {
+        if (this.isYomKippurModeActive()) return;
         if (this.audioPlayer.paused) {
           this.isSecretMuted = false;
           this.startRadioStream();
@@ -1642,12 +1764,14 @@ class BuildingSignageApp {
 
     if (unmutePrompt) {
       unmutePrompt.addEventListener('click', () => {
+        if (this.isYomKippurModeActive()) return;
         this.unlockAudio();
       });
     }
 
     // Unlock audio smoothly on ANY screen touch if waiting for user gesture
     document.addEventListener('pointerdown', () => {
+      if (this.isYomKippurModeActive()) return;
       if (this.audioPlayer && this.audioPlayer.paused && this.isRadioInSchedule() && !this.isSecretMuted) {
         this.startRadioStream();
       }
@@ -1667,6 +1791,7 @@ class BuildingSignageApp {
   }
 
   unlockAudio() {
+    if (this.isYomKippurModeActive()) return;
     const prompt = document.getElementById('audio-unmute-prompt');
     if (this.audioPlayer && this.isRadioInSchedule() && !this.isSecretMuted) {
       this.startRadioStream();
@@ -1676,6 +1801,7 @@ class BuildingSignageApp {
   }
 
   isRadioInSchedule() {
+    if (this.isYomKippurModeActive()) return false;
     if (!this.settings?.radio?.enabled) return false;
     if (!this.settings.radio.autoPlaySchedule) return true;
 
@@ -1746,6 +1872,10 @@ class BuildingSignageApp {
   }
 
   startRadioStream() {
+    if (this.isYomKippurModeActive()) {
+      this.stopRadioImmediate();
+      return;
+    }
     if (!this.audioPlayer || !this.isRadioInSchedule() || this.isSecretMuted) return;
 
     const radio = this.settings?.radio;
@@ -1782,7 +1912,7 @@ class BuildingSignageApp {
   }
 
   recycleAudioBuffer() {
-    if (!this.isRadioInSchedule() || !this.audioPlayer || this.audioPlayer.paused || this.isSecretMuted) return;
+    if (this.isYomKippurModeActive() || !this.isRadioInSchedule() || !this.audioPlayer || this.audioPlayer.paused || this.isSecretMuted) return;
     console.log('♻️ [Radio] Recycling live audio stream buffer to prevent memory bloat...');
     const currentSt = this.getCurrentRadioStation();
     if (!currentSt) return;
@@ -1800,6 +1930,10 @@ class BuildingSignageApp {
   }
 
   checkRadioSchedule() {
+    if (this.isYomKippurModeActive()) {
+      this.stopRadioImmediate();
+      return;
+    }
     const inSchedule = this.isRadioInSchedule();
     const unmutePrompt = document.getElementById('audio-unmute-prompt');
 
