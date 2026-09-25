@@ -517,6 +517,8 @@ async function loadNotices() {
     notices.forEach(n => { window._adminNoticesMap[n.id] = n; });
 
     list.innerHTML = notices.map(n => {
+      const urgentBadge = n.isUrgent ? `<span class="bg-red-600 text-white text-xs px-2 py-0.5 rounded-md font-bold">⚠️ דחוף</span>` : '';
+      const imgBadge = n.imageUrl ? `<span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-md">🖼️ תמונה</span>` : '';
       const isExpired = Boolean(n.expiresAt && !isNaN(new Date(n.expiresAt).getTime()) && (new Date(n.expiresAt).getTime() <= Date.now()));
       let statusBadge = '';
       if (n.hidden) {
@@ -558,6 +560,7 @@ async function loadNotices() {
       `;
     }).join('');
   } catch (err) {
+    console.error('[Admin] Error loading notices:', err);
     list.innerHTML = '<p class="text-red-400 text-xs">שגיאה בטעינת הודעות</p>';
   }
 }
