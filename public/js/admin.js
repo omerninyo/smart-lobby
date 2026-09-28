@@ -657,7 +657,7 @@ function setupGalleryPicker() {
         (data.notice_topics || []).forEach(item => {
           allImages.push({
             id: item.id,
-            title: item.title,
+            title: item.name || item.title || 'הודעת ועד',
             category: 'notices',
             catName: 'הודעות ועד',
             url: item.url
@@ -666,11 +666,11 @@ function setupGalleryPicker() {
 
         // 2. Shabbat & Holidays
         if (data.shabbat) {
-          data.shabbat.forEach(item => allImages.push({ id: item.id, title: item.title || 'שבת קודש', category: 'shabbat', catName: 'שבת קודש', url: item.url }));
+          data.shabbat.forEach(item => allImages.push({ id: item.id, title: item.title || item.name || 'שבת קודש', category: 'shabbat', catName: 'שבת קודש', url: item.url }));
         }
-        ['rosh-hashanah', 'sukkot', 'hanukkah', 'pesach', 'shavuot'].forEach(hKey => {
+        ['rosh-hashanah', 'yom-kippur', 'sukkot', 'simchat-torah', 'hanukkah', 'tu-bishvat', 'purim', 'pesach', 'memorial-day', 'independence-day', 'lag-baomer', 'shavuot', 'back-to-school', 'new-year'].forEach(hKey => {
           if (data[hKey]) {
-            data[hKey].forEach(item => allImages.push({ id: item.id, title: item.title, category: 'shabbat', catName: 'חגי ישראל', url: item.url }));
+            data[hKey].forEach(item => allImages.push({ id: item.id, title: item.title || item.name || 'חגי ישראל', category: 'shabbat', catName: 'חגי ישראל ומועדים', url: item.url }));
           }
         });
 
@@ -678,7 +678,7 @@ function setupGalleryPicker() {
         (data.default || []).forEach(item => {
           allImages.push({
             id: item.id,
-            title: item.title,
+            title: item.title || item.name || 'נוף ואבסטרקט',
             category: 'landscapes',
             catName: 'נוף ואבסטרקט',
             url: item.url
@@ -783,6 +783,9 @@ function updateLiteModeUI(isLite) {
       headerBtn.className = 'bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm';
       headerText.textContent = 'Lite: כבוי';
     }
+    if (currentRole === 'editor') {
+      headerBtn.classList.add('hidden');
+    }
   }
 }
 
@@ -825,6 +828,7 @@ function setupDisplayControls() {
           showNewsTicker: document.getElementById('setting-show-news-ticker')?.checked !== false,
           showStageArrows: document.getElementById('setting-show-stage-arrows')?.checked !== false,
           customTickerText: document.getElementById('setting-custom-ticker')?.value.trim() || '',
+          newsSource: document.getElementById('setting-rss-source')?.value || settingsData?.display?.newsSource || 'ynet',
           yomKippurMode: document.getElementById('setting-yom-kippur-mode')?.value || 'auto',
           theme: selectedThemeMode,
           customTheme

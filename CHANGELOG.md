@@ -4,6 +4,15 @@ All notable changes to the Smart Lobby open-source template will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.2] - 2026-09-28
+### Fixed
+- **Duplicate ID Elimination:** Removed redundant secondary Lite Mode card in Tab 2 (`admin.html` and `public/admin.html`), guaranteeing unique `#setting-lite-mode` ID across the DOM.
+- **Notice Gallery Title Fallback:** Fixed `setupGalleryPicker` in `admin.js` to map `item.name || item.title || 'הודעת ועד'`, eliminating `undefined` image labels in the notice media picker modal. Expanded holiday suite mapping to include all 15 Jewish holidays and seasonal themes.
+- **Role Permission Boundary (Editor Mode):** Fixed header Lite Mode quick toggle button (`#header-litemode-btn`) leak in Editor mode caused by class reset in `updateLiteModeUI()`. Ensured button stays strictly hidden for the committee member editor role.
+
+### Changed
+- **Logical Admin Grouping:** Re-located RSS News Source dropdown (`#setting-rss-source`) to Tab 2 (Display & Ticker Controls) alongside the ticker toggle and custom ticker message. Focused Tab 5 exclusively on Building Details and PIN Security.
+
 ## [2.4.1] - 2026-09-16
 ### Fixed
 - **Notice Expiration Filtering:** Added strict expiration verification (`isNoticeActive`) in `screen.js` and `admin.js`. Notices whose `expiresAt` timestamp has passed are automatically excluded from the side feed and main stage slides, and clearly flagged as expired in Admin.
