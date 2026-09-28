@@ -1492,4 +1492,90 @@ function setupDeviceHealthMonitoring() {
       setTimeout(() => { flushBtn.textContent = 'רענן זיכרון עכשיו'; }, 3000);
     });
   }
+
+  setupDeviceLogsMonitoring();
+}
+
+function setupDeviceLogsMonitoring() {
+  if (!window.FirebaseSync) return;
+
+  const logsList = document.getElementById('device-logs-list');
+  const refreshBtn = document.getElementById('refresh-device-logs-btn');
+  const clearBtn = document.getElementById('clear-device-logs-btn');
+
+  const renderLogs = (events) => {
+    if (!logsList) return;
+    if (!events || events.length === 0) {
+      logsList.innerHTML = '<div class="text-center py-6 text-gray-500">אין אירועים או קריסות מתועדות ביומן (הכל נקי)</div>';
+      return;
+    }
+
+    logsList.innerHTML = events.map(evt => {
+      const d = new Date(evt.timestamp || evt.reportedAt || Date.now());
+      const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+      let badgeClass = 'bg-gray-800 text-gray-300 border-gray-700';
+      let badgeIcon = 'ℹ️';
+      let badgeTitle = 'אירוע שגרתי';
+
+      if (evt.type === 'crash' || evt.bootType === 'unclean_crash_restart') {
+        badgeClass = 'bg-red-950 text-red-300 border-red-800';
+        badgeIcon = '🔴';
+        badgeTitle = 'קריסה / כיבוי פתאומי';
+      } else if (evt.bootType === 'clean_watchdog_reload') {
+        badgeClass = 'bg-emerald-950 text-emerald-300 border-emerald-800';
+        badgeIcon = '🟢';
+        badgeTitle = 'רענון Watchdog יזום';
+      } else if (evt.bootType === 'remote_force_reload') {
+        badgeClass = 'bg-purple-950 text-purple-300 border-purple-800';
+        badgeIcon = '🟣';
+        badgeTitle = 'רענון מרוחק (Admin)';
+      } else if (evt.type === 'js_error') {
+        badgeClass = 'bg-amber-950 text-amber-300 border-amber-800';
+        badgeIcon = '⚠️';
+        badgeTitle = 'שגיאת קוד JS';
+      } else if (evt.type === 'unhandled_rejection') {
+        badgeClass = 'bg-orange-950 text-orange-300 border-orange-800';
+        badgeIcon = '⚡';
+        badgeTitle = 'דחיית Promise לא מטופלת';
+      }
+
+      return `
+        <div class="bg-gray-950/80 p-2.5 rounded-lg border border-gray-800/80 space-y-1">
+          <div class="flex items-center justify-between gap-2">
+            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass}">
+              <span>${badgeIcon}</span>
+              <span>${badgeTitle}</span>
+            </span>
+            <span class="text-[10px] font-mono text-gray-400" dir="ltr">${timeStr}</span>
+          </div>
+          <p class="text-xs text-gray-300 leading-snug">${escapeHtml(evt.summary || evt.message || 'ללא פירוט')}</p>
+          ${evt.heapUsedMB ? `<span class="text-[10px] text-gray-500 block">זיכרון בשימוש בעלייה: ${evt.heapUsedMB} MB</span>` : ''}
+          ${evt.stack ? `<pre class="text-[9px] font-mono text-gray-500 bg-gray-900 p-1.5 rounded overflow-x-auto max-h-20" dir="ltr">${escapeHtml(evt.stack)}</pre>` : ''}
+        </div>
+      `;
+    }).join('');
+  };
+
+  window.FirebaseSync.onDeviceLogsChanged(renderLogs);
+  window.FirebaseSync.getDeviceLogs().then(renderLogs);
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', async () => {
+      refreshBtn.textContent = 'טוען...';
+      const events = await window.FirebaseSync.getDeviceLogs();
+      renderLogs(events);
+      setTimeout(() => { refreshBtn.textContent = '🔄 רענן יומן'; }, 1000);
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', async () => {
+      if (!confirm('האם אתה בטוח שברצונך לנקות את יומן האירועים והקריסות?')) return;
+      clearBtn.textContent = 'מנקה...';
+      await window.FirebaseSync.clearDeviceLogs();
+      renderLogs([]);
+      setTimeout(() => { clearBtn.textContent = '🗑️ נקה יומן'; }, 1000);
+    });
+  }
 }

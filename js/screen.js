@@ -65,6 +65,7 @@ class BuildingSignageApp {
 
   async init() {
     console.log('🚀 Initializing Building Digital Signage Touchscreen Controller...');
+    this.setupFlightRecorder();
     this.setupAudio();
     this.startClock();
     this.setupTouchInteractions();
@@ -108,6 +109,7 @@ class BuildingSignageApp {
         // Check for Remote Force Reload
         if (cloudSettings.system?.forceReloadAt && cloudSettings.system.forceReloadAt > this.bootTimestamp) {
           console.log('🔄 [Screen] Remote reload command received from admin!');
+          try { localStorage.setItem('smart_lobby_exit_reason', 'remote_force_reload'); } catch (e) {}
           window.location.reload(true);
           return;
         }
@@ -2016,6 +2018,7 @@ class BuildingSignageApp {
       if (current > lastReloadTime) {
         lastReloadTime = current;
         console.log('🔄 Remote force reload triggered via interval poll!');
+        try { localStorage.setItem('smart_lobby_exit_reason', 'remote_force_reload'); } catch (e) {}
         window.location.reload();
       }
     }, 2500);
@@ -2042,6 +2045,7 @@ class BuildingSignageApp {
         const isModalOpen = modal && !modal.classList.contains('hidden');
         if (!this.isPaused && !isModalOpen) {
           console.log(`🔄 [Watchdog] Scheduled clean night reload at ${currentH}:${String(currentM).padStart(2, '0')} (radio is off)...`);
+          try { localStorage.setItem('smart_lobby_exit_reason', `watchdog_scheduled_${currentH}:${String(currentM).padStart(2, '0')}`); } catch (e) {}
           window.location.reload();
         }
       }
@@ -2063,6 +2067,121 @@ class BuildingSignageApp {
     if (window.gc) {
       try { window.gc(); } catch (e) {}
     }
+  }
+
+  // =========================================================
+  // 8. BLACKBOX FLIGHT RECORDER & CRASH TRACKING
+  // =========================================================
+  setupFlightRecorder() {
+    let lastExitReason = null;
+    let lastAlivePing = 0;
+    try {
+      lastExitReason = localStorage.getItem('smart_lobby_exit_reason');
+      lastAlivePing = parseInt(localStorage.getItem('smart_lobby_last_alive') || '0', 10);
+    } catch (e) {}
+
+    const now = Date.now();
+    let bootType = 'fresh_start';
+    let summary = 'הפעלת מערכת שגרתית';
+    let isCrash = false;
+
+    if (lastExitReason) {
+      if (lastExitReason.startsWith('watchdog_scheduled')) {
+        bootType = 'clean_watchdog_reload';
+        const timeStr = lastExitReason.replace('watchdog_scheduled_', '');
+        summary = `רענון שגרתי מתוזמן ע"י ה-Watchdog (${timeStr}) לניקוי זיכרון`;
+      } else if (lastExitReason === 'remote_force_reload') {
+        bootType = 'remote_force_reload';
+        summary = 'רענון יזום מרחוק ע"י מנהל המערכת (Admin Remote Reload)';
+      } else if (lastExitReason === 'manual_user_reload') {
+        bootType = 'manual_reload';
+        summary = 'רענון ידני ע"י משתמש / מפתח';
+      } else if (lastExitReason === 'running') {
+        isCrash = true;
+        bootType = 'unclean_crash_restart';
+        const gapMins = lastAlivePing ? Math.round((now - lastAlivePing) / 60000) : null;
+        summary = (gapMins !== null && gapMins > 0)
+          ? `התאוששות מקריסה / כיבוי פתאומי. אות חיים אחרון לפני כ-${gapMins} דקות (סגירה בלתי נקייה של Webview Kiosk / מערכת ההפעלה)`
+          : 'התאוששות מקריסה / סגירה פתאומית של הדפדפן ללא רענון יזום';
+      }
+    } else {
+      bootType = 'initial_boot';
+      summary = 'הפעלה ראשונית של לוח השילוט';
+    }
+
+    try {
+      localStorage.setItem('smart_lobby_exit_reason', 'running');
+      localStorage.setItem('smart_lobby_last_alive', now.toString());
+    } catch (e) {}
+
+    // Send boot / crash log to Firebase once initialized
+    setTimeout(async () => {
+      if (window.FirebaseSync) {
+        let heapMB = null;
+        if (window.performance && window.performance.memory) {
+          heapMB = Math.round(window.performance.memory.usedJSHeapSize / 1048576 * 10) / 10;
+        }
+        await window.FirebaseSync.logDeviceEvent({
+          type: isCrash ? 'crash' : 'boot',
+          bootType,
+          summary,
+          heapUsedMB: heapMB,
+          screenResolution: `${window.innerWidth}x${window.innerHeight}`,
+          userAgent: navigator.userAgent
+        });
+      }
+    }, 4500);
+
+    // High frequency alive ticker in localStorage every 30s
+    setInterval(() => {
+      try {
+        if (localStorage.getItem('smart_lobby_exit_reason') === 'running') {
+          localStorage.setItem('smart_lobby_last_alive', Date.now().toString());
+        }
+      } catch (e) {}
+    }, 30000);
+
+    // Mark manual reload on user navigation
+    window.addEventListener('beforeunload', () => {
+      try {
+        if (localStorage.getItem('smart_lobby_exit_reason') === 'running') {
+          localStorage.setItem('smart_lobby_exit_reason', 'manual_user_reload');
+        }
+      } catch (e) {}
+    });
+
+    // Uncaught JS Exception Listener
+    window.addEventListener('error', (event) => {
+      try {
+        if (!window.FirebaseSync) return;
+        const msg = event.message || 'שגיאת JavaScript לא מזוהה';
+        if (msg.includes('Script error.') && !event.filename) return;
+
+        window.FirebaseSync.logDeviceEvent({
+          type: 'js_error',
+          summary: `שגיאת קוד: ${msg} (${event.filename ? event.filename.split('/').pop() : 'inline'}:${event.lineno})`,
+          errorMsg: msg,
+          filename: event.filename,
+          lineno: event.lineno,
+          stack: event.error?.stack ? event.error.stack.slice(0, 400) : null
+        });
+      } catch (e) {}
+    });
+
+    // Unhandled Promise Rejection Listener
+    window.addEventListener('unhandledrejection', (event) => {
+      try {
+        if (!window.FirebaseSync) return;
+        const reason = event.reason;
+        const msg = reason?.message || String(reason || 'Promise rejected');
+        window.FirebaseSync.logDeviceEvent({
+          type: 'unhandled_rejection',
+          summary: `דחיית Promise לא מטופלת: ${msg}`,
+          errorMsg: msg,
+          stack: reason?.stack ? reason.stack.slice(0, 400) : null
+        });
+      } catch (e) {}
+    });
   }
 
   // =========================================================

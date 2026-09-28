@@ -28,6 +28,8 @@
       this.isInitialized = false;
       this.settingsListeners = [];
       this.noticesListeners = [];
+      this.healthListeners = [];
+      this.logsListeners = [];
       this.initPromise = null;
     }
 
@@ -100,7 +102,7 @@
         console.warn("[FirebaseSync] Could not attach settings listener:", e);
       }
 
-            // 3. Listen to Device Health
+      // 3. Listen to Device Health
       try {
         this.db.collection("smart_lobby").doc("device_health").onSnapshot((doc) => {
           if (doc.exists) {
@@ -108,6 +110,21 @@
             if (this.healthListeners) {
               this.healthListeners.forEach(fn => {
                 try { fn(data); } catch (e) {}
+              });
+            }
+          }
+        }, (err) => {});
+      } catch (e) {}
+
+      // 4. Listen to Device Logs & Crash Telemetry
+      try {
+        this.db.collection("smart_lobby").doc("device_logs").onSnapshot((doc) => {
+          if (doc.exists) {
+            const data = doc.data();
+            const events = data.events || [];
+            if (this.logsListeners) {
+              this.logsListeners.forEach(fn => {
+                try { fn(events); } catch (e) {}
               });
             }
           }
@@ -256,6 +273,74 @@
       if (typeof callback === "function") {
         this.healthListeners = this.healthListeners || [];
         this.healthListeners.push(callback);
+      }
+    }
+
+    // Log device lifecycle, crash or JS error to cloud flight recorder
+    async logDeviceEvent(eventData) {
+      if (!this.db) await this.init();
+      if (!this.db) return false;
+      try {
+        const docRef = this.db.collection("smart_lobby").doc("device_logs");
+        const doc = await docRef.get();
+        let events = [];
+        if (doc.exists && Array.isArray(doc.data().events)) {
+          events = doc.data().events;
+        }
+        const newEvent = {
+          id: 'evt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+          timestamp: Date.now(),
+          reportedAt: new Date().toISOString(),
+          ...eventData
+        };
+        events.unshift(newEvent);
+        if (events.length > 50) events = events.slice(0, 50);
+
+        await docRef.set({
+          events,
+          lastUpdated: new Date().toISOString(),
+          totalEventsLogged: (doc.exists && doc.data().totalEventsLogged ? doc.data().totalEventsLogged : 0) + 1
+        });
+        console.log("[FirebaseSync] 📋 Device event logged to cloud:", newEvent.type);
+        return true;
+      } catch (err) {
+        console.warn("[FirebaseSync] logDeviceEvent error:", err);
+        return false;
+      }
+    }
+
+    // Get device logs array
+    async getDeviceLogs() {
+      if (!this.db) await this.init();
+      if (!this.db) return [];
+      try {
+        const doc = await this.db.collection("smart_lobby").doc("device_logs").get();
+        return doc.exists && Array.isArray(doc.data().events) ? doc.data().events : [];
+      } catch (err) {
+        return [];
+      }
+    }
+
+    // Listen to live device logs changes
+    onDeviceLogsChanged(callback) {
+      if (typeof callback === "function") {
+        this.logsListeners = this.logsListeners || [];
+        this.logsListeners.push(callback);
+      }
+    }
+
+    // Clear device logs
+    async clearDeviceLogs() {
+      if (!this.db) await this.init();
+      if (!this.db) return false;
+      try {
+        await this.db.collection("smart_lobby").doc("device_logs").set({
+          events: [],
+          clearedAt: new Date().toISOString()
+        });
+        return true;
+      } catch (err) {
+        return false;
       }
     }
 

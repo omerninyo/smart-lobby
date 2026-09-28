@@ -4,6 +4,13 @@ All notable changes to the Smart Lobby open-source template will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.3] - 2026-09-28
+### Added
+- **Blackbox Flight Recorder & Crash Diagnostics:** Implemented cloud-synced flight recorder (`smart_lobby/device_logs` in Firestore) with persistent state tracking in `localStorage` across reloads. Distinguishes clean watchdog reloads, admin remote reloads, manual reloads, and sudden unclean kiosk crashes (`unclean_crash_restart`).
+- **Global Error & Promise Rejection Trapping:** Added global `window.onerror` and `window.onunhandledrejection` crash traps in `screen.js` to immediately stream client-side exceptions and stack traces to cloud telemetry.
+- **Admin Crash & Event Log Viewer:** Added live-updating "יומן אירועים וקריסות (Blackbox Flight Recorder)" UI in Tab 5 (Settings) of `admin.html` with color-coded status badges, timestamps, heap usage metrics, manual refresh, and log clearing.
+- **Exit Reason Marking:** Instrumented `setupWatchdog()`, `setupForceReloadListener()`, and user navigation to mark exit intent before reloading to prevent false-positive crash flags.
+
 ## [2.4.2] - 2026-09-28
 ### Fixed
 - **Duplicate ID Elimination:** Removed redundant secondary Lite Mode card in Tab 2 (`admin.html` and `public/admin.html`), guaranteeing unique `#setting-lite-mode` ID across the DOM.
