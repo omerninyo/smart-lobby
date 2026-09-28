@@ -794,6 +794,8 @@ function setupDisplayControls() {
   const bgOpacityLabel = document.getElementById('bg-opacity-label');
   const burnCompInput = document.getElementById('setting-left-burn-comp');
   const burnCompLabel = document.getElementById('burn-comp-val-label');
+  const resolutionInput = document.getElementById('setting-resolution');
+  const resolutionStatus = document.getElementById('resolution-status-text');
   const saveBtn = document.getElementById('save-display-btn');
 
   if (bgOpacityInput && bgOpacityLabel) {
@@ -808,6 +810,22 @@ function setupDisplayControls() {
     });
   }
 
+  if (resolutionInput && resolutionStatus) {
+    const updateResStatus = (val) => {
+      if (val === '1080p') {
+        resolutionStatus.textContent = 'Full HD (1080p) - גופנים מלאים';
+        resolutionStatus.className = 'text-blue-400 font-bold';
+      } else if (val === '720p') {
+        resolutionStatus.textContent = 'HD Ready (720p) - גופנים קומפקטיים';
+        resolutionStatus.className = 'text-purple-400 font-bold';
+      } else {
+        resolutionStatus.textContent = 'התאמה רספונסיבית אוטומטית (מומלץ)';
+        resolutionStatus.className = 'text-cyan-400 font-bold';
+      }
+    };
+    resolutionInput.addEventListener('change', () => updateResStatus(resolutionInput.value));
+  }
+
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
       const selectedThemeMode = document.querySelector('input[name="theme-mode"]:checked')?.value || 'auto';
@@ -820,6 +838,7 @@ function setupDisplayControls() {
           leftBurnCompensation: parseInt(burnCompInput?.value || '0', 10),
           highContrastSideCards: document.getElementById('setting-high-contrast-side')?.checked || false,
           liteMode: document.getElementById('setting-lite-mode')?.checked || false,
+          resolution: document.getElementById('setting-resolution')?.value || settingsData?.display?.resolution || 'auto',
           layoutSide: document.getElementById('setting-layout-side')?.value || 'left',
           headerClockPosition: document.getElementById('setting-pos-clock')?.value || 'left',
           headerBrandPosition: document.getElementById('setting-pos-brand')?.value || 'right',
@@ -1151,6 +1170,25 @@ function populateSettingsUI() {
   }
   updateLiteModeUI(Boolean(settingsData.display?.liteMode));
 
+  const resolutionInput = document.getElementById('setting-resolution');
+  const resolutionStatus = document.getElementById('resolution-status-text');
+  if (resolutionInput) {
+    const resVal = settingsData.display?.resolution || 'auto';
+    resolutionInput.value = resVal;
+    if (resolutionStatus) {
+      if (resVal === '1080p') {
+        resolutionStatus.textContent = 'Full HD (1080p) - גופנים מלאים';
+        resolutionStatus.className = 'text-blue-400 font-bold';
+      } else if (resVal === '720p') {
+        resolutionStatus.textContent = 'HD Ready (720p) - גופנים קומפקטיים';
+        resolutionStatus.className = 'text-purple-400 font-bold';
+      } else {
+        resolutionStatus.textContent = 'התאמה רספונסיבית אוטומטית (מומלץ)';
+        resolutionStatus.className = 'text-cyan-400 font-bold';
+      }
+    }
+  }
+
   const ykModeInput = document.getElementById('setting-yom-kippur-mode');
   if (ykModeInput) ykModeInput.value = settingsData.display?.yomKippurMode || 'auto';
 
@@ -1460,6 +1498,11 @@ function setupDeviceHealthMonitoring() {
       } else {
         memoryElem.textContent = 'תקין (Lite Mode)';
       }
+    }
+
+    const resolutionElem = document.getElementById('health-resolution');
+    if (resolutionElem) {
+      resolutionElem.textContent = health.screenResolution || '--';
     }
 
     if (radioElem) {

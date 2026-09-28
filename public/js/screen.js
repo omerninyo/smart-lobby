@@ -2207,6 +2207,7 @@ class BuildingSignageApp {
         lastSeen: Date.now(),
         uptimeMinutes,
         heap,
+        screenResolution: `${window.innerWidth}x${window.innerHeight}`,
         radio: {
           playing: isRadioPlaying,
           station: this.settings?.radio?.currentStation || 'unknown',

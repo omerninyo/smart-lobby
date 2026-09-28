@@ -4,6 +4,11 @@ All notable changes to the Smart Lobby open-source template will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.4] - 2026-09-28
+### Added
+- **Screen Resolution & Font Scaling Selector:** Added dedicated "רזולוציית מסך והתאמת גופנים" control card in Tab 2 (Display) of `admin.html`, enabling real-time switching between Responsive Auto (`auto`), Full HD 1080p (`1080p`), and HD Ready 720p / Tablet (`720p`).
+- **Live Screen Resolution Metric in Device Health:** Added `#health-resolution` indicator to the device health telemetry grid in Tab 5 (Settings). Instrumented `startHeartbeat()` in `screen.js` to continuously transmit active screen viewport dimensions to Firestore `smart_lobby/device_health`.
+
 ## [2.4.3] - 2026-09-28
 ### Added
 - **Blackbox Flight Recorder & Crash Diagnostics:** Implemented cloud-synced flight recorder (`smart_lobby/device_logs` in Firestore) with persistent state tracking in `localStorage` across reloads. Distinguishes clean watchdog reloads, admin remote reloads, manual reloads, and sudden unclean kiosk crashes (`unclean_crash_restart`).
