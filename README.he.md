@@ -122,6 +122,27 @@
    * היכנסו ל-**Settings ➡️ Pages** במאגר שלכם.
    * בחרו ב-**Deploy from a branch (main)**.
    * **זה הכל! לוח השילוט של הבניין שלכם באוויר ופעיל מיד!**
+4. *(אופציונלי אך מומלץ)* **הפעלת סנכרון ענן בזמן אמת (Firebase Firestore):**
+   * פתחו פרויקט חינמי ב-[Firebase Console](https://console.firebase.google.com).
+   * **הקמת מסד נתונים Cloud Firestore:**
+     * בתפריט בחרו **Build** ⬅️ **Firestore Database** ⬅️ לחצו **Create database**.
+     * בחרו מיקום קרוב (למשל `eur3` או `me-west1` תל אביב).
+     * **חשוב מאוד - חוקי אבטחה קבועים:** היכנסו ללשונית **Rules (כללים)**, מחקו את חוק ה-30 יום הזמני של גוגל, הדביקו את תוכן הקובץ [`firestore.rules`](firestore.rules), ולחצו **Publish (פרסם)**:
+       ```javascript
+       rules_version = '2';
+       service cloud.firestore {
+         match /databases/{database}/documents {
+           match /smart_lobby/{docId} {
+             allow read, write: if true;
+           }
+         }
+       }
+       ```
+       *(שימו לב: אל תשאירו את ה-Test Mode של גוגל כפי שהוא, אחרת גוגל תחסום את המסד לאחר 30 יום!)*
+   * **חיבור הקוד ל-Firebase:**
+     * בהגדרות הפרויקט הוסיפו אפליקציית Web (`</>`).
+     * העתיקו את `js/config.example.js` לקובץ `js/config.js` והדביקו את מפתחות ה-Firebase שלכם.
+   * כעת כל שינוי מהסמארטפון או מהמחשב יסונכרן חי למסך הלובי ברגע!
 
 ---
 

@@ -207,9 +207,27 @@ Anyone is welcome to fork this repository and launch a smart lobby board for the
    * Go to **Settings** ➡️ **Pages** in your repository.
    * Under **Build and deployment**, select **Deploy from a branch** ➡️ choose `main` / `root` (or GitHub Actions).
    * Your building dashboard is immediately live!
-4. *(Optional)* **Enable Real-Time Cloud Sync:**
+4. *(Optional)* **Enable Real-Time Cloud Sync (Firebase Firestore):**
    * Create a free project at [Firebase Console](https://console.firebase.google.com).
-   * Copy `js/config.example.js` to `js/config.js` and paste your project credentials.
+   * **Setup Cloud Firestore Database:**
+     * In the Firebase Console, go to **Build** ➡️ **Firestore Database** ➡️ click **Create database**.
+     * Select a nearby location (e.g. `eur3` Europe-West or `me-west1` Tel Aviv).
+     * **CRITICAL - Security Rules:** Go to the **Rules** tab, replace the default 30-day expiring test rule with the contents of [`firestore.rules`](firestore.rules), and click **Publish**:
+       ```javascript
+       rules_version = '2';
+       service cloud.firestore {
+         match /databases/{database}/documents {
+           match /smart_lobby/{docId} {
+             allow read, write: if true;
+           }
+         }
+       }
+       ```
+       *(Note: Do not leave the default 30-day test mode, otherwise Firebase will lock your database after 30 days!)*
+   * **Configure Web Client:**
+     * In Project Settings ➡️ General ➡️ Your apps, create a **Web app** (`</>`).
+     * Copy `js/config.example.js` to `js/config.js` and paste your Firebase credentials (`apiKey`, `projectId`, etc.).
+   * Now updates made from any phone or computer will sync live to your lobby screen!
 
 ---
 
