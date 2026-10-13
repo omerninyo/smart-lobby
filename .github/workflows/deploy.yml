@@ -28,6 +28,7 @@ jobs:
         run: |
           mkdir -p _site
           cp -r public/* _site/
+          cp CNAME _site/ || true
           mkdir -p _site/data
           cp -r data/* _site/data/
 

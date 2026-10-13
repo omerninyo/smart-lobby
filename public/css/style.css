@@ -1437,6 +1437,14 @@ body.lite-mode * {
   -webkit-backdrop-filter: none !important;
 }
 
+body.lite-mode #background-layer,
+body.lite-mode #background-layer.zoom-effect {
+  transform: none !important;
+  transition: opacity 0.6s ease !important;
+  will-change: auto !important;
+}
+
+body.lite-mode .header-bar,
 body.lite-mode .header-container {
   background: rgba(15, 23, 42, 0.96) !important;
 }
@@ -1449,12 +1457,14 @@ body.lite-mode .side-widget-card {
   background: rgba(15, 23, 42, 0.95) !important;
 }
 
+body.lite-mode .footer-bar,
 body.lite-mode .bottom-ticker-bar {
   background: rgba(15, 23, 42, 0.97) !important;
 }
 
 body.lite-mode .admin-card,
-body.lite-mode .modal-content {
+body.lite-mode .modal-content,
+body.lite-mode .modal-card {
   background: rgba(15, 23, 42, 0.98) !important;
 }
 
@@ -1465,6 +1475,13 @@ body.lite-mode .slide-card {
 
 body.lite-mode .stage-progress-fill {
   transition: width 0.5s linear !important;
+}
+
+body.lite-mode .special-badge,
+body.lite-mode .notice-type-badge.urgent,
+body.lite-mode .mini-notice-item.urgent,
+body.lite-mode .radio-wave-bar {
+  animation: none !important;
 }
 
 /* =========================================================

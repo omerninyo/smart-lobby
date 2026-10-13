@@ -4,6 +4,19 @@ All notable changes to the Smart Lobby open-source template will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.5] - 2026-10-13
+### Fixed
+- **Shabbat & Holiday Header Rendering Crash:** Fixed `TypeError: this.applyDisplaySettings is not a function` in `fetchShabbatAndHolidays()` (`js/screen.js`) by invoking `this.applySettings()`, restoring live Shabbat candle-lighting, Havdalah, and Parasha display in the top header.
+- **Client-Side Image Compression for Mobile Uploads:** Added automatic HTML5 Canvas image compression (`compressImageToDataUrl`, max width 720px, WebP/JPEG quality 0.78) in `js/admin.js` to prevent raw multi-megabyte smartphone photos from exceeding Firestore's 1MB document limit on static GitHub Pages deployments.
+- **Unified Radio Mute State & Listener Deduplication:** Removed conflicting duplicate `click` listener on `#radio-indicator` in `setupAudio()` and unified `toggleSecretMute()` to properly update `isSecretMuted`, preventing the 15-second radio watchdog from unmuting manually muted audio.
+- **Night Watchdog Modal Detection:** Fixed modal element ID lookup in `setupWatchdog()` (`#interactive-modal` instead of `#content-modal`).
+- **Tab 5 Settings Overwrite Prevention:** Removed redundant `display.newsSource` write from `setupGeneralSettings()` in `js/admin.js`.
+- **Midnight Schedule Parsing & Dynamic Hebrew Year:** Removed `00:xx` minute-to-hour swap in `isRadioInSchedule()` and replaced hardcoded Hebrew year strings with dynamic `Intl.DateTimeFormat('he-IL-u-ca-hebrew')` calculation.
+- **HTML Sanitization:** Added `escapeHtml()` wrapping for `customTickerText` and contact directory modal fields in `js/screen.js`.
+
+### Changed
+- **Android WebView GPU & Memory Optimizations:** Fixed `.header-bar` and `.footer-bar` selectors in `body.lite-mode` (`css/style.css`), disabled full-screen Ken-Burns `transform: scale(1.06)` and non-composited `box-shadow` pulse animations in Lite Mode, hid `#left-burn-compensator` (`mix-blend-mode: screen`) when `leftBurnCompensation` is `0%`, added `decoding="async"` to slide images, and cached DOM references in `startClock()`.
+
 ## [2.4.4] - 2026-09-28
 ### Added
 - **Screen Resolution & Font Scaling Selector:** Added dedicated "רזולוציית מסך והתאמת גופנים" control card in Tab 2 (Display) of `admin.html`, enabling real-time switching between Responsive Auto (`auto`), Full HD 1080p (`1080p`), and HD Ready 720p / Tablet (`720p`).

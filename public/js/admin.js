@@ -319,17 +319,59 @@ function setupNoticesForm() {
     });
   }
 
+  // Client-side Canvas image compression helper (prevents Firestore 1MB limit overflow on mobile uploads)
+  function compressImageToDataUrl(file, maxWidth = 720, quality = 0.78) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onerror = () => resolve(ev.target.result);
+        img.onload = () => {
+          try {
+            let width = img.width;
+            let height = img.height;
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            let dataUrl = canvas.toDataURL('image/webp', quality);
+            if (!dataUrl || !dataUrl.startsWith('data:image/webp')) {
+              dataUrl = canvas.toDataURL('image/jpeg', quality);
+            }
+            resolve(dataUrl);
+          } catch (err) {
+            resolve(ev.target.result);
+          }
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   // File selection
   if (fileInput) {
-    fileInput.addEventListener('change', (e) => {
+    fileInput.addEventListener('change', async (e) => {
       if (e.target.files && e.target.files.length > 0) {
         selectedNoticeFile = e.target.files[0];
-        const reader = new FileReader();
-        reader.onload = (re) => {
-          previewImg.src = re.target.result;
+        try {
+          const compressedDataUrl = await compressImageToDataUrl(selectedNoticeFile, 720, 0.78);
+          previewImg.src = compressedDataUrl;
           previewBox.classList.remove('hidden');
-        };
-        reader.readAsDataURL(selectedNoticeFile);
+        } catch (err) {
+          const reader = new FileReader();
+          reader.onload = (re) => {
+            previewImg.src = re.target.result;
+            previewBox.classList.remove('hidden');
+          };
+          reader.readAsDataURL(selectedNoticeFile);
+        }
       }
     });
   }
@@ -1055,10 +1097,6 @@ function setupGeneralSettings() {
           ...settingsData?.building,
           name: document.getElementById('setting-bld-name')?.value.trim() || 'הירדן 5',
           city: document.getElementById('setting-bld-city')?.value.trim() || 'חדרה'
-        },
-        display: {
-          ...settingsData?.display,
-          newsSource: document.getElementById('setting-rss-source')?.value || 'ynet'
         },
         security: {
           ...settingsData?.security,

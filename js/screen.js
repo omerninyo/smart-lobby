@@ -170,6 +170,12 @@ class BuildingSignageApp {
   }
 
   startClock() {
+    const timeElem = document.getElementById('clock-time');
+    const gregDateElem = document.getElementById('clock-date-greg');
+    const days = ['יום ראשון', 'יום שני', 'יום שלישי', 'יום רביעי', 'יום חמישי', 'יום שישי', 'יום שבת'];
+    const months = ['בינואר', 'בפברואר', 'במרץ', 'באפריל', 'במאי', 'ביוני', 'ביולי', 'באוגוסט', 'בספטמבר', 'באוקטובר', 'בנובמבר', 'בדצמבר'];
+    let lastDateStr = '';
+
     const updateTime = () => {
       const now = new Date();
       
@@ -177,22 +183,16 @@ class BuildingSignageApp {
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const seconds = String(now.getSeconds()).padStart(2, '0');
       
-      const timeElem = document.getElementById('clock-time');
       if (timeElem) {
         timeElem.textContent = `${hours}:${minutes}:${seconds}`;
       }
 
-      const days = ['יום ראשון', 'יום שני', 'יום שלישי', 'יום רביעי', 'יום חמישי', 'יום שישי', 'יום שבת'];
-      const months = ['בינואר', 'בפברואר', 'במרץ', 'באפריל', 'במאי', 'ביוני', 'ביולי', 'באוגוסט', 'בספטמבר', 'באוקטובר', 'בנובמבר', 'בדצמבר'];
-      
-      const dayName = days[now.getDay()];
-      const dayOfMonth = now.getDate();
-      const monthName = months[now.getMonth()];
-      const year = now.getFullYear();
-
-      const gregDateElem = document.getElementById('clock-date-greg');
       if (gregDateElem) {
-        gregDateElem.textContent = `${dayName}, ${dayOfMonth} ${monthName} ${year}`;
+        const dateStr = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+        if (dateStr !== lastDateStr) {
+          lastDateStr = dateStr;
+          gregDateElem.textContent = dateStr;
+        }
       }
     };
 
@@ -266,7 +266,9 @@ class BuildingSignageApp {
     // 4. Radio Indicator Tap to Mute / Unmute
     const radioIndicator = document.getElementById('radio-indicator');
     if (radioIndicator) {
-      radioIndicator.addEventListener('click', () => {
+      radioIndicator.addEventListener('pointerdown', (e) => e.stopPropagation());
+      radioIndicator.addEventListener('click', (e) => {
+        e.stopPropagation();
         this.toggleSecretMute();
       });
     }
@@ -321,13 +323,14 @@ class BuildingSignageApp {
   }
 
   toggleSecretMute() {
-    if (!this.audioPlayer) return;
+    if (!this.audioPlayer || this.isYomKippurModeActive()) return;
     if (this.audioPlayer.paused) {
-      this.audioPlayer.play().then(() => {
-        this.showTouchToast('מוזיקה ורדיו הופעלו', '🔊');
-      }).catch(err => console.log('Audio error:', err));
+      this.isSecretMuted = false;
+      this.startRadioStream();
+      this.showTouchToast('מוזיקה ורדיו הופעלו', '🔊');
     } else {
-      this.audioPlayer.pause();
+      this.isSecretMuted = true;
+      this.stopRadioImmediate();
       this.showTouchToast('מוזיקת רקע הושתקה', '🔇');
     }
   }
@@ -441,14 +444,14 @@ class BuildingSignageApp {
     const rows = contacts.map(c => `
       <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.85rem 1.1rem; background: rgba(255,255,255,0.05); border-radius: 0.9rem; margin-bottom: 0.6rem;">
         <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <span style="font-size: 1.8rem;">${c.icon || '📞'}</span>
+          <span style="font-size: 1.8rem;">${escapeHtml(c.icon || '📞')}</span>
           <div>
-            <div style="font-weight: 700; color: #fff;">${c.name}</div>
-            <div style="font-size: 0.78rem; color: #94a3b8;">${c.desc || ''}</div>
+            <div style="font-weight: 700; color: #fff;">${escapeHtml(c.name)}</div>
+            <div style="font-size: 0.78rem; color: #94a3b8;">${escapeHtml(c.desc || '')}</div>
           </div>
         </div>
-        <a href="tel:${c.phone.replace(/[^0-9*]/g, '')}" style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 800; color: #38bdf8; text-decoration: none; background: rgba(56,189,248,0.15); padding: 0.4rem 0.8rem; border-radius: 0.6rem;">
-          ${c.phone}
+        <a href="tel:${(c.phone || '').replace(/[^0-9*]/g, '')}" style="font-family: var(--font-heading); font-size: 1.2rem; font-weight: 800; color: #38bdf8; text-decoration: none; background: rgba(56,189,248,0.15); padding: 0.4rem 0.8rem; border-radius: 0.6rem;">
+          ${escapeHtml(c.phone)}
         </a>
       </div>
     `).join('');
@@ -556,6 +559,10 @@ class BuildingSignageApp {
     const leftBoostPct = this.settings.display?.leftBurnCompensation !== undefined ? this.settings.display.leftBurnCompensation : 0;
     const boostOpacity = (leftBoostPct / 100) * 0.75;
     document.documentElement.style.setProperty('--left-boost', boostOpacity);
+    const leftBurnElem = document.getElementById('left-burn-compensator');
+    if (leftBurnElem) {
+      leftBurnElem.style.display = leftBoostPct > 0 ? 'block' : 'none';
+    }
 
     // Lite Mode (Low-spec hardware & Crash Prevention)
     const isLiteMode = Boolean(this.settings.display?.liteMode);
@@ -646,18 +653,6 @@ class BuildingSignageApp {
         }
       } else {
         return true;
-      }
-    }
-
-    // Gregorian calendar fallback for 2026: Sep 20 00:00 to Sep 21 19:30
-    const y = now.getFullYear();
-    const m = now.getMonth() + 1;
-    const d = now.getDate();
-    if (y === 2026 && m === 9) {
-      if (d === 20) return true;
-      if (d === 21) {
-        const totalMin = now.getHours() * 60 + now.getMinutes();
-        if (totalMin <= 19 * 60 + 20) return true;
       }
     }
 
@@ -1015,7 +1010,7 @@ class BuildingSignageApp {
         // Update default wallpapers to match current holiday/special event theme!
         this.wallpapers = shuffledThemeImages.map((url, i) => ({ id: `theme-wall-${i}`, url }));
 
-        this.applyDisplaySettings();
+        this.applySettings();
         this.renderShabbatAndHolidays();
         this.buildSlides();
         this.rotateBackground();
@@ -1253,7 +1248,7 @@ class BuildingSignageApp {
       itemsHtml += `
         <span class="ticker-item" style="color: #fbbf24; font-weight: 800;">
           <span class="ticker-item-bullet">📢</span>
-          ${this.settings.display.customTickerText}
+          ${escapeHtml(this.settings.display.customTickerText)}
         </span>
       `;
     }
@@ -1346,12 +1341,17 @@ class BuildingSignageApp {
     if (this.isYomKippurModeActive()) {
       const candles = this.shabbatData?.candleLighting?.time || '18:19';
       const havdalah = this.shabbatData?.havdalah?.time || '19:15';
+      let hebYear = 'תשפ"ז';
+      try {
+        const formatted = new Intl.DateTimeFormat('he-IL-u-ca-hebrew', { year: 'numeric' }).format(new Date());
+        if (formatted) hebYear = formatted;
+      } catch (e) {}
       this.slides.push({
         type: 'yom_kippur_static',
         data: {
           candles,
           havdalah,
-          year: 'תשפ"ז',
+          year: hebYear,
           image: 'images/wallpapers/holidays/yom_kippur.jpg?v=20260830'
         }
       });
@@ -1468,7 +1468,7 @@ class BuildingSignageApp {
           contentHtml = `
             <div class="stage-notice-split-layout">
               <div class="notice-attached-img-box">
-                <img src="${n.imageUrl}" alt="תמונה מצורפת" loading="lazy" />
+                <img src="${n.imageUrl}" alt="תמונה מצורפת" loading="lazy" decoding="async" />
               </div>
               <div class="stage-notice-layout">
                 <div class="notice-header-row">
@@ -1576,7 +1576,7 @@ class BuildingSignageApp {
       else if (slide.type === 'photo') {
         contentHtml = `
           <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border-radius: 1rem; overflow: hidden;">
-            <img src="${slide.data.url}" alt="פלייר / תמונה" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 0.9rem; box-shadow: 0 12px 30px rgba(0,0,0,0.6);" loading="lazy" />
+            <img src="${slide.data.url}" alt="פלייר / תמונה" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 0.9rem; box-shadow: 0 12px 30px rgba(0,0,0,0.6);" loading="lazy" decoding="async" />
           </div>
         `;
       }
@@ -1584,7 +1584,7 @@ class BuildingSignageApp {
       else if (slide.type === 'holiday_greeting') {
         const photoHero = slide.data.image ? `
           <div class="holiday-grand-hero-box">
-            <img src="${slide.data.image}" alt="חג" class="holiday-grand-hero-img" />
+            <img src="${slide.data.image}" alt="חג" class="holiday-grand-hero-img" decoding="async" />
             <div class="holiday-hero-gradient"></div>
             <div class="holiday-hero-overlay-content">
               <div class="holiday-hero-icon">${slide.data.icon}</div>
@@ -1748,21 +1748,7 @@ class BuildingSignageApp {
   // =========================================================
   setupAudio() {
     this.audioPlayer = document.getElementById('radio-audio');
-    const radioToggle = document.getElementById('radio-indicator');
     const unmutePrompt = document.getElementById('audio-unmute-prompt');
-
-    if (radioToggle && this.audioPlayer) {
-      radioToggle.addEventListener('click', () => {
-        if (this.isYomKippurModeActive()) return;
-        if (this.audioPlayer.paused) {
-          this.isSecretMuted = false;
-          this.startRadioStream();
-        } else {
-          this.isSecretMuted = true;
-          this.stopRadioImmediate();
-        }
-      });
-    }
 
     if (unmutePrompt) {
       unmutePrompt.addEventListener('click', () => {
@@ -1818,10 +1804,6 @@ class BuildingSignageApp {
     if (isNaN(sm)) sm = 30;
     if (isNaN(eh)) eh = 23;
     if (isNaN(em)) em = 0;
-
-    // Normalize any 00:xx hour errors
-    if (sh === 0 && sm > 0 && sm <= 23) { sh = sm; sm = 0; }
-    if (eh === 0 && em > 0 && em <= 23) { eh = em; em = 0; }
 
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -2041,7 +2023,7 @@ class BuildingSignageApp {
       // Deep night full reloads (23:05 and 04:00 AM) - radio is off, zero audio interruption
       const isNightCleanTime = (currentH === 23 && currentM === 5) || (currentH === 4 && currentM === 0);
       if (isNightCleanTime && currentS < 12) {
-        const modal = document.getElementById('content-modal');
+        const modal = document.getElementById('interactive-modal');
         const isModalOpen = modal && !modal.classList.contains('hidden');
         if (!this.isPaused && !isModalOpen) {
           console.log(`🔄 [Watchdog] Scheduled clean night reload at ${currentH}:${String(currentM).padStart(2, '0')} (radio is off)...`);
