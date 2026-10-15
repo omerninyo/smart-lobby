@@ -1723,7 +1723,11 @@ class BuildingSignageApp {
     if (!bgLayer) return;
 
     if (this.isYomKippurModeActive()) {
-      bgLayer.style.backgroundImage = "url('images/wallpapers/holidays/yom_kippur.jpg?v=20260830')";
+      const ykUrl = 'images/wallpapers/holidays/yom_kippur.jpg?v=20260830';
+      if (bgLayer.dataset.activeWallUrl !== ykUrl) {
+        bgLayer.style.backgroundImage = `url('${ykUrl}')`;
+        bgLayer.dataset.activeWallUrl = ykUrl;
+      }
       bgLayer.classList.remove('zoom-effect');
       return;
     }
@@ -1735,10 +1739,24 @@ class BuildingSignageApp {
 
     if (!activeList || activeList.length === 0) return;
 
+    // In Lite Mode: lock to a single static wallpaper per theme to eliminate 12s GPU texture churn on rk3368
+    if (this.settings?.display?.liteMode) {
+      const staticUrl = activeList[0]?.url;
+      if (staticUrl && bgLayer.dataset.activeWallUrl !== staticUrl) {
+        bgLayer.style.backgroundImage = `url('${staticUrl}')`;
+        bgLayer.dataset.activeWallUrl = staticUrl;
+      }
+      bgLayer.classList.remove('zoom-effect');
+      return;
+    }
+
     const wallIndex = this.currentSlideIndex % activeList.length;
     const nextWall = activeList[wallIndex];
     if (nextWall && nextWall.url) {
-      bgLayer.style.backgroundImage = `url('${nextWall.url}')`;
+      if (bgLayer.dataset.activeWallUrl !== nextWall.url) {
+        bgLayer.style.backgroundImage = `url('${nextWall.url}')`;
+        bgLayer.dataset.activeWallUrl = nextWall.url;
+      }
       bgLayer.classList.toggle('zoom-effect');
     }
   }
@@ -1772,10 +1790,10 @@ class BuildingSignageApp {
       this.checkRadioSchedule();
     }, 15000);
 
-    // Cycle audio stream buffer every 2 hours during playback to prevent memory leaks
+    // Cycle audio stream buffer every 30 minutes during playback to prevent native WebView memory bloat
     setInterval(() => {
       this.recycleAudioBuffer();
-    }, 2 * 60 * 60 * 1000);
+    }, 30 * 60 * 1000);
   }
 
   unlockAudio() {
