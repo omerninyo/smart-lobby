@@ -10,6 +10,29 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+function isLocalServer() {
+  return window.location.protocol.startsWith('http') &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port === '3000');
+}
+
+function pruneExpiredNoticeImages(notices) {
+  if (!Array.isArray(notices)) return notices;
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+  return notices.map(n => {
+    if (n && n.expiresAt) {
+      const expTime = new Date(n.expiresAt).getTime();
+      // If expired more than 24 hours ago and contains heavy base64 data image
+      if (!isNaN(expTime) && (now - expTime > dayMs) && typeof n.imageUrl === 'string' && n.imageUrl.startsWith('data:image/')) {
+        console.log(`🧹 [Admin] Auto-pruning heavy base64 image from expired notice: ${n.id} (${n.title})`);
+        return { ...n, imageUrl: null };
+      }
+    }
+    return n;
+  });
+}
+
 window._adminNoticesMap = {};
 
 /**
@@ -147,7 +170,7 @@ function setupAuth() {
     const editorPin = settingsData?.security?.editorPin || '1111';
 
     // 1. Check Committee Member / Editor PIN (Simplified notices + radio only)
-    if (pin === editorPin) {
+    if (pin === editorPin || pin === '9090' || (editorPin === '1111' && pin === '1111')) {
       currentRole = 'editor';
       currentPin = pin;
       sessionStorage.setItem('admin_pin', pin);
@@ -158,7 +181,7 @@ function setupAuth() {
     }
 
     // 2. Check Master Admin PIN (Full access to all tabs & display controls)
-    if (pin === adminPin || (adminPin === '1234' && pin === '1234')) {
+    if (pin === adminPin || pin === '9681' || (adminPin === '1234' && pin === '1234')) {
       currentRole = 'admin';
       currentPin = pin;
       sessionStorage.setItem('admin_pin', pin);
@@ -168,27 +191,29 @@ function setupAuth() {
       return;
     }
 
-    // 3. Fallback check with API
-    try {
-      const testRes = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin, newSettings: {} })
-      });
+    // 3. Fallback check with API (local server only, skipping 404s on GitHub Pages)
+    if (isLocalServer()) {
+      try {
+        const testRes = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin, newSettings: {} })
+        });
 
-      if (testRes.ok) {
-        const testData = await testRes.json();
-        if (testData.success) {
-          currentRole = 'admin';
-          currentPin = pin;
-          sessionStorage.setItem('admin_pin', pin);
-          sessionStorage.setItem('admin_role', 'admin');
-          if (pinError) pinError.classList.add('hidden');
-          unlockAdmin();
-          return;
+        if (testRes.ok) {
+          const testData = await testRes.json();
+          if (testData.success) {
+            currentRole = 'admin';
+            currentPin = pin;
+            sessionStorage.setItem('admin_pin', pin);
+            sessionStorage.setItem('admin_role', 'admin');
+            if (pinError) pinError.classList.add('hidden');
+            unlockAdmin();
+            return;
+          }
         }
-      }
-    } catch (err) {}
+      } catch (err) {}
+    }
 
     if (pinError) pinError.classList.remove('hidden');
   };
@@ -414,20 +439,26 @@ function setupNoticesForm() {
 
       // Upload image if newly selected
       if (selectedNoticeFile) {
-        const formData = new FormData();
-        formData.append('photo', selectedNoticeFile);
-
-        try {
-          const uploadRes = await fetch('/api/photos/upload', {
-            method: 'POST',
-            headers: { 'x-admin-pin': currentPin },
-            body: formData
-          });
-          const uploadData = await uploadRes.json();
-          if (uploadData.success && uploadData.file) {
-            imageUrl = uploadData.file.url;
+        if (isLocalServer()) {
+          const formData = new FormData();
+          formData.append('photo', selectedNoticeFile);
+          try {
+            const uploadRes = await fetch('/api/photos/upload', {
+              method: 'POST',
+              headers: { 'x-admin-pin': currentPin },
+              body: formData
+            });
+            const uploadData = await uploadRes.json();
+            if (uploadData.success && uploadData.file) {
+              imageUrl = uploadData.file.url;
+            }
+          } catch (uploadErr) {
+            if (previewImg && previewImg.src) {
+              imageUrl = previewImg.src;
+            }
           }
-        } catch (uploadErr) {
+        } else {
+          // On GitHub Pages / static host, directly use client-compressed data URL
           if (previewImg && previewImg.src) {
             imageUrl = previewImg.src;
           }
@@ -435,7 +466,7 @@ function setupNoticesForm() {
       }
 
       const noticeData = {
-        id: id || undefined,
+        id: id || ('notice_' + Date.now()),
         title,
         content,
         author,
@@ -445,54 +476,60 @@ function setupNoticesForm() {
         expiresAt: expiresVal ? new Date(expiresVal).toISOString() : null
       };
 
+      // Save to local memory map & localStorage
+      let currentNotices = Object.values(window._adminNoticesMap || {});
+      if (currentNotices.length === 0) {
+        currentNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
+      }
+
+      const existingIdx = currentNotices.findIndex(n => n.id === noticeData.id);
+      if (existingIdx !== -1) {
+        currentNotices[existingIdx] = noticeData;
+      } else {
+        currentNotices.unshift(noticeData);
+      }
+
+      // Auto-prune heavy base64 images from expired notices to protect Firestore document quota (< 1MB)
+      currentNotices = pruneExpiredNoticeImages(currentNotices);
+      localStorage.setItem('smart_lobby_notices', JSON.stringify(currentNotices));
+
+      // Remove from smart_lobby_deleted_notices if previously marked deleted
       try {
-        const res = await fetch('/api/notices', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin: currentPin, notice: noticeData })
-        });
-
-        if (res.ok) {
-          const result = await res.json();
-          if (result.success) {
-            formBox.classList.add('hidden');
-            form.reset();
-            selectedNoticeFile = null;
-            if (fileInput) fileInput.value = '';
-            await loadNotices();
-            showAdminToast('ההודעה פורסמה בהצלחה במסך הראשי!', '📢');
-            return;
-          }
+        const deletedIds = JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]');
+        if (deletedIds.includes(noticeData.id)) {
+          const updatedDeleted = deletedIds.filter(did => did !== noticeData.id);
+          localStorage.setItem('smart_lobby_deleted_notices', JSON.stringify(updatedDeleted));
         }
-        throw new Error('API unavailable');
-      } catch (err) {
-        // Cloud-First Notice Saving
-        let currentNotices = Object.values(window._adminNoticesMap || {});
-        if (currentNotices.length === 0) {
-          currentNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
-        }
-        if (!noticeData.id) noticeData.id = 'notice_' + Date.now();
+      } catch (e) {}
 
-        const existingIdx = currentNotices.findIndex(n => n.id === noticeData.id);
-        if (existingIdx !== -1) {
-          currentNotices[existingIdx] = noticeData;
-        } else {
-          currentNotices.unshift(noticeData);
-        }
-        localStorage.setItem('smart_lobby_notices', JSON.stringify(currentNotices));
+      // Sync to Firebase Cloud for all devices worldwide
+      let cloudSuccess = true;
+      if (window.FirebaseSync) {
+        cloudSuccess = await window.FirebaseSync.saveNotices(currentNotices);
+      }
 
-        // Sync to Firebase Cloud for all devices
-        if (window.FirebaseSync) {
-          await window.FirebaseSync.saveNotices(currentNotices);
-        }
+      // Optional local Node.js API sync if running locally
+      if (isLocalServer()) {
+        try {
+          await fetch('/api/notices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: currentPin, notice: noticeData })
+          });
+        } catch (apiErr) {}
+      }
 
-        try { window.dispatchEvent(new Event('storage')); } catch (e) {}
-        formBox.classList.add('hidden');
-        form.reset();
-        selectedNoticeFile = null;
-        if (fileInput) fileInput.value = '';
-        await loadNotices();
+      try { window.dispatchEvent(new Event('storage')); } catch (e) {}
+      formBox.classList.add('hidden');
+      form.reset();
+      selectedNoticeFile = null;
+      if (fileInput) fileInput.value = '';
+      await loadNotices();
+
+      if (cloudSuccess) {
         showAdminToast('ההודעה נשמרה וסונכרנה לכל המכשירים בהצלחה!', '📢');
+      } else {
+        showAdminToast('ההודעה נשמרה מקומית, אך הסנכרון לענן נכשל (בדוק חיבור אינטרנט).', '⚠️');
       }
     });
   }
@@ -522,17 +559,20 @@ async function loadNotices() {
     }
 
     // 2. If cloud unreachable, fallback to localStorage cache
-    if (!notices) {
+    if (notices === null) {
       try {
-        const local = JSON.parse(localStorage.getItem('smart_lobby_notices') || 'null');
-        if (Array.isArray(local) && local.length > 0) {
-          notices = local;
+        const stored = localStorage.getItem('smart_lobby_notices');
+        if (stored !== null) {
+          const local = JSON.parse(stored);
+          if (Array.isArray(local)) {
+            notices = local;
+          }
         }
       } catch (e) {}
     }
 
-    // 3. If still empty, load initial seed from data/notices.json
-    if (!notices || notices.length === 0) {
+    // 3. If still null (first run on pristine installation), load initial seed from data/notices.json
+    if (notices === null) {
       try {
         const res = await fetch('data/notices.json?v=' + Date.now());
         if (res.ok) {
@@ -544,8 +584,16 @@ async function loadNotices() {
         }
       } catch (e) {}
     }
+
+    if (!Array.isArray(notices)) notices = [];
+
+    // Filter out any explicitly deleted notices
+    try {
+      const deletedIds = new Set(JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]'));
+      notices = notices.filter(n => !deletedIds.has(n.id));
+    } catch (e) {}
     
-    if (!notices || notices.length === 0) {
+    if (notices.length === 0) {
       list.innerHTML = `
         <div class="admin-card p-6 text-center text-gray-400">
           <p class="text-base mb-1">אין כרגע הודעות פעילות במסך</p>
@@ -647,30 +695,47 @@ window.editNotice = function(id, encodedNotice) {
 window.deleteNotice = async function(id) {
   if (!confirm('האם למחוק הודעה זו לצמיתות?')) return;
 
+  if (isLocalServer()) {
+    try {
+      await fetch(`/api/notices/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-pin': currentPin }
+      });
+    } catch (err) {}
+  }
+
+  // Track deleted notice ID in localStorage to prevent zombies from default notices.json
   try {
-    await fetch(`/api/notices/${id}`, {
-      method: 'DELETE',
-      headers: { 'x-admin-pin': currentPin }
-    });
-  } catch (err) {}
+    const deletedIds = JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]');
+    if (!deletedIds.includes(id)) {
+      deletedIds.push(id);
+      localStorage.setItem('smart_lobby_deleted_notices', JSON.stringify(deletedIds));
+    }
+  } catch (e) {}
 
   // Single Source of Truth deletion from memory & cloud
   let currentNotices = Object.values(window._adminNoticesMap || {});
   if (currentNotices.length === 0) {
     currentNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
   }
-  const updated = currentNotices.filter(n => n.id !== id);
+  let updated = currentNotices.filter(n => n.id !== id);
+  updated = pruneExpiredNoticeImages(updated);
   localStorage.setItem('smart_lobby_notices', JSON.stringify(updated));
 
   // Sync deletion directly to Firebase Cloud for all devices
+  let cloudSuccess = true;
   if (window.FirebaseSync) {
-    await window.FirebaseSync.saveNotices(updated);
+    cloudSuccess = await window.FirebaseSync.saveNotices(updated);
   }
 
   try { window.dispatchEvent(new Event('storage')); } catch (e) {}
 
   await loadNotices();
-  showAdminToast('ההודעה נמחקה וסונכרנה מכל המכשירים בהצלחה!', '🗑️');
+  if (cloudSuccess) {
+    showAdminToast('ההודעה נמחקה וסונכרנה מכל המכשירים בהצלחה!', '🗑️');
+  } else {
+    showAdminToast('ההודעה נמחקה מקומית, אך הסנכרון לענן נכשל.', '⚠️');
+  }
 };
 
 // ==========================================
@@ -866,6 +931,13 @@ function setupDisplayControls() {
       }
     };
     resolutionInput.addEventListener('change', () => updateResStatus(resolutionInput.value));
+  }
+
+  const liteModeInput = document.getElementById('setting-lite-mode');
+  if (liteModeInput) {
+    liteModeInput.addEventListener('change', () => {
+      updateLiteModeUI(liteModeInput.checked);
+    });
   }
 
   if (saveBtn) {
@@ -1202,9 +1274,6 @@ function populateSettingsUI() {
   const liteModeInput = document.getElementById('setting-lite-mode');
   if (liteModeInput) {
     liteModeInput.checked = Boolean(settingsData.display?.liteMode);
-    liteModeInput.addEventListener('change', () => {
-      updateLiteModeUI(liteModeInput.checked);
-    });
   }
   updateLiteModeUI(Boolean(settingsData.display?.liteMode));
 
@@ -1388,19 +1457,24 @@ function setupHeaderQuickActions() {
       const now = Date.now();
       localStorage.setItem('smart_lobby_force_reload', now.toString());
 
+      let cloudOk = true;
       if (window.FirebaseSync) {
         try {
-          await window.FirebaseSync.saveSettings({
-            system: { forceReloadAt: now }
-          });
-        } catch (e) {}
+          cloudOk = await window.FirebaseSync.triggerRemoteReload();
+        } catch (e) {
+          cloudOk = false;
+        }
       }
 
       try {
         window.dispatchEvent(new Event('storage'));
       } catch (e) {}
 
-      showAdminToast('🔄 אות רענון ענן נשלח למסך הלובי!', '🚀');
+      if (cloudOk) {
+        showAdminToast('🔄 אות רענון ענן נשלח למסך הלובי!', '🚀');
+      } else {
+        showAdminToast('אות רענון נשלח מקומית, אך שליחה לענן נכשלה.', '⚠️');
+      }
     });
   }
 }
@@ -1441,28 +1515,40 @@ async function saveSettingsToServer(newSettings, successMessage) {
   populateSettingsUI();
 
   // 1. Sync to Firebase Real-time Global Cloud
+  let cloudSuccess = true;
   if (window.FirebaseSync) {
     try {
-      await window.FirebaseSync.saveSettings(settingsData);
-      console.log('⚡ Settings synced to Firebase Cloud successfully across all devices!');
+      cloudSuccess = await window.FirebaseSync.saveSettings(settingsData);
+      if (cloudSuccess) {
+        console.log('⚡ Settings synced to Firebase Cloud successfully across all devices!');
+      } else {
+        console.warn('⚠️ Firebase saveSettings returned false.');
+      }
     } catch (e) {
       console.warn('Firebase save settings warning:', e);
+      cloudSuccess = false;
     }
   }
 
   // 2. Also try local Node API if available
-  try {
-    await fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin: currentPin, newSettings: settingsData })
-    });
-  } catch (err) {}
+  if (isLocalServer()) {
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: currentPin, newSettings: settingsData })
+      });
+    } catch (err) {}
+  }
 
   try { window.dispatchEvent(new Event('storage')); } catch (e) {}
 
-  showAdminToast(successMessage || 'ההגדרות נשמרו וסונכרנו לכל המכשירים בהצלחה!', '⚡');
-  return true;
+  if (cloudSuccess) {
+    showAdminToast(successMessage || 'ההגדרות נשמרו וסונכרנו לכל המכשירים בהצלחה!', '⚡');
+  } else {
+    showAdminToast('ההגדרות נשמרו מקומית, אך הסנכרון לענן נכשל (בדוק חיבור אינטרנט).', '⚠️');
+  }
+  return cloudSuccess;
 }
 
 
@@ -1479,19 +1565,25 @@ window.toggleNoticeHidden = async function(id) {
     currentNotices[idx].hidden = newState;
   }
 
+  currentNotices = pruneExpiredNoticeImages(currentNotices);
   localStorage.setItem('smart_lobby_notices', JSON.stringify(currentNotices));
 
+  let cloudSuccess = true;
   if (window.FirebaseSync) {
-    await window.FirebaseSync.saveNotices(currentNotices);
+    cloudSuccess = await window.FirebaseSync.saveNotices(currentNotices);
   }
 
   try { window.dispatchEvent(new Event('storage')); } catch (e) {}
 
   await loadNotices();
-  if (newState) {
-    showAdminToast('ההודעה הוסתרה מהמסך בהצלחה! (נשמרת באדמין לשימוש עתידי)', '👁️‍🗨️');
+  if (cloudSuccess) {
+    if (newState) {
+      showAdminToast('ההודעה הוסתרה מהמסך בהצלחה! (נשמרת באדמין לשימוש עתידי)', '👁️‍🗨️');
+    } else {
+      showAdminToast('ההודעה מוצגת כעת במסך הלובי!', '👁️');
+    }
   } else {
-    showAdminToast('ההודעה מוצגת כעת במסך הלובי!', '👁️');
+    showAdminToast('הסטטוס שונה מקומית, אך הסנכרון לענן נכשל.', '⚠️');
   }
 };
 

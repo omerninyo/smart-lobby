@@ -31,6 +31,23 @@
       this.healthListeners = [];
       this.logsListeners = [];
       this.initPromise = null;
+      this.healthUnsubscribe = null;
+      this.logsUnsubscribe = null;
+    }
+
+    async loadSdkScripts() {
+      if (typeof document === "undefined") return;
+      const loadScript = (src) => new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src*="${src}"]`);
+        if (existing) existing.remove();
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = (e) => reject(new Error(`Failed to load ${src}`));
+        document.head.appendChild(script);
+      });
+      await loadScript('https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js');
+      await loadScript('https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js');
     }
 
     async init() {
@@ -39,7 +56,19 @@
       this.initPromise = new Promise(async (resolve) => {
         try {
           if (typeof firebase === "undefined") {
+            // Attempt to dynamically load Firebase compat SDK if not present on window (e.g. cold boot while offline)
+            if (typeof document !== "undefined") {
+              try {
+                await this.loadSdkScripts();
+              } catch (loadErr) {
+                console.warn("[FirebaseSync] Firebase SDK dynamic fetch failed:", loadErr.message);
+              }
+            }
+          }
+
+          if (typeof firebase === "undefined") {
             console.warn("[FirebaseSync] Firebase SDK not loaded on window.");
+            this.initPromise = null;
             resolve(false);
             return;
           }
@@ -68,11 +97,57 @@
         } catch (err) {
           console.error("[FirebaseSync] ⚠️ Firebase initialization error:", err);
           this.isInitialized = false;
+          this.initPromise = null;
           resolve(false);
         }
       });
 
       return this.initPromise;
+    }
+
+    startRealtimeListeners() {
+      return this.startRealtimeSubscriptions();
+    }
+
+    ensureHealthSubscription() {
+      if (!this.db || this.healthUnsubscribe) return;
+      try {
+        this.healthUnsubscribe = this.db.collection("smart_lobby").doc("device_health").onSnapshot((doc) => {
+          if (doc.exists) {
+            const data = doc.data();
+            if (this.healthListeners) {
+              this.healthListeners.forEach(fn => {
+                try { fn(data); } catch (e) {}
+              });
+            }
+          }
+        }, (err) => {
+          console.warn("[FirebaseSync] Device health snapshot warning:", err.message);
+        });
+      } catch (e) {
+        console.warn("[FirebaseSync] Could not attach device health listener:", e);
+      }
+    }
+
+    ensureLogsSubscription() {
+      if (!this.db || this.logsUnsubscribe) return;
+      try {
+        this.logsUnsubscribe = this.db.collection("smart_lobby").doc("device_logs").onSnapshot((doc) => {
+          if (doc.exists) {
+            const data = doc.data();
+            const events = data.events || [];
+            if (this.logsListeners) {
+              this.logsListeners.forEach(fn => {
+                try { fn(events); } catch (e) {}
+              });
+            }
+          }
+        }, (err) => {
+          console.warn("[FirebaseSync] Device logs snapshot warning:", err.message);
+        });
+      } catch (e) {
+        console.warn("[FirebaseSync] Could not attach device logs listener:", e);
+      }
     }
 
     startRealtimeSubscriptions() {
@@ -102,35 +177,6 @@
         console.warn("[FirebaseSync] Could not attach settings listener:", e);
       }
 
-      // 3. Listen to Device Health
-      try {
-        this.db.collection("smart_lobby").doc("device_health").onSnapshot((doc) => {
-          if (doc.exists) {
-            const data = doc.data();
-            if (this.healthListeners) {
-              this.healthListeners.forEach(fn => {
-                try { fn(data); } catch (e) {}
-              });
-            }
-          }
-        }, (err) => {});
-      } catch (e) {}
-
-      // 4. Listen to Device Logs & Crash Telemetry
-      try {
-        this.db.collection("smart_lobby").doc("device_logs").onSnapshot((doc) => {
-          if (doc.exists) {
-            const data = doc.data();
-            const events = data.events || [];
-            if (this.logsListeners) {
-              this.logsListeners.forEach(fn => {
-                try { fn(events); } catch (e) {}
-              });
-            }
-          }
-        }, (err) => {});
-      } catch (e) {}
-
       // 2. Listen to Notices changes
       try {
         this.db.collection("smart_lobby").doc("notices").onSnapshot((doc) => {
@@ -155,19 +201,33 @@
       } catch (e) {
         console.warn("[FirebaseSync] Could not attach notices listener:", e);
       }
+
+      // 3. Lazy Subscriptions: Attach health and logs listeners only if registered
+      if (this.healthListeners && this.healthListeners.length > 0) {
+        this.ensureHealthSubscription();
+      }
+      if (this.logsListeners && this.logsListeners.length > 0) {
+        this.ensureLogsSubscription();
+      }
     }
 
     // Register callback for settings updates
     onSettingsChanged(callback) {
       if (typeof callback === "function") {
-        this.settingsListeners.push(callback);
+        this.settingsListeners = this.settingsListeners || [];
+        if (!this.settingsListeners.includes(callback)) {
+          this.settingsListeners.push(callback);
+        }
       }
     }
 
     // Register callback for notices updates
     onNoticesChanged(callback) {
       if (typeof callback === "function") {
-        this.noticesListeners.push(callback);
+        this.noticesListeners = this.noticesListeners || [];
+        if (!this.noticesListeners.includes(callback)) {
+          this.noticesListeners.push(callback);
+        }
       }
     }
 
@@ -223,14 +283,31 @@
       return null;
     }
 
+    pruneExpiredNoticeImages(notices) {
+      if (!Array.isArray(notices)) return notices;
+      const now = Date.now();
+      const dayMs = 24 * 60 * 60 * 1000;
+      return notices.map(n => {
+        if (n && n.expiresAt) {
+          const expTime = new Date(n.expiresAt).getTime();
+          if (!isNaN(expTime) && (now - expTime > dayMs) && typeof n.imageUrl === 'string' && n.imageUrl.startsWith('data:image/')) {
+            console.log(`🧹 [FirebaseSync] Auto-pruning heavy base64 image from expired notice: ${n.id}`);
+            return { ...n, imageUrl: null };
+          }
+        }
+        return n;
+      });
+    }
+
     // Save Notices Array to cloud
     async saveNotices(noticesArray) {
       if (!this.db) await this.init();
       if (!this.db) return false;
 
       try {
+        const cleaned = this.pruneExpiredNoticeImages(noticesArray);
         await this.db.collection("smart_lobby").doc("notices").set({
-          items: noticesArray,
+          items: cleaned,
           updatedAt: new Date().toISOString()
         });
         console.log("[FirebaseSync] 💾 Notices list saved to Firebase Cloud!");
@@ -272,8 +349,15 @@
     onDeviceHealthChanged(callback) {
       if (typeof callback === "function") {
         this.healthListeners = this.healthListeners || [];
-        this.healthListeners.push(callback);
+        if (!this.healthListeners.includes(callback)) {
+          this.healthListeners.push(callback);
+        }
+        this.ensureHealthSubscription();
       }
+    }
+
+    onHealthChanged(callback) {
+      this.onDeviceHealthChanged(callback);
     }
 
     // Log device lifecycle, crash or JS error to cloud flight recorder
@@ -325,8 +409,15 @@
     onDeviceLogsChanged(callback) {
       if (typeof callback === "function") {
         this.logsListeners = this.logsListeners || [];
-        this.logsListeners.push(callback);
+        if (!this.logsListeners.includes(callback)) {
+          this.logsListeners.push(callback);
+        }
+        this.ensureLogsSubscription();
       }
+    }
+
+    onLogsChanged(callback) {
+      this.onDeviceLogsChanged(callback);
     }
 
     // Clear device logs

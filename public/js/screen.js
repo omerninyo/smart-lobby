@@ -54,6 +54,13 @@ class BuildingSignageApp {
 
     this.audioPlayer = null;
     this.audioUnlocked = false;
+    this.lastAudioTime = 0;
+    this.audioStallCount = 0;
+    this.audioErrorRetryTimer = null;
+    this.isRecyclingAudio = false;
+    this.wasYomKippur = false;
+    this.modalAutoCloseTimer = null;
+    this.firebaseListenersAttached = false;
 
     // Touch counters
     this.clockTapCount = 0;
@@ -73,6 +80,7 @@ class BuildingSignageApp {
     this.setupWatchdog();
     this.startHeartbeat();
     this.initWakeLock();
+    this.setupNetworkListener();
 
     // Initial Data Fetch
     await this.fetchSettings();
@@ -94,51 +102,67 @@ class BuildingSignageApp {
     this.setupFirebaseCloudSync();
   }
 
+  setupNetworkListener() {
+    window.addEventListener('online', () => {
+      console.log('🌐 [Screen] Network connection restored (online event)');
+      this.setupFirebaseCloudSync();
+      this.fetchWeather();
+      this.fetchNews();
+      this.fetchShabbatAndHolidays();
+      this.checkRadioSchedule();
+    });
+  }
+
   async setupFirebaseCloudSync() {
     if (!window.FirebaseSync) return;
 
     try {
       this.bootTimestamp = this.bootTimestamp || Date.now();
-      await window.FirebaseSync.init();
+      const connected = await window.FirebaseSync.init();
+      if (!connected) return;
 
-      // Listen for Live Settings Updates from any admin worldwide
-      window.FirebaseSync.onSettingsChanged((cloudSettings) => {
-        if (!cloudSettings) return;
-        console.log('⚡ [Screen] Live cloud settings received:', cloudSettings);
+      if (!this.firebaseListenersAttached) {
+        this.firebaseListenersAttached = true;
 
-        // Check for Remote Force Reload
-        if (cloudSettings.system?.forceReloadAt && cloudSettings.system.forceReloadAt > this.bootTimestamp) {
-          console.log('🔄 [Screen] Remote reload command received from admin!');
-          try { localStorage.setItem('smart_lobby_exit_reason', 'remote_force_reload'); } catch (e) {}
-          window.location.reload(true);
-          return;
-        }
+        // Listen for Live Settings Updates from any admin worldwide
+        window.FirebaseSync.onSettingsChanged((cloudSettings) => {
+          if (!cloudSettings) return;
+          console.log('⚡ [Screen] Live cloud settings received:', cloudSettings);
 
-        const oldNewsSource = this.settings?.display?.newsSource;
-        this.settings = { ...this.settings, ...cloudSettings };
-        this.applySettings();
+          // Check for Remote Force Reload
+          if (cloudSettings.system?.forceReloadAt && cloudSettings.system.forceReloadAt > this.bootTimestamp) {
+            console.log('🔄 [Screen] Remote reload command received from admin!');
+            try { localStorage.setItem('smart_lobby_exit_reason', 'remote_force_reload'); } catch (e) {}
+            window.location.reload(true);
+            return;
+          }
 
-        // Trigger immediate news refresh if news source changed in cloud
-        if (cloudSettings.display?.newsSource && cloudSettings.display.newsSource !== oldNewsSource) {
-          console.log(`📰 [Screen] Live news source changed from ${oldNewsSource} to ${cloudSettings.display.newsSource}. Fetching fresh headlines...`);
-          this.fetchNews();
-        } else {
-          this.renderNewsTicker();
-        }
+          const oldNewsSource = this.settings?.display?.newsSource;
+          this.settings = { ...this.settings, ...cloudSettings };
+          this.applySettings();
 
-        // Immediately evaluate radio schedule against clock
-        this.checkRadioSchedule();
-        this.buildSlides();
-      });
+          // Trigger immediate news refresh if news source changed in cloud
+          if (cloudSettings.display?.newsSource && cloudSettings.display.newsSource !== oldNewsSource) {
+            console.log(`📰 [Screen] Live news source changed from ${oldNewsSource} to ${cloudSettings.display.newsSource}. Fetching fresh headlines...`);
+            this.fetchNews();
+          } else {
+            this.renderNewsTicker();
+          }
 
-      // Listen for Live Notices Updates from any admin worldwide
-      window.FirebaseSync.onNoticesChanged((cloudNotices) => {
-        if (!cloudNotices) return;
-        console.log('⚡ [Screen] Live cloud notices received:', cloudNotices.length);
-        this.notices = cloudNotices;
-        this.renderSideColumn();
-        this.buildSlides();
-      });
+          // Immediately evaluate radio schedule against clock
+          this.checkRadioSchedule();
+          this.buildSlides();
+        });
+
+        // Listen for Live Notices Updates from any admin worldwide
+        window.FirebaseSync.onNoticesChanged((cloudNotices) => {
+          if (!cloudNotices) return;
+          console.log('⚡ [Screen] Live cloud notices received:', cloudNotices.length);
+          this.notices = cloudNotices;
+          this.renderSideColumn();
+          this.buildSlides();
+        });
+      }
 
       // Seed cloud database on first run if it is empty
       await window.FirebaseSync.seedIfEmpty(this.settings, this.notices);
@@ -337,8 +361,8 @@ class BuildingSignageApp {
 
   showOnScreenAdminPrompt() {
     const pin = prompt('הזן קוד PIN לניהול השילוט הדיגיטלי:');
-    if (pin === '1234' || pin === this.settings?.security?.adminPin) {
-      window.location.href = '/admin';
+    if (pin === '1234' || pin === '9681' || pin === this.settings?.security?.adminPin) {
+      window.location.href = this.isLocalServer() ? '/admin' : 'admin.html';
     } else if (pin !== null) {
       alert('קוד PIN שגוי');
     }
@@ -360,15 +384,34 @@ class BuildingSignageApp {
 
     if (!modal || !modalTitle || !modalBody) return;
 
+    if (this.modalAutoCloseTimer) {
+      clearTimeout(this.modalAutoCloseTimer);
+      this.modalAutoCloseTimer = null;
+    }
+
     modalTitle.textContent = title;
     modalBody.innerHTML = bodyHtml;
     modal.classList.remove('hidden');
-    this.pauseTemporarily(40000);
+    this.pauseTemporarily(45000);
+
+    // Auto-close modal after 45 seconds of inactivity so kiosk/watchdog are never blocked
+    this.modalAutoCloseTimer = setTimeout(() => {
+      console.log('⏰ [Screen] Auto-closing modal after 45s inactivity timeout.');
+      this.closeModal();
+    }, 45000);
   }
 
   closeModal() {
+    if (this.modalAutoCloseTimer) {
+      clearTimeout(this.modalAutoCloseTimer);
+      this.modalAutoCloseTimer = null;
+    }
     const modal = document.getElementById('interactive-modal');
     if (modal) modal.classList.add('hidden');
+    // Immediately resume slideshow when modal is closed
+    clearTimeout(this.pauseTimeout);
+    this.isPaused = false;
+    this.slideStartTime = Date.now();
   }
 
   openWeatherModal() {
@@ -468,11 +511,11 @@ class BuildingSignageApp {
     const newsRows = this.newsItems.slice(0, 8).map((item, i) => `
       <div style="padding: 0.75rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: flex-start; gap: 0.6rem;">
         <span style="color: #ef4444; font-weight: 800;">${i + 1}.</span>
-        <span style="font-size: 1.05rem; color: #f1f5f9; line-height: 1.4;">${item.title}</span>
+        <span style="font-size: 1.05rem; color: #f1f5f9; line-height: 1.4;">${escapeHtml(item.title)}</span>
       </div>
     `).join('');
 
-    this.openModal('📰 מבזקי חדשות אחרונים (Ynet)', `
+    this.openModal('📰 מבזקי חדשות אחרונים', `
       <div style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 60vh; overflow-y: auto;">
         ${newsRows}
       </div>
@@ -610,6 +653,7 @@ class BuildingSignageApp {
 
     // Slide Duration
     const durationSec = this.settings.display?.slideDurationSeconds || 12;
+    const oldDurationMs = this.slideDurationMs;
     this.slideDurationMs = durationSec * 1000;
 
     // Yom Kippur Strict Mode: Zero Motion & Absolute Silence
@@ -618,9 +662,25 @@ class BuildingSignageApp {
     if (isYomKippur) {
       this.stopRadioImmediate();
       this.isSecretMuted = true;
-      if (this.slideTimer) clearInterval(this.slideTimer);
-      if (this.progressTimer) clearInterval(this.progressTimer);
+      if (this.slideTimer) {
+        clearInterval(this.slideTimer);
+        this.slideTimer = null;
+      }
+      if (this.progressTimer) {
+        clearInterval(this.progressTimer);
+        this.progressTimer = null;
+      }
+    } else {
+      if (this.wasYomKippur) {
+        this.isSecretMuted = false;
+        this.checkRadioSchedule();
+      }
+      // Restart or update slideshow timing if duration changed or returning from Yom Kippur mode
+      if (this.slides && this.slides.length > 1 && (!this.slideTimer || oldDurationMs !== this.slideDurationMs)) {
+        this.startSlideshow();
+      }
     }
+    this.wasYomKippur = isYomKippur;
 
     // Radio
     this.updateRadioState();
@@ -886,72 +946,111 @@ class BuildingSignageApp {
         let recommendedTheme = 'default';
         let themeImages = HOLIDAY_COLLECTIONS.default;
 
-        // 1. Match Jewish Holidays from Hebcal
+        // 1. Match Jewish Holidays from Hebcal (search across all holidays for primary event)
         let jewishHolidayEvent = null;
-        if (holidays.length > 0) {
-          const hTitle = holidays[0].title;
-          const hLower = hTitle.toLowerCase();
-
+        const matchHoliday = (hTitle) => {
+          const hLower = (hTitle || '').toLowerCase();
           if (hLower.includes('ראש השנה')) {
-            recommendedTheme = 'rosh-hashanah';
-            themeImages = HOLIDAY_COLLECTIONS['rosh-hashanah'];
-            jewishHolidayEvent = { title: 'ראש השנה', customGreeting: 'שנה טובה ומתוקה!', subtitle: 'ועד הבית מאחל לכל הדיירים ובני ביתם שנה של שגשוג, בריאות, שלום והתחדשות', icon: '🍎' };
+            return {
+              theme: 'rosh-hashanah',
+              images: HOLIDAY_COLLECTIONS['rosh-hashanah'],
+              event: { title: 'ראש השנה', customGreeting: 'שנה טובה ומתוקה!', subtitle: 'ועד הבית מאחל לכל הדיירים ובני ביתם שנה של שגשוג, בריאות, שלום והתחדשות', icon: '🍎' }
+            };
           } else if (hLower.includes('כיפור')) {
-            recommendedTheme = 'yom-kippur';
-            themeImages = HOLIDAY_COLLECTIONS['yom-kippur'];
-            jewishHolidayEvent = { title: 'יום הכיפורים', customGreeting: 'גמר חתימה טובה!', subtitle: 'צום קל ומועיל לכל הדיירים והצמים • שנת סליחה ושלום', icon: '🕍' };
+            return {
+              theme: 'yom-kippur',
+              images: HOLIDAY_COLLECTIONS['yom-kippur'],
+              event: { title: 'יום הכיפורים', customGreeting: 'גמר חתימה טובה!', subtitle: 'צום קל ומועיל לכל הדיירים והצמים • שנת סליחה ושלום', icon: '🕍' }
+            };
           } else if (hLower.includes('שמחת תורה') || hLower.includes('שמיני עצרת')) {
-            recommendedTheme = 'simchat-torah';
-            themeImages = HOLIDAY_COLLECTIONS['simchat-torah'];
-            jewishHolidayEvent = { title: 'שמחת תורה', customGreeting: 'חג שמחת תורה שמח!', subtitle: 'מועדים לשמחה וחגים וזמנים לששון לכל דיירי הבניין', icon: '📜' };
+            return {
+              theme: 'simchat-torah',
+              images: HOLIDAY_COLLECTIONS['simchat-torah'],
+              event: { title: 'שמחת תורה', customGreeting: 'חג שמחת תורה שמח!', subtitle: 'מועדים לשמחה וחגים וזמנים לששון לכל דיירי הבניין', icon: '📜' }
+            };
           } else if (hLower.includes('סוכות') || hLower.includes('הושענא')) {
-            recommendedTheme = 'sukkot';
-            themeImages = HOLIDAY_COLLECTIONS['sukkot'];
-            jewishHolidayEvent = { title: 'חג הסוכות', customGreeting: 'חג סוכות שמח!', subtitle: 'ועד הבית מאחל חג סוכות מבורך, שמחה ואושפיזין מבורכים', icon: '⛺' };
+            return {
+              theme: 'sukkot',
+              images: HOLIDAY_COLLECTIONS['sukkot'],
+              event: { title: 'חג הסוכות', customGreeting: 'חג סוכות שמח!', subtitle: 'ועד הבית מאחל חג סוכות מבורך, שמחה ואושפיזין מבורכים', icon: '⛺' }
+            };
           } else if (hLower.includes('חנוכה')) {
-            recommendedTheme = 'hanukkah';
-            themeImages = HOLIDAY_COLLECTIONS['hanukkah'];
-            jewishHolidayEvent = { title: 'חנוכה', customGreeting: 'חג חנוכה שמח ומאיר!', subtitle: 'חג של אור, שמחה, ניסים ונפלאות לכל המשפחות', icon: '🕎' };
+            return {
+              theme: 'hanukkah',
+              images: HOLIDAY_COLLECTIONS['hanukkah'],
+              event: { title: 'חנוכה', customGreeting: 'חג חנוכה שמח ומאיר!', subtitle: 'חג של אור, שמחה, ניסים ונפלאות לכל המשפחות', icon: '🕎' }
+            };
           } else if (hLower.includes('ט״ו בשבט') || hLower.includes('טו בשבט')) {
-            recommendedTheme = 'tu-bishvat';
-            themeImages = HOLIDAY_COLLECTIONS['tu-bishvat'];
-            jewishHolidayEvent = { title: 'ט"ו בשבט', customGreeting: 'חג לאילנות שמח!', subtitle: 'חג צמיחה, פריחה והתחדשות הטבע לכל דיירי הבניין', icon: '🌳' };
+            return {
+              theme: 'tu-bishvat',
+              images: HOLIDAY_COLLECTIONS['tu-bishvat'],
+              event: { title: 'ט"ו בשבט', customGreeting: 'חג לאילנות שמח!', subtitle: 'חג צמיחה, פריחה והתחדשות הטבע לכל דיירי הבניין', icon: '🌳' }
+            };
           } else if (hLower.includes('פורים') || hLower.includes('אסתר')) {
-            recommendedTheme = 'purim';
-            themeImages = HOLIDAY_COLLECTIONS['purim'];
-            jewishHolidayEvent = { title: 'פורים', customGreeting: 'חג פורים שמח ומבדח!', subtitle: 'ליהודים הייתה אורה ושמחה וששון ויקר • חג מלא צהלה', icon: '🎭' };
+            return {
+              theme: 'purim',
+              images: HOLIDAY_COLLECTIONS['purim'],
+              event: { title: 'פורים', customGreeting: 'חג פורים שמח ומבדח!', subtitle: 'ליהודים הייתה אורה ושמחה וששון ויקר • חג מלא צהלה', icon: '🎭' }
+            };
           } else if (hLower.includes('פסח')) {
-            recommendedTheme = 'pesach';
-            themeImages = HOLIDAY_COLLECTIONS['pesach'];
-            jewishHolidayEvent = { title: 'פסח', customGreeting: 'חג פסח כשר ושמח!', subtitle: 'חג אביב וחרות מלבלב, שקט ושלווה לכל דיירי הבניין', icon: '🍷' };
+            return {
+              theme: 'pesach',
+              images: HOLIDAY_COLLECTIONS['pesach'],
+              event: { title: 'פסח', customGreeting: 'חג פסח כשר ושמח!', subtitle: 'חג אביב וחרות מלבלב, שקט ושלווה לכל דיירי הבניין', icon: '🍷' }
+            };
           } else if (hLower.includes('שואה')) {
-            recommendedTheme = 'memorial';
-            themeImages = HOLIDAY_COLLECTIONS['memorial'];
-            jewishHolidayEvent = { title: 'יום הזיכרון לשואה ולגבורה', customGreeting: 'יום הזיכרון לשואה ולגבורה', subtitle: 'נזכור ולא נשכח • מרכינים ראש לזכר ששת המיליונים', icon: '🕯️' };
+            return {
+              theme: 'memorial',
+              images: HOLIDAY_COLLECTIONS['memorial'],
+              event: { title: 'יום הזיכרון לשואה ולגבורה', customGreeting: 'יום הזיכרון לשואה ולגבורה', subtitle: 'נזכור ולא נשכח • מרכינים ראש לזכר ששת המיליונים', icon: '🕯️' }
+            };
           } else if (hLower.includes('הזיכרון') || hLower.includes('חללי')) {
-            recommendedTheme = 'memorial';
-            themeImages = HOLIDAY_COLLECTIONS['memorial'];
-            jewishHolidayEvent = { title: 'יום הזיכרון לחללי מערכות ישראל', customGreeting: 'יום הזיכרון לחללי מערכות ישראל ופעולות האיבה', subtitle: 'במותם ציוו לנו את החיים • יהי זכרם ברוך ונצור בליבנו תמיד', icon: '🇮🇱' };
+            return {
+              theme: 'memorial',
+              images: HOLIDAY_COLLECTIONS['memorial'],
+              event: { title: 'יום הזיכרון לחללי מערכות ישראל', customGreeting: 'יום הזיכרון לחללי מערכות ישראל ופעולות האיבה', subtitle: 'במותם ציוו לנו את החיים • יהי זכרם ברוך ונצור בליבנו תמיד', icon: '🇮🇱' }
+            };
           } else if (hLower.includes('עצמאות')) {
-            recommendedTheme = 'israel';
-            themeImages = HOLIDAY_COLLECTIONS['israel'];
-            jewishHolidayEvent = { title: 'יום העצמאות', customGreeting: 'חג עצמאות שמח למדינת ישראל!', subtitle: 'חג שמח ומלא גאווה לאומית לכל דיירי הבניין ועם ישראל', icon: '🇮🇱' };
+            return {
+              theme: 'israel',
+              images: HOLIDAY_COLLECTIONS['israel'],
+              event: { title: 'יום העצמאות', customGreeting: 'חג עצמאות שמח למדינת ישראל!', subtitle: 'חג שמח ומלא גאווה לאומית לכל דיירי הבניין ועם ישראל', icon: '🇮🇱' }
+            };
           } else if (hLower.includes('עומר') || hLower.includes('ל״ג')) {
-            recommendedTheme = 'lag-baomer';
-            themeImages = HOLIDAY_COLLECTIONS['lag-baomer'];
-            jewishHolidayEvent = { title: 'ל"ג בעומר', customGreeting: 'ל"ג בעומר שמח!', subtitle: 'חג שמח ומאיר לכל המשפחות והילדים', icon: '🔥' };
+            return {
+              theme: 'lag-baomer',
+              images: HOLIDAY_COLLECTIONS['lag-baomer'],
+              event: { title: 'ל"ג בעומר', customGreeting: 'ל"ג בעומר שמח!', subtitle: 'חג שמח ומאיר לכל המשפחות והילדים', icon: '🔥' }
+            };
           } else if (hLower.includes('ירושלים')) {
-            recommendedTheme = 'jerusalem';
-            themeImages = HOLIDAY_COLLECTIONS['jerusalem'];
-            jewishHolidayEvent = { title: 'יום ירושלים', customGreeting: 'יום ירושלים שמח!', subtitle: 'שמחי ירושלים וגילו בה כל אוהביה', icon: '🦁' };
+            return {
+              theme: 'jerusalem',
+              images: HOLIDAY_COLLECTIONS['jerusalem'],
+              event: { title: 'יום ירושלים', customGreeting: 'יום ירושלים שמח!', subtitle: 'שמחי ירושלים וגילו בה כל אוהביה', icon: '🦁' }
+            };
           } else if (hLower.includes('שבועות')) {
-            recommendedTheme = 'shavuot';
-            themeImages = HOLIDAY_COLLECTIONS['shavuot'];
-            jewishHolidayEvent = { title: 'שבועות', customGreeting: 'חג שבועות שמח!', subtitle: 'חג מתן תורה, חג הקציר והביכורים לכל הדיירים', icon: '🌾' };
+            return {
+              theme: 'shavuot',
+              images: HOLIDAY_COLLECTIONS['shavuot'],
+              event: { title: 'שבועות', customGreeting: 'חג שבועות שמח!', subtitle: 'חג מתן תורה, חג הקציר והביכורים לכל הדיירים', icon: '🌾' }
+            };
           } else if (hLower.includes('ט״ו באב') || hLower.includes('טו באב')) {
-            recommendedTheme = 'tu-baav';
-            themeImages = HOLIDAY_COLLECTIONS['tu-baav'];
-            jewishHolidayEvent = { title: 'ט"ו באב', customGreeting: 'יום אהבה עברי שמח!', subtitle: 'שמחה, אהבה ואחווה בקרב כל משפחות הבניין', icon: '❤️' };
+            return {
+              theme: 'tu-baav',
+              images: HOLIDAY_COLLECTIONS['tu-baav'],
+              event: { title: 'ט"ו באב', customGreeting: 'יום אהבה עברי שמח!', subtitle: 'שמחה, אהבה ואחווה בקרב כל משפחות הבניין', icon: '❤️' }
+            };
+          }
+          return null;
+        };
+
+        for (const h of holidays) {
+          const match = matchHoliday(h.title);
+          if (match) {
+            recommendedTheme = match.theme;
+            themeImages = match.images;
+            jewishHolidayEvent = match.event;
+            break;
           }
         }
 
@@ -1072,38 +1171,50 @@ class BuildingSignageApp {
   }
 
   async fetchNotices() {
-    let list = [];
-    if (this.isLocalServer()) {
-      try {
-        const res = await fetch('/api/notices');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.notices) {
-            list = data.notices;
-          }
-        }
-      } catch (e) {}
-    }
+    let list = null;
 
-    // Static fallback: load data/notices.json
-    if (list.length === 0) {
-      try {
-        const res = await fetch('data/notices.json?v=' + Date.now());
-        if (res.ok) {
-          list = await res.json();
-        }
-      } catch (fallbackErr) {
-        console.warn('Notices load error:', fallbackErr);
-      }
-    }
-
-    // Merge with any client-side localStorage notices & filter deleted
+    // 1. If smart_lobby_notices exists in localStorage (previously synced from Cloud / Admin), prioritize it directly as Single Source of Truth!
     try {
-      const localNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
-      if (Array.isArray(localNotices) && localNotices.length > 0) {
-        const localIds = new Set(localNotices.map(n => n.id));
-        list = [...localNotices, ...list.filter(n => !localIds.has(n.id))];
+      const stored = localStorage.getItem('smart_lobby_notices');
+      if (stored !== null) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          list = parsed;
+        }
       }
+    } catch (e) {}
+
+    // 2. If no local cache exists, attempt local server API or fallback to data/notices.json
+    if (list === null) {
+      if (this.isLocalServer()) {
+        try {
+          const res = await fetch('/api/notices');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && Array.isArray(data.notices)) {
+              list = data.notices;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // Static fallback: load data/notices.json on clean initial boot
+      if (list === null) {
+        try {
+          const res = await fetch('data/notices.json?v=' + Date.now());
+          if (res.ok) {
+            list = await res.json();
+          }
+        } catch (fallbackErr) {
+          console.warn('Notices load error:', fallbackErr);
+        }
+      }
+    }
+
+    if (!Array.isArray(list)) list = [];
+
+    // Filter out any explicitly deleted notices
+    try {
       const deletedIds = new Set(JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]'));
       list = list.filter(n => !deletedIds.has(n.id));
     } catch (e) {}
@@ -1201,25 +1312,68 @@ class BuildingSignageApp {
       throw new Error('No valid items in RSS response');
     };
 
+    const fetchViaAllOrigins = async (feedUrl) => {
+      const allOriginsUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`;
+      const res = await fetchWithTimeout(allOriginsUrl, {}, 8000);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data.contents) throw new Error('No contents from allorigins');
+
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(data.contents, 'text/xml');
+      const items = Array.from(xmlDoc.querySelectorAll('item'));
+      if (items.length === 0) throw new Error('No items in parsed RSS XML');
+
+      const validItems = items.slice(0, 12).map(item => {
+        const rawTitle = item.querySelector('title')?.textContent || '';
+        const cleanTitle = rawTitle
+          .replace(/<[^>]*>?/gm, '')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'")
+          .replace(/&amp;/g, '&')
+          .trim();
+        return { title: cleanTitle };
+      }).filter(i => i.title && i.title.length > 5);
+
+      if (validItems.length === 0) throw new Error('No valid items after filtering RSS XML');
+      return validItems;
+    };
+
     try {
-      // 1. Try selected news source
+      // 1. Try selected news source via rss2json
       this.newsItems = await fetchViaRss2Json(targetFeed);
       this.renderNewsTicker();
       return;
     } catch (primaryErr) {
       console.warn(`[Screen] Primary news fetch failed for ${requestedSource} (${primaryErr.message}). Trying fallback feed...`);
 
-      // 2. Try reliable backup feed (Walla or N12)
+      // 2. Try reliable backup feed (Walla or N12) via rss2json
       try {
         this.newsItems = await fetchViaRss2Json(fallbackFeed);
         this.renderNewsTicker();
         return;
       } catch (fallbackErr) {
-        console.warn('[Screen] Backup news fetch failed:', fallbackErr.message);
+        console.warn('[Screen] Backup news fetch failed via rss2json:', fallbackErr.message);
+      }
+
+      // 3. Fallback: Try allorigins proxy + DOMParser (bypass rss2json quota limits 429/500)
+      try {
+        console.log('[Screen] Trying allorigins proxy fallback for target feed...');
+        this.newsItems = await fetchViaAllOrigins(targetFeed);
+        this.renderNewsTicker();
+        return;
+      } catch (aoErr1) {
+        try {
+          this.newsItems = await fetchViaAllOrigins(fallbackFeed);
+          this.renderNewsTicker();
+          return;
+        } catch (aoErr2) {
+          console.warn('[Screen] AllOrigins proxy fallback failed:', aoErr2.message);
+        }
       }
     }
 
-    // 3. Fallback Announcements Ticker if all networks fail
+    // 4. Fallback Announcements Ticker if all networks fail
     this.newsItems = [
       { title: 'ועד הבית מברך את כל דיירי ואורחי הבניין בברכת יום נעים, בריאות ושקט' },
       { title: 'נא לוודא כי דלת הלובי הראשית והשער נסגרים כראוי לאחר כניסה ויציאה' },
@@ -1263,7 +1417,7 @@ class BuildingSignageApp {
       itemsHtml += `
         <span class="ticker-item">
           <span class="ticker-item-bullet">●</span>
-          ${item.title}
+          ${escapeHtml(item.title)}
         </span>
       `;
     });
@@ -1664,11 +1818,30 @@ class BuildingSignageApp {
       card.innerHTML = contentHtml;
       container.appendChild(card);
     });
+
+    if (this.slides.length <= 1) {
+      if (this.slideTimer) {
+        clearInterval(this.slideTimer);
+        this.slideTimer = null;
+      }
+      if (this.progressTimer) {
+        clearInterval(this.progressTimer);
+        this.progressTimer = null;
+      }
+    } else if (!this.isYomKippurModeActive() && !this.slideTimer) {
+      this.startSlideshow();
+    }
   }
 
   startSlideshow() {
-    if (this.slideTimer) clearInterval(this.slideTimer);
-    if (this.progressTimer) clearInterval(this.progressTimer);
+    if (this.slideTimer) {
+      clearInterval(this.slideTimer);
+      this.slideTimer = null;
+    }
+    if (this.progressTimer) {
+      clearInterval(this.progressTimer);
+      this.progressTimer = null;
+    }
     if (this.isYomKippurModeActive() || this.slides.length <= 1) return;
 
     this.slideStartTime = Date.now();
@@ -1764,6 +1937,26 @@ class BuildingSignageApp {
   // =========================================================
   // 6. AUDIO & RADIO CONTROLS
   // =========================================================
+  attachAudioErrorListener() {
+    if (!this.audioPlayer || this.audioErrorListenerAttached) return;
+    this.audioErrorListenerAttached = true;
+    this.audioPlayer.addEventListener('error', (e) => {
+      // Ignore errors caused during intentional buffer recycle / src clearance
+      if (this.isRecyclingAudio || !this.audioPlayer || !this.audioPlayer.getAttribute('src')) return;
+      console.warn('⚠️ [Radio] Audio player error encountered:', e);
+      if (this.isRadioInSchedule() && !this.isSecretMuted && !this.isYomKippurModeActive()) {
+        if (this.audioErrorRetryTimer) clearTimeout(this.audioErrorRetryTimer);
+        this.audioErrorRetryTimer = setTimeout(() => {
+          this.audioErrorRetryTimer = null;
+          if (this.isRadioInSchedule() && !this.isSecretMuted && !this.isYomKippurModeActive()) {
+            console.log('🔄 [Radio] Attempting stream recovery after error...');
+            this.recycleAudioBuffer(true);
+          }
+        }, 3000);
+      }
+    });
+  }
+
   setupAudio() {
     this.audioPlayer = document.getElementById('radio-audio');
     const unmutePrompt = document.getElementById('audio-unmute-prompt');
@@ -1774,6 +1967,8 @@ class BuildingSignageApp {
         this.unlockAudio();
       });
     }
+
+    this.attachAudioErrorListener();
 
     // Unlock audio smoothly on ANY screen touch if waiting for user gesture
     document.addEventListener('pointerdown', () => {
@@ -1862,11 +2057,19 @@ class BuildingSignageApp {
 
   stopRadioImmediate() {
     if (!this.audioPlayer) return;
+    this.isRecyclingAudio = true;
+    this.lastAudioTime = 0;
+    this.audioStallCount = 0;
+    if (this.audioErrorRetryTimer) {
+      clearTimeout(this.audioErrorRetryTimer);
+      this.audioErrorRetryTimer = null;
+    }
     this.audioPlayer.pause();
     if (this.audioPlayer.src) {
       this.audioPlayer.removeAttribute('src');
       this.audioPlayer.load();
     }
+    this.isRecyclingAudio = false;
     const radioWidget = document.getElementById('radio-indicator');
     const unmutePrompt = document.getElementById('audio-unmute-prompt');
     if (radioWidget) radioWidget.style.display = 'none';
@@ -1913,20 +2116,29 @@ class BuildingSignageApp {
     }
   }
 
-  recycleAudioBuffer() {
-    if (this.isYomKippurModeActive() || !this.isRadioInSchedule() || !this.audioPlayer || this.audioPlayer.paused || this.isSecretMuted) return;
-    console.log('♻️ [Radio] Recycling live audio stream buffer to prevent memory bloat...');
+  recycleAudioBuffer(force = false) {
+    if (this.isYomKippurModeActive() || !this.isRadioInSchedule() || !this.audioPlayer || this.isSecretMuted) return;
+    if (!force && this.audioPlayer.paused) return;
+    console.log(`♻️ [Radio] Recycling live audio stream buffer (force=${force}) to prevent stall / memory bloat...`);
     const currentSt = this.getCurrentRadioStation();
     if (!currentSt) return;
+
+    this.isRecyclingAudio = true;
+    this.lastAudioTime = 0;
+    this.audioStallCount = 0;
+    if (this.audioErrorRetryTimer) {
+      clearTimeout(this.audioErrorRetryTimer);
+      this.audioErrorRetryTimer = null;
+    }
 
     this.audioPlayer.pause();
     this.audioPlayer.removeAttribute('src');
     this.audioPlayer.load();
 
     setTimeout(() => {
-      if (this.isRadioInSchedule() && !this.isSecretMuted && this.audioPlayer) {
-        this.audioPlayer.src = currentSt.url;
-        this.audioPlayer.play().catch(() => {});
+      this.isRecyclingAudio = false;
+      if (this.isRadioInSchedule() && !this.isSecretMuted && this.audioPlayer && !this.isYomKippurModeActive()) {
+        this.startRadioStream();
       }
     }, 400);
   }
@@ -1939,7 +2151,16 @@ class BuildingSignageApp {
     const inSchedule = this.isRadioInSchedule();
     const unmutePrompt = document.getElementById('audio-unmute-prompt');
 
+    // Ensure error listener is attached if audioPlayer was loaded dynamically
+    this.attachAudioErrorListener();
+
     if (!inSchedule) {
+      this.lastAudioTime = 0;
+      this.audioStallCount = 0;
+      if (this.audioErrorRetryTimer) {
+        clearTimeout(this.audioErrorRetryTimer);
+        this.audioErrorRetryTimer = null;
+      }
       // Outside permitted hours -> stop radio and ensure prompt is hidden
       if (unmutePrompt) unmutePrompt.style.display = 'none';
       if (this.audioPlayer && (!this.audioPlayer.paused || this.audioPlayer.src)) {
@@ -1950,6 +2171,21 @@ class BuildingSignageApp {
       // Inside permitted hours -> forcefully assert stream playback if not user-muted
       if (this.audioPlayer && this.audioPlayer.paused && !this.isSecretMuted) {
         this.startRadioStream();
+      } else if (inSchedule && !this.isSecretMuted && this.audioPlayer && !this.audioPlayer.paused) {
+        // Track currentTime to detect buffer stalls (e.g. icecast stream freeze)
+        const curTime = this.audioPlayer.currentTime;
+        if (curTime > 0 && curTime === this.lastAudioTime) {
+          this.audioStallCount = (this.audioStallCount || 0) + 1;
+          console.warn(`⚠️ [Radio] Audio stream buffer stall detected (${this.audioStallCount}/2): currentTime=${curTime}`);
+          if (this.audioStallCount >= 2) {
+            console.warn('🔄 [Radio] Stream stalled for 30s. Triggering forced buffer recycle...');
+            this.audioStallCount = 0;
+            this.recycleAudioBuffer(true);
+          }
+        } else {
+          this.lastAudioTime = curTime;
+          this.audioStallCount = 0;
+        }
       }
     }
   }
@@ -1977,7 +2213,7 @@ class BuildingSignageApp {
 
     setInterval(() => {
       this.fetchNews();
-    }, 5 * 60 * 1000);
+    }, 10 * 60 * 1000);
 
     setInterval(() => {
       this.fetchShabbatAndHolidays();
@@ -2003,7 +2239,9 @@ class BuildingSignageApp {
       if (e.key === 'smart_lobby_force_reload') {
         const time = parseInt(e.newValue || '0', 10);
         if (time > lastReloadTime) {
+          lastReloadTime = time;
           console.log('🔄 Remote force reload triggered via storage event!');
+          try { localStorage.setItem('smart_lobby_exit_reason', 'remote_force_reload'); } catch (e) {}
           window.location.reload();
         }
       } else if (e.key === 'smart_lobby_settings') {
@@ -2011,17 +2249,6 @@ class BuildingSignageApp {
         this.fetchSettings();
       }
     });
-
-    // Check periodically for force reload signals
-    setInterval(() => {
-      const current = parseInt(localStorage.getItem('smart_lobby_force_reload') || '0', 10);
-      if (current > lastReloadTime) {
-        lastReloadTime = current;
-        console.log('🔄 Remote force reload triggered via interval poll!');
-        try { localStorage.setItem('smart_lobby_exit_reason', 'remote_force_reload'); } catch (e) {}
-        window.location.reload();
-      }
-    }, 2500);
   }
 
   setupWatchdog() {
@@ -2150,12 +2377,37 @@ class BuildingSignageApp {
       } catch (e) {}
     });
 
+    // Error telemetry rate-limiter & session circuit breaker (max 1 error per 60s, max 10 per session)
+    let errorReportCount = 0;
+    let lastErrorReportTime = 0;
+    const MAX_ERRORS_PER_SESSION = 10;
+    const ERROR_COOLDOWN_MS = 60000;
+
+    const shouldReportError = () => {
+      const currentTime = Date.now();
+      if (errorReportCount >= MAX_ERRORS_PER_SESSION) {
+        if (errorReportCount === MAX_ERRORS_PER_SESSION) {
+          errorReportCount++;
+          console.warn('🛑 [FlightRecorder] Maximum session error report quota reached (10). Circuit breaker engaged.');
+        }
+        return false;
+      }
+      if (currentTime - lastErrorReportTime < ERROR_COOLDOWN_MS) {
+        console.warn('⏳ [FlightRecorder] Error report suppressed by rate-limit (max 1 per 60s).');
+        return false;
+      }
+      lastErrorReportTime = currentTime;
+      errorReportCount++;
+      return true;
+    };
+
     // Uncaught JS Exception Listener
     window.addEventListener('error', (event) => {
       try {
         if (!window.FirebaseSync) return;
         const msg = event.message || 'שגיאת JavaScript לא מזוהה';
         if (msg.includes('Script error.') && !event.filename) return;
+        if (!shouldReportError()) return;
 
         window.FirebaseSync.logDeviceEvent({
           type: 'js_error',
@@ -2172,6 +2424,7 @@ class BuildingSignageApp {
     window.addEventListener('unhandledrejection', (event) => {
       try {
         if (!window.FirebaseSync) return;
+        if (!shouldReportError()) return;
         const reason = event.reason;
         const msg = reason?.message || String(reason || 'Promise rejected');
         window.FirebaseSync.logDeviceEvent({
