@@ -12,28 +12,75 @@ function escapeHtml(str) {
 }
 
 function isLocalServer() {
+  if (typeof window === 'undefined' || !window.location) return false;
   return window.location.protocol.startsWith('http') &&
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port === '3000');
 }
 
-function pruneExpiredNoticeImages(notices) {
+function pruneExpiredNoticeImages(notices, nowInput = new Date()) {
   if (!Array.isArray(notices)) return notices;
-  const now = Date.now();
-  const dayMs = 24 * 60 * 60 * 1000;
-  return notices.map(n => {
+  const now = nowInput instanceof Date ? nowInput.getTime() : (typeof nowInput === 'number' ? nowInput : Date.now());
+  let prunedCount = 0;
+  let bytesSaved = 0;
+
+  const cleaned = notices.map(n => {
     if (n && n.expiresAt) {
       const expTime = new Date(n.expiresAt).getTime();
-      // If expired more than 24 hours ago and contains heavy base64 data image
-      if (!isNaN(expTime) && (now - expTime > dayMs) && typeof n.imageUrl === 'string' && n.imageUrl.startsWith('data:image/')) {
-        console.log(`🧹 [Admin] Auto-pruning heavy base64 image from expired notice: ${n.id} (${n.title})`);
+      // If notice has expired and contains heavy base64 data image
+      if (!isNaN(expTime) && (now >= expTime) && typeof n.imageUrl === 'string' && (n.imageUrl.startsWith('data:image/') || n.imageUrl.length > 1000)) {
+        prunedCount++;
+        bytesSaved += n.imageUrl.length;
+        console.log(`🧹 [Admin] Auto-pruned heavy base64 image from expired notice: ${n.id} (${n.title}), saved ~${Math.round(n.imageUrl.length / 1024)}KB`);
         return { ...n, imageUrl: null };
       }
     }
     return n;
   });
+
+  if (typeof window !== 'undefined') {
+    window._lastPruneStats = { prunedCount, bytesSaved, timestamp: now };
+  }
+  if (prunedCount > 0 && typeof localStorage !== 'undefined') {
+    try {
+      const prevStats = JSON.parse(localStorage.getItem('smart_lobby_prune_stats') || '{"totalPruned":0,"totalBytes":0}');
+      localStorage.setItem('smart_lobby_prune_stats', JSON.stringify({
+        totalPruned: (prevStats.totalPruned || 0) + prunedCount,
+        totalBytes: (prevStats.totalBytes || 0) + bytesSaved,
+        lastPrunedAt: new Date(now).toISOString()
+      }));
+    } catch (e) {}
+  }
+  return cleaned;
 }
 
-window._adminNoticesMap = {};
+function isNoticeActive(notice, nowInput = new Date()) {
+  if (!notice || notice.hidden === true) return false;
+  const now = nowInput instanceof Date ? nowInput.getTime() : (typeof nowInput === 'number' ? nowInput : Date.now());
+  const currentDay = nowInput instanceof Date ? nowInput.getDay() : new Date(now).getDay();
+  if (notice.startsAt) {
+    const startTime = new Date(notice.startsAt).getTime();
+    if (!isNaN(startTime) && startTime > now) {
+      return false; // Scheduled for future
+    }
+  }
+  if (notice.expiresAt) {
+    const expTime = new Date(notice.expiresAt).getTime();
+    if (!isNaN(expTime) && expTime <= now) {
+      return false; // Expired
+    }
+  }
+  if (Array.isArray(notice.recurringDays) && notice.recurringDays.length > 0) {
+    const days = notice.recurringDays.map(Number);
+    if (!days.includes(currentDay)) {
+      return false; // Not scheduled for today
+    }
+  }
+  return true;
+}
+
+if (typeof window !== 'undefined') {
+  window._adminNoticesMap = {};
+}
 
 /**
  * =========================================================
@@ -56,8 +103,83 @@ const RADIO_STATIONS_MAP = [
   { id: 'dance', name: 'I Love Dance & Hits', url: 'https://streams.ilovemusic.de/iloveradio2.mp3' }
 ];
 
-let currentPin = sessionStorage.getItem('admin_pin') || '';
-let currentRole = sessionStorage.getItem('admin_role') || 'admin';
+const EMERGENCY_PRESETS = {
+  oref: {
+    title: 'הנחיות פיקוד העורף - התגוננות בעת אזעקה',
+    content: 'בהישמע אזעקה יש להיכנס למרחב המוגן / מקלט הבניין בתוך 90 שניות. יש לשהות במרחב 10 דקות לפחות ולהישמע להנחיות כוחות הביטחון.'
+  },
+  elevator: {
+    title: 'הודעה דחופה: חילוץ / השבתת מעלית לבדיקה',
+    content: 'המעלית מושבתת לצורך טיפול טכני דחוף וחילוץ. טכנאי שירות מוזעק למקום. אין להשתמש במעלית עד לסיום הבדיקה!'
+  },
+  water: {
+    title: 'הודעה דחופה: פיצוץ צנרת / הפסקת מים בבניין',
+    content: 'עקב פיצוץ צנרת ראשי הופסקה זמנית אספקת המים. בעל מקצוע הוזעק ומבצע עבודות לתיקון התקלה והשבת אספקת המים בהקדם.'
+  },
+  power: {
+    title: 'הודעה דחופה: הפסקת חשמל כללית בבניין',
+    content: 'מתרחשת הפסקת חשמל. מערכות החירום ותאורת המדרגות פועלות. הנושא נמצא בטיפול מול חברת החשמל.'
+  },
+  utility: {
+    title: 'הודעה דחופה: הפסקת מים וחשמל בבניין',
+    content: 'בשל תקלה דחופה נותקה אספקת המים/חשמל בבניין. צוות תיקון מטפל בנושא במטרה להשיב את האספקה בהקדם האפשרי. עמכם הסליחה על אי הנוחות.'
+  }
+};
+
+const SMART_DRAFTS = {
+  water: {
+    title: 'הודעה על הפסקת מים וחשמל יזומה',
+    content: 'דיירים יקרים,\n\nלתשומת לבכם, ביום [תאריך] בין השעות [שעות] תתקיים הפסקת אספקה יזומה לצורך עבודות תחזוקה ושדרוג מערכות הבניין.\nמומלץ להיערך מראש בהתאם.\n\nאנו מתנצלים על אי הנוחות ומודים על ההבנה,\nועד הבית.',
+    img: 'images/notices/maintenance.jpg',
+    recommendedDays: 2,
+    isUrgent: true
+  },
+  elevator: {
+    title: 'הודעה על עבודות שירות ובדיקה במעלית',
+    content: 'דיירים יקרים,\n\nביום [תאריך] בין השעות [שעות] תתבצע בדיקה תקופתית ועבודות שירות במעלית הבניין על ידי טכנאי מוסמך.\nבזמן זה המעלית תהיה מושבתת לסירוגין.\n\nבברכה,\nועד הבית.',
+    img: 'images/notices/maintenance.jpg',
+    recommendedDays: 2,
+    isUrgent: true
+  },
+  cleaning: {
+    title: 'ניקיון ושטיפה יסודית של החניון והלובי',
+    content: 'דיירים יקרים,\n\nביום [תאריך] יתבצע ניקיון ושטיפה יסודית בחניון ובשטחי הלובי והקומות.\nנודה לפינוי חפצים אישיים מרחבת החניה כדי לאפשר גישה נוחה למכונות הניקוי.\n\nתודה רבה על שיתוף הפעולה,\nועד הבית.',
+    img: 'images/notices/clean_hallway_care.jpg',
+    recommendedDays: 3,
+    isUrgent: false
+  },
+  pest: {
+    title: 'הדברה תקופתית בחדרי האשפה ובשטחים הציבוריים',
+    content: 'דיירים יקרים,\n\nביום [תאריך] תבוצע הדברה תקופתית בחצר, בחדר האשפה ובחדרי המדרגות.\nהחומרים בטוחים אך מומלץ לשמור על השגחה על חיות מחמד ופעוטות בסמיכות לשטחים המודברים.\n\nבברכה,\nועד הבית.',
+    img: 'images/notices/gardening_cleaning.jpg',
+    recommendedDays: 4,
+    isUrgent: false
+  },
+  meeting: {
+    title: 'הזמנה לאסיפת דיירים שנתית',
+    content: 'דיירים יקרים,\n\nאסיפת הדיירים השנתית של הבניין תתקיים ביום [תאריך] בשעה 20:00 בלובי הבניין.\nעל סדר היום: דו"ח כספי שנתי, תכנית שדרוג ושיפוץ, ובחירת ועד לשנה הקרובה.\n\nנוכחות כולם חשובה מאוד לעתיד הבניין!\nועד הבית.',
+    img: 'images/notices/peaceful_morning_lobby.jpg',
+    recommendedDays: 7,
+    isUrgent: false
+  },
+  pruning: {
+    title: 'עבודות גיזום ופינוי חפצים ממעברים משותפים',
+    content: 'דיירים יקרים,\n\nלקראת עבודות גיזום וטיפוח גינת הבניין ביום [תאריך], נבקשכם לפנות חפצים, אופניים וציוד פרטי מהמעברים ומרחבת הכניסה.\nגזם שיוצא לרחוב יפונה בהתאם להנחיות העירייה.\n\nתודה על ההתחשבות,\nועד הבית.',
+    img: 'images/notices/pruning_waste.jpg',
+    recommendedDays: 3,
+    isUrgent: false
+  },
+  dues: {
+    title: 'תזכורת ידידותית: תשלום מסי ועד בית לחודש הנוכחי',
+    content: 'דיירים יקרים,\n\nתזכורת להסדרת דמי ועד הבית לחודש הנוכחי. תשלום מסודר מאפשר לנו לתחזק את המעלית, הניקיון, התאורה והביטוח של הבניין ברמה הגבוהה ביותר.\nניתן להעביר בהעברה בנקאית או באפליקציית ביט/פייבוקס.\n\nתודה לכל הדיירים המקדימים לשלם,\nועד הבית.',
+    img: 'images/notices/peaceful_morning_lobby.jpg',
+    recommendedDays: 30,
+    isUrgent: false
+  }
+};
+
+let currentPin = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('admin_pin') || '' : '';
+let currentRole = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('admin_role') || 'admin' : 'admin';
 let settingsData = null;
 let selectedNoticeFile = null;
 let testAudio = null;
@@ -70,12 +192,15 @@ function getStationById(id) {
   return RADIO_STATIONS_MAP[0];
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  setupAuth();
-  setupTabs();
-  setupHeaderQuickActions();
-  setupDeviceHealthMonitoring();
-  setupNoticesForm();
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    setupAuth();
+    setupTabs();
+    setupHeaderQuickActions();
+    setupDeviceHealthMonitoring();
+    setupNoticesForm();
+    setupEmergencyAlertUI();
+    setupSmartNoticeAssistant();
   setupGalleryPicker();
   setupDisplayControls();
   setupContactsManager();
@@ -86,7 +211,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (currentPin) {
     unlockAdmin();
   }
-});
+  });
+}
 
 async function setupFirebaseCloudSync() {
   const badge = document.getElementById('cloud-sync-status-badge');
@@ -315,7 +441,7 @@ function setupTabs() {
 // ==========================================
 function setupNoticesForm() {
   const addBtn = document.getElementById('add-notice-btn');
-  const formBox = document.getElementById('notice-form-box');
+  const formBox = document.getElementById('notice-form-box') || document.getElementById('notice-form-container');
   const cancelBtn = document.getElementById('cancel-notice-btn');
   const form = document.getElementById('notice-form');
   const fileInput = document.getElementById('notice-file-input');
@@ -323,6 +449,45 @@ function setupNoticesForm() {
   const previewBox = document.getElementById('notice-img-preview-box');
   const previewImg = document.getElementById('notice-img-preview');
   const imgUrlHidden = document.getElementById('notice-image-url');
+
+  const recurringGroup = document.getElementById('notice-recurring-days-group');
+  const recurringClearBtn = document.getElementById('notice-recurring-clear-btn');
+
+  if (recurringGroup) {
+    recurringGroup.addEventListener('click', (e) => {
+      const btn = e.target.closest('.recurring-day-btn');
+      if (!btn) return;
+      btn.classList.toggle('selected');
+    });
+  }
+
+  if (recurringClearBtn) {
+    recurringClearBtn.addEventListener('click', () => {
+      document.querySelectorAll('#notice-recurring-days-group .recurring-day-btn').forEach(b => {
+        b.classList.remove('selected');
+      });
+    });
+  }
+
+  function getSelectedRecurringDays() {
+    const selected = [];
+    document.querySelectorAll('#notice-recurring-days-group .recurring-day-btn.selected').forEach(b => {
+      selected.push(Number(b.dataset.day));
+    });
+    return selected.sort((a, b) => a - b);
+  }
+
+  function setSelectedRecurringDays(days = []) {
+    const daySet = new Set((days || []).map(Number));
+    document.querySelectorAll('#notice-recurring-days-group .recurring-day-btn').forEach(b => {
+      if (daySet.has(Number(b.dataset.day))) {
+        b.classList.add('selected');
+      } else {
+        b.classList.remove('selected');
+      }
+    });
+  }
+  window.setSelectedRecurringDays = setSelectedRecurringDays;
 
   if (addBtn) {
     addBtn.addEventListener('click', () => {
@@ -332,6 +497,9 @@ function setupNoticesForm() {
       selectedNoticeFile = null;
       if (fileInput) fileInput.value = '';
       if (previewBox) previewBox.classList.add('hidden');
+      const startsInput = document.getElementById('notice-starts');
+      if (startsInput) startsInput.value = '';
+      setSelectedRecurringDays([]);
       document.getElementById('form-title').textContent = 'יצירת הודעה חדשה לוועד';
       formBox.classList.remove('hidden');
       formBox.scrollIntoView({ behavior: 'smooth' });
@@ -432,7 +600,10 @@ function setupNoticesForm() {
       const title = document.getElementById('notice-title').value.trim();
       const content = document.getElementById('notice-content').value.trim();
       const author = document.getElementById('notice-author').value.trim() || 'ועד הבית';
+      const startsInput = document.getElementById('notice-starts');
+      const startsVal = startsInput ? startsInput.value : '';
       const expiresVal = document.getElementById('notice-expires').value;
+      const recurringDays = getSelectedRecurringDays();
       const isUrgent = document.getElementById('notice-urgent').checked;
       const isHidden = document.getElementById('notice-hidden') ? document.getElementById('notice-hidden').checked : false;
       let imageUrl = imgUrlHidden.value || null;
@@ -473,7 +644,9 @@ function setupNoticesForm() {
         isUrgent,
         hidden: isHidden,
         imageUrl,
-        expiresAt: expiresVal ? new Date(expiresVal).toISOString() : null
+        startsAt: startsVal ? new Date(startsVal).toISOString() : null,
+        expiresAt: expiresVal ? new Date(expiresVal).toISOString() : null,
+        recurringDays: recurringDays.length > 0 ? recurringDays : []
       };
 
       // Save to local memory map & localStorage
@@ -592,68 +765,119 @@ async function loadNotices() {
       const deletedIds = new Set(JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]'));
       notices = notices.filter(n => !deletedIds.has(n.id));
     } catch (e) {}
-    
-    if (notices.length === 0) {
-      list.innerHTML = `
-        <div class="admin-card p-6 text-center text-gray-400">
-          <p class="text-base mb-1">אין כרגע הודעות פעילות במסך</p>
-          <p class="text-xs">המסך מציג צילומי שבת וחגים, מזג אוויר ועדכוני חדשות אוטומטית</p>
-        </div>
-      `;
-      return;
+
+    // Auto-prune heavy base64 images from expired notices on load
+    notices = pruneExpiredNoticeImages(notices);
+    if (window._lastPruneStats && window._lastPruneStats.prunedCount > 0) {
+      console.log(`🧹 Auto-prune on load: cleaned ${window._lastPruneStats.prunedCount} expired notice images, saving ${Math.round(window._lastPruneStats.bytesSaved / 1024)}KB!`);
+      localStorage.setItem('smart_lobby_notices', JSON.stringify(notices));
+      if (window.FirebaseSync && window.FirebaseSync.isInitialized) {
+        window.FirebaseSync.saveNotices(notices).catch(e => console.warn('Quiet cloud prune sync on load:', e));
+      }
     }
 
-    window._adminNoticesMap = {};
-    notices.forEach(n => { window._adminNoticesMap[n.id] = n; });
-
-    list.innerHTML = notices.map(n => {
-      const urgentBadge = n.isUrgent ? `<span class="bg-red-600 text-white text-xs px-2 py-0.5 rounded-md font-bold">⚠️ דחוף</span>` : '';
-      const imgBadge = n.imageUrl ? `<span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-md">🖼️ תמונה</span>` : '';
-      const isExpired = Boolean(n.expiresAt && !isNaN(new Date(n.expiresAt).getTime()) && (new Date(n.expiresAt).getTime() <= Date.now()));
-      let statusBadge = '';
-      if (n.hidden) {
-        statusBadge = `<span class="bg-gray-700 text-amber-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-gray-600">👁️‍🗨️ מוסתרת ידנית</span>`;
-      } else if (isExpired) {
-        statusBadge = `<span class="bg-amber-950 text-amber-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-amber-800">⌛ פג תוקף (לא מוצגת במסך)</span>`;
+    // Display storage savings badge in Tab 1 and Tab 5
+    const pruneBadge = document.getElementById('prune-savings-badge');
+    const pruneText = document.getElementById('prune-savings-text');
+    const pruneTextTab5 = document.getElementById('prune-savings-text-tab5');
+    try {
+      const stats = JSON.parse(localStorage.getItem('smart_lobby_prune_stats') || 'null');
+      if (stats && (stats.totalPruned > 0 || stats.totalBytes > 0)) {
+        const kbSaved = Math.round(stats.totalBytes / 1024);
+        const msg = `ניקוי אוטומטי פעיל: נוקו ${stats.totalPruned} תמונות ממודעות ישנות שפג תוקפן (נחסכו ~${kbSaved}KB לשמירה על מכסת Firestore).`;
+        if (pruneText) pruneText.textContent = msg;
+        if (pruneTextTab5) pruneTextTab5.textContent = msg;
+        if (pruneBadge) pruneBadge.classList.remove('hidden');
       } else {
-        statusBadge = `<span class="bg-emerald-950 text-emerald-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-emerald-800">✅ מוצגת במסך</span>`;
+        if (pruneBadge) pruneBadge.classList.remove('hidden');
       }
-      const expDate = n.expiresAt 
-        ? `<span class="text-xs ${isExpired ? 'text-rose-400 font-semibold' : 'text-amber-400'}">תפוגה: ${new Date(n.expiresAt).toLocaleDateString('he-IL')} ${new Date(n.expiresAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span>` 
-        : '<span class="text-xs text-gray-500">ללא תפוגה</span>';
-      const cardBg = (n.hidden || isExpired) ? 'opacity-65 bg-gray-950/70 border-dashed border-gray-700' : 'hover:border-gray-600';
+    } catch (e) {}
 
-      return `
-        <div class="admin-card p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 transition ${cardBg}">
-          <div class="space-y-1 flex-1 min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              ${urgentBadge}
-              ${imgBadge}
-              ${statusBadge}
-              <h3 class="font-bold text-sm sm:text-base text-white truncate">${escapeHtml(n.title)}</h3>
-            </div>
-            <p class="text-xs sm:text-sm text-gray-300 line-clamp-2">${escapeHtml(n.content)}</p>
-            <div class="flex items-center gap-2 sm:gap-3 pt-1 text-[11px] sm:text-xs text-gray-400 flex-wrap">
-              <span>נכתב ע"י: ${escapeHtml(n.author || 'ועד הבית')}</span>
-              <span>•</span>
-              ${expDate}
-            </div>
-          </div>
-          <div class="flex gap-2 self-end sm:self-center shrink-0 w-full sm:w-auto justify-end flex-wrap">
-            <button onclick="toggleNoticeHidden('${n.id}')" class="px-3 py-1.5 ${n.hidden ? 'bg-emerald-800 hover:bg-emerald-700 text-emerald-100' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'} active:scale-95 rounded-lg text-xs font-bold transition" title="${n.hidden ? 'הצג הודעה זו במסך הלובי' : 'הסתר הודעה זו מהמסך'}">
-              ${n.hidden ? '👁️ הצג במסך' : '👁️‍🗨️ הסתר'}
-            </button>
-            <button onclick="editNotice('${n.id}')" class="px-3.5 py-1.5 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-xs font-semibold">✏️ ערוך</button>
-            <button onclick="deleteNotice('${n.id}')" class="px-3.5 py-1.5 bg-red-900 bg-opacity-40 hover:bg-opacity-80 active:scale-95 text-red-300 rounded-lg text-xs font-semibold">🗑️ מחק</button>
-          </div>
-        </div>
-      `;
-    }).join('');
+    renderNoticesList(notices);
   } catch (err) {
     console.error('[Admin] Error loading notices:', err);
     list.innerHTML = '<p class="text-red-400 text-xs">שגיאה בטעינת הודעות</p>';
   }
 }
+
+function renderNoticesList(notices) {
+  const list = document.getElementById('notices-list');
+  if (!list) return;
+
+  if (!Array.isArray(notices) || notices.length === 0) {
+    list.innerHTML = `
+      <div class="admin-card p-6 text-center text-gray-400">
+        <p class="text-base mb-1">אין כרגע הודעות פעילות במסך</p>
+        <p class="text-xs">המסך מציג צילומי שבת וחגים, מזג אוויר ועדכוני חדשות אוטומטית</p>
+      </div>
+    `;
+    return;
+  }
+
+  window._adminNoticesMap = {};
+  notices.forEach(n => { window._adminNoticesMap[n.id] = n; });
+
+  list.innerHTML = notices.map(n => {
+    const urgentBadge = n.isUrgent ? `<span class="bg-red-600 text-white text-xs px-2 py-0.5 rounded-md font-bold">⚠️ דחוף</span>` : '';
+    const imgBadge = n.imageUrl ? `<span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-md">🖼️ תמונה</span>` : '';
+    const isExpired = Boolean(n.expiresAt && !isNaN(new Date(n.expiresAt).getTime()) && (new Date(n.expiresAt).getTime() <= Date.now()));
+    const isFutureScheduled = Boolean(n.startsAt && !isNaN(new Date(n.startsAt).getTime()) && (new Date(n.startsAt).getTime() > Date.now()));
+    const isRecurring = Array.isArray(n.recurringDays) && n.recurringDays.length > 0;
+
+    let statusBadge = '';
+    if (n.hidden) {
+      statusBadge = `<span class="bg-gray-700 text-amber-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-gray-600">👁️‍🗨️ מוסתרת ידנית</span>`;
+    } else if (isExpired) {
+      statusBadge = `<span class="bg-amber-950 text-amber-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-amber-800">⌛ פג תוקף (לא מוצגת במסך)</span>`;
+    } else if (isFutureScheduled) {
+      statusBadge = `<span class="bg-indigo-950 text-indigo-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-indigo-800">⏳ מתוזמן ל-${new Date(n.startsAt).toLocaleDateString('he-IL')} ${new Date(n.startsAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span>`;
+    } else {
+      statusBadge = `<span class="bg-emerald-950 text-emerald-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-emerald-800">✅ מוצגת במסך</span>`;
+    }
+
+    let recurringBadge = '';
+    if (isRecurring) {
+      const dayNames = ['א\'', 'ב\'', 'ג\'', 'ד\'', 'ה\'', 'ו\'', 'ש\''];
+      const daysStr = n.recurringDays.map(Number).sort((a,b)=>a-b).map(d => dayNames[d] || d).join(', ');
+      const isToday = n.recurringDays.map(Number).includes(new Date().getDay());
+      recurringBadge = `<span class="bg-purple-950 text-purple-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-purple-800">🔄 כל יום ${daysStr}${isToday ? ' (פעיל היום)' : ' (היום אינו יום פרסום)'}</span>`;
+    }
+
+    const expDate = n.expiresAt 
+      ? `<span class="text-xs ${isExpired ? 'text-rose-400 font-semibold' : 'text-amber-400'}">תפוגה: ${new Date(n.expiresAt).toLocaleDateString('he-IL')} ${new Date(n.expiresAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span>` 
+      : '<span class="text-xs text-gray-500">ללא תפוגה</span>';
+    const cardBg = (n.hidden || isExpired || isFutureScheduled) ? 'opacity-65 bg-gray-950/70 border-dashed border-gray-700' : 'hover:border-gray-600';
+
+    return `
+      <div class="admin-card p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 transition ${cardBg}">
+        <div class="space-y-1 flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            ${urgentBadge}
+            ${imgBadge}
+            ${statusBadge}
+            ${recurringBadge}
+            <h3 class="font-bold text-sm sm:text-base text-white truncate">${escapeHtml(n.title)}</h3>
+          </div>
+          <p class="text-xs sm:text-sm text-gray-300 line-clamp-2">${escapeHtml(n.content)}</p>
+          <div class="flex items-center gap-2 sm:gap-3 pt-1 text-[11px] sm:text-xs text-gray-400 flex-wrap">
+            <span>נכתב ע"י: ${escapeHtml(n.author || 'ועד הבית')}</span>
+            ${n.startsAt ? `<span>•</span><span class="${isFutureScheduled ? 'text-indigo-400 font-semibold' : 'text-gray-400'}">התחלה: ${new Date(n.startsAt).toLocaleDateString('he-IL')} ${new Date(n.startsAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span>` : ''}
+            <span>•</span>
+            ${expDate}
+          </div>
+        </div>
+        <div class="flex gap-2 self-end sm:self-center shrink-0 w-full sm:w-auto justify-end flex-wrap">
+          <button onclick="toggleNoticeHidden('${n.id}')" class="px-3 py-1.5 ${n.hidden ? 'bg-emerald-800 hover:bg-emerald-700 text-emerald-100' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'} active:scale-95 rounded-lg text-xs font-bold transition" title="${n.hidden ? 'הצג הודעה זו במסך הלובי' : 'הסתר הודעה זו מהמסך'}">
+            ${n.hidden ? '👁️ הצג במסך' : '👁️‍🗨️ הסתר'}
+          </button>
+          <button onclick="editNotice('${n.id}')" class="px-3.5 py-1.5 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-xs font-semibold">✏️ ערוך</button>
+          <button onclick="deleteNotice('${n.id}')" class="px-3.5 py-1.5 bg-red-900 bg-opacity-40 hover:bg-opacity-80 active:scale-95 text-red-300 rounded-lg text-xs font-semibold">🗑️ מחק</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+window.renderNoticesList = renderNoticesList;
 
 window.editNotice = function(id, encodedNotice) {
   const n = window._adminNoticesMap[id] || (encodedNotice ? JSON.parse(decodeURIComponent(encodedNotice)) : null);
@@ -678,6 +902,20 @@ window.editNotice = function(id, encodedNotice) {
     previewBox.classList.add('hidden');
   }
 
+  if (n.startsAt) {
+    const d = new Date(n.startsAt);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    const startsInput = document.getElementById('notice-starts');
+    if (startsInput) startsInput.value = d.toISOString().slice(0, 16);
+  } else {
+    const startsInput = document.getElementById('notice-starts');
+    if (startsInput) startsInput.value = '';
+  }
+
+  if (window.setSelectedRecurringDays) {
+    window.setSelectedRecurringDays(Array.isArray(n.recurringDays) ? n.recurringDays : []);
+  }
+
   if (n.expiresAt) {
     const d = new Date(n.expiresAt);
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -687,7 +925,7 @@ window.editNotice = function(id, encodedNotice) {
   }
 
   document.getElementById('form-title').textContent = 'עריכת הודעת ועד';
-  const formBox = document.getElementById('notice-form-box');
+  const formBox = document.getElementById('notice-form-box') || document.getElementById('notice-form-container');
   formBox.classList.remove('hidden');
   formBox.scrollIntoView({ behavior: 'smooth' });
 };
@@ -737,6 +975,484 @@ window.deleteNotice = async function(id) {
     showAdminToast('ההודעה נמחקה מקומית, אך הסנכרון לענן נכשל.', '⚠️');
   }
 };
+
+// ==========================================
+// 3.1 EMERGENCY ALERT CONTROLS (חידוש #4)
+// ==========================================
+function updateEmergencyAlertUI(alertData) {
+  const alert = alertData || settingsData?.display?.emergencyAlert || { active: false, title: '', content: '' };
+  const badge = document.getElementById('emergency-alert-status-badge');
+  const cancelBtn = document.getElementById('emergency-alert-cancel-btn');
+  const liveBanner = document.getElementById('emergency-active-banner');
+  const panel = document.getElementById('emergency-alert-panel');
+  const saveBtnText = document.getElementById('emergency-alert-save-btn-text');
+  const activeChk = document.getElementById('emergency-alert-active');
+  const updatedAtText = document.getElementById('emergency-updated-at-text');
+  const titleInput = document.getElementById('emergency-alert-title');
+  const contentInput = document.getElementById('emergency-alert-content');
+
+  const isActive = Boolean(alert.active);
+
+  if (activeChk) activeChk.checked = isActive;
+
+  if (isActive) {
+    if (badge) {
+      badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-black bg-red-600 text-white animate-pulse shadow-md border border-red-400';
+      badge.textContent = '🔴 פעיל כעת במסך!';
+    }
+    if (cancelBtn) cancelBtn.classList.remove('hidden');
+    if (liveBanner) liveBanner.classList.remove('hidden');
+    if (panel) {
+      panel.classList.add('ring-2', 'ring-red-500', 'shadow-red-900/50');
+    }
+    if (saveBtnText) saveBtnText.textContent = 'עדכן התרעת חירום במסך';
+    if (updatedAtText && alert.updatedAt) {
+      try {
+        const timeStr = new Date(alert.updatedAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+        updatedAtText.textContent = `עודכן לאחרונה: ${timeStr}`;
+      } catch (e) {
+        updatedAtText.textContent = 'פעיל';
+      }
+    }
+  } else {
+    if (badge) {
+      badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700';
+      badge.textContent = '⚪ כבוי (שגרה)';
+    }
+    if (cancelBtn) cancelBtn.classList.add('hidden');
+    if (liveBanner) liveBanner.classList.add('hidden');
+    if (panel) {
+      panel.classList.remove('ring-2', 'ring-red-500', 'shadow-red-900/50');
+    }
+    if (saveBtnText) saveBtnText.textContent = 'שמור והפעל התרעת חירום במסך';
+  }
+
+  // Populate inputs if blank or if alert values exist
+  if (titleInput && !titleInput.value.trim() && alert.title) {
+    titleInput.value = alert.title;
+  }
+  if (contentInput && !contentInput.value.trim() && alert.content) {
+    contentInput.value = alert.content;
+  }
+}
+
+function setupEmergencyAlertUI() {
+  const panel = document.getElementById('emergency-alert-panel');
+  if (!panel) return;
+
+  const titleInput = document.getElementById('emergency-alert-title');
+  const contentInput = document.getElementById('emergency-alert-content');
+  const activeChk = document.getElementById('emergency-alert-active');
+  const saveBtn = document.getElementById('emergency-alert-save-btn');
+  const cancelBtn = document.getElementById('emergency-alert-cancel-btn');
+  const presetBtns = panel.querySelectorAll('.emergency-preset-btn');
+
+  presetBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pKey = btn.dataset.preset;
+      const data = EMERGENCY_PRESETS[pKey];
+      if (!data) return;
+      if (titleInput) titleInput.value = data.title;
+      if (contentInput) contentInput.value = data.content;
+      if (activeChk) activeChk.checked = true;
+      showAdminToast(`נטענה תבנית חירום: ${data.title.substring(0, 30)}...`, '🚨');
+    });
+  });
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const title = titleInput?.value.trim() || '';
+      const content = contentInput?.value.trim() || '';
+      const isActive = Boolean(activeChk?.checked);
+
+      if (isActive && (!title || !content)) {
+        showAdminToast('נא להזין כותרת ותוכן להתרעת החירום לפני ההפעלה!', '⚠️');
+        return;
+      }
+
+      const alertData = {
+        active: isActive,
+        title: title || (isActive ? 'הודעת חירום לדיירי הבניין' : ''),
+        content: content || '',
+        updatedAt: new Date().toISOString()
+      };
+
+      const updatedSettings = {
+        ...settingsData,
+        display: {
+          ...settingsData?.display,
+          emergencyAlert: alertData
+        }
+      };
+
+      const ok = await saveSettingsToServer(
+        updatedSettings,
+        isActive ? 'התרעת החירום הופעלה במסך בהצלחה!' : 'התרעת החירום עודכנה (כבוי)'
+      );
+      if (ok) {
+        updateEmergencyAlertUI(alertData);
+      }
+    });
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', async () => {
+      if (activeChk) activeChk.checked = false;
+      const alertData = {
+        active: false,
+        title: titleInput?.value.trim() || '',
+        content: contentInput?.value.trim() || '',
+        updatedAt: new Date().toISOString()
+      };
+
+      const updatedSettings = {
+        ...settingsData,
+        display: {
+          ...settingsData?.display,
+          emergencyAlert: alertData
+        }
+      };
+
+      const ok = await saveSettingsToServer(updatedSettings, 'מצב החירום בוטל והמסך חזר לשגרה!');
+      if (ok) {
+        updateEmergencyAlertUI(alertData);
+      }
+    });
+  }
+}
+
+// ==========================================
+// 3.2 SMART NOTICE ASSISTANT (חידוש #5)
+// ==========================================
+function polishNoticeWithHeuristics(rawTitle, rawContent) {
+  const combined = `${rawTitle} ${rawContent}`.toLowerCase();
+  
+  // 1. Detect Scenario (Supports all 11 catalog topics)
+  let category = 'general';
+  if (/מים|צנרת|פיצוץ|ברז|תאגיד|ביוב|דוד|הצפה/.test(combined)) category = 'water';
+  else if (/מעלית|מעליות|קומה|שינדלר|אלקטרה|פיר/.test(combined)) category = 'elevator';
+  else if (/חשמל|חברת חשמל|מתח|ארון חשמל|תאורה|גנרטור|נתיך/.test(combined)) category = 'electricity';
+  else if (/אסיפה|פגישה|ישיבה|תקציב|בחירות|דיירים/.test(combined)) category = 'meeting';
+  else if (/ניקיון|שטיפה|מנקה|שטיפת|חדר מדרגות|ספונג\'ה/.test(combined)) category = 'cleaning';
+  else if (/הדברה|ריסוס|תיקנים|ג\'וקים|עכברים|חולדות|מזיקים|נמלים/.test(combined)) category = 'pest';
+  else if (/גיזום|גזם|עצים|ענפים|צמחים|גינה|גרוטאות/.test(combined)) category = 'pruning';
+  else if (/תשלום|דמי ועד|מיסי ועד|מסי ועד|גבייה|חוב|ביט|פייבוקס|צ\'ק/.test(combined)) category = 'dues';
+  else if (/חניה|חנייה|חוסם|רכב|שער|שלט חניה/.test(combined)) category = 'parking';
+  else if (/חג|חגים|שנה טובה|פסח|סוכות|שבועות|ראש השנה|פורים|חנוכה|יום העצמאות|ברכה|מזל טוב|איחולים/.test(combined)) category = 'holiday';
+  else if (/רעש|מוזיקה|שקט|שעות המנוחה|שיפוץ|שיפוצים|קדיחות|פטיש|הריסה|עבודות בנייה/.test(combined)) category = 'renovation';
+
+  // 2. Urgent / Fault / Outage Detection
+  const isUrgent = /תקלה|מושבת|השבתה|הפסקה|פיצוץ|חירום|דחוף|ניתוק|דליפה|תקוע/.test(combined) ||
+                   category === 'water' || category === 'elevator' || category === 'electricity';
+
+  // 3. Extract dates / times if provided
+  const timeMatch = combined.match(/\b\d{1,2}:\d{2}\b/);
+  const dateMatch = combined.match(/\b\d{1,2}[\.\/]\d{1,2}(?:[\.\/]\d{2,4})?\b/);
+  const timeStr = timeMatch ? `בשעה ${timeMatch[0]}` : '';
+  const dateStr = dateMatch ? `בתאריך ${dateMatch[0]}` : '';
+
+  // 4. Calculate smart suggested expiration date
+  let suggestedExpiry = null;
+  const now = new Date();
+  let endHour = 23;
+  let endMinute = 59;
+  const rangeMatch = combined.match(/(?:בין|משעה)\s*(\d{1,2}(?::\d{2})?)\s*(?:עד|ל-|-)\s*(\d{1,2}(?::\d{2})?)/);
+  const untilMatch = combined.match(/עד\s*(?:השעה\s*)?(\d{1,2}(?::\d{2})?)/);
+  if (rangeMatch && rangeMatch[2]) {
+    const parts = rangeMatch[2].split(':');
+    endHour = parseInt(parts[0], 10);
+    endMinute = parts[1] ? parseInt(parts[1], 10) : 0;
+  } else if (untilMatch && untilMatch[1]) {
+    const parts = untilMatch[1].split(':');
+    endHour = parseInt(parts[0], 10);
+    endMinute = parts[1] ? parseInt(parts[1], 10) : 0;
+  }
+
+  if (/מחר/.test(combined)) {
+    const d = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    d.setHours(endHour, endMinute, 0, 0);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    suggestedExpiry = d.toISOString().slice(0, 16);
+  } else if (/היום/.test(combined)) {
+    const d = new Date(now.getTime());
+    d.setHours(endHour, endMinute, 0, 0);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    suggestedExpiry = d.toISOString().slice(0, 16);
+  } else {
+    const daysMap = {
+      water: 2,
+      elevator: 2,
+      electricity: 2,
+      cleaning: 3,
+      pest: 4,
+      meeting: 7,
+      pruning: 3,
+      dues: 30,
+      parking: 3,
+      holiday: 3,
+      renovation: 5,
+      general: 7
+    };
+    const daysToAdd = daysMap[category] || 7;
+    const d = new Date(now.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    suggestedExpiry = d.toISOString().slice(0, 16);
+  }
+
+  // 5. Select Valid Existing Topic Image from Repository
+  const topicImages = {
+    water: 'images/notices/maintenance.jpg',
+    elevator: 'images/notices/maintenance.jpg',
+    electricity: 'images/notices/maintenance.jpg',
+    cleaning: 'images/notices/clean_hallway_care.jpg',
+    pest: 'images/notices/gardening_cleaning.jpg',
+    parking: 'images/notices/clean_hallway_care.jpg',
+    pruning: 'images/notices/pruning_waste.jpg',
+    meeting: 'images/notices/peaceful_morning_lobby.jpg',
+    dues: 'images/notices/peaceful_morning_lobby.jpg',
+    holiday: 'images/wallpapers/shabbat/shabbat_candles_luxury.jpg',
+    renovation: 'images/notices/maintenance.jpg',
+    general: 'images/notices/peaceful_morning_lobby.jpg'
+  };
+  const imageUrl = topicImages[category] || topicImages.general;
+
+  // 6. Compose refined title
+  let finalTitle = rawTitle.trim();
+  if (!finalTitle || finalTitle.length < 5) {
+    const titlesMap = {
+      water: 'הודעה דחופה על הפסקת מים יזומה',
+      elevator: 'עבודות שירות ובדיקת בטיחות במעלית',
+      electricity: 'הודעה על עבודות חשמל והפסקת זרם זמנית',
+      cleaning: 'שטיפה וניקיון יסודי של השטחים המשותפים',
+      pest: 'הדברה תקופתית בחדר האשפה ובחצר',
+      meeting: 'הזמנה לאסיפת דיירים כללית',
+      pruning: 'עבודות גיזום ופינוי חפצים מהחצר',
+      dues: 'תזכורת להסדרת תשלומי ועד הבית',
+      parking: 'הסדרת חניה ושמירה על מעברים פנויים',
+      holiday: 'ברכת חג שמח ומבורך לכל דיירי הבניין',
+      renovation: 'שמירה על השקט ועבודות שיפוץ בבניין',
+      general: 'הודעה חשובה מטעם ועד הבית'
+    };
+    finalTitle = titlesMap[category] || 'הודעה חשובה מטעם ועד הבית';
+  }
+
+  // 7. Compose refined content
+  let bodyCore = rawContent.trim();
+  if (bodyCore.startsWith('דיירים יקרים,')) {
+    bodyCore = bodyCore.replace(/^דיירים יקרים,\s*/, '');
+  }
+  if (bodyCore.endsWith('ועד הבית.') || bodyCore.endsWith('ועד הבית')) {
+    bodyCore = bodyCore.replace(/[\n\s]*בברכה,?[\n\s]*ועד הבית\.?$/, '');
+    bodyCore = bodyCore.replace(/[\n\s]*תודה רבה על שיתוף הפעולה,?[\n\s]*ועד הבית\.?$/, '');
+  }
+
+  if (bodyCore.length < 15) {
+    const defaultBodies = {
+      water: `לתשומת לבכם, ${dateStr || 'בימים הקרובים'} ${timeStr || ''} תתקיים הפסקת מים זמנית לצורך עבודות תחזוקה. מומלץ להיערך מראש עם מים לשתייה.`,
+      elevator: `לתשומת לבכם, ${dateStr || 'בקרוב'} ${timeStr || ''} תתבצע בדיקה ועבודות שירות במעלית על ידי טכנאי מוסמך. המעלית תושבת לסירוגין.`,
+      electricity: `לתשומת לבכם, ${dateStr || 'בימים הקרובים'} ${timeStr || ''} תתקיים הפסקת חשמל זמנית לצורך עבודות תחזוקה בארון החשמל הראשי. נא להיערך בהתאם.`,
+      cleaning: `ביום המיועד יתבצע ניקיון ושטיפה יסודית בחניון ובשטחי הכניסה. נודה לפינוי חפצים מראש לשמירה על סדר.`,
+      pest: `תבוצע הדברה מקצועית בחדרי האשפה ובשטחי החצר. יש להקפיד על השגחה על בעלי חיים וילדים בסביבת האזורים המודברים.`,
+      meeting: `אסיפת הדיירים תתכנס בלובי הבניין ${dateStr || ''} ${timeStr || 'בשעה 20:00'}. נוכחות כלל הדיירים חשובה מאוד.`,
+      pruning: `יתבצעו עבודות גיזום וטיפוח בחצר. אנא פנו ציוד פרטי, עגלות ואופניים ממעברי הכניסה והחצר.`,
+      dues: `תזכורת להסדרת דמי ועד הבית לחודש הנוכחי. תשלום שוטף מאפשר תחזוקה ברמה גבוהה של מערכות הבניין.`,
+      parking: `נא להקפיד לחנות אך ורק במקומות המסומנים ולא לחסום רכבים ומעברי חירום.`,
+      holiday: `ועד הבית מאחל לכל דיירי הבניין, למשפחותיהם ולאורחיהם חג שמח, בריאות, שלווה ושמחה בביתכם.`,
+      renovation: `לתשומת לב הדיירים, מתבצעות עבודות שיפוצים בבניין. נבקש להקפיד על שעות המנוחה המותרות כחוק (14:00-16:00 ו-23:00-07:00) ולשמור על ניקיון המעלית והלובי.`,
+      general: bodyCore || 'לידיעתכם ולתשומת לבכם.'
+    };
+    bodyCore = defaultBodies[category] || bodyCore;
+  }
+
+  const finalContent = `דיירים יקרים,\n\n${bodyCore}\n\nתודה רבה על שיתוף הפעולה,\nועד הבית.`;
+
+  return { title: finalTitle, content: finalContent, category, isUrgent, suggestedExpiry, imageUrl };
+}
+
+async function polishNoticeWithGemini(key, rawTitle, rawContent) {
+  const prompt = `אתה עוזר ניסוח מקצועי ומנוסה לוועדי בתים משותפים בישראל. 
+תפקידך לשפר ולנסח את ההודעה הבאה לדיירי הבניין בסגנון מכובד, בהיר, ענייני, רהוט ונעים לקריאה בעברית.
+כותרת נוכחית: "${rawTitle}"
+תוכן נוכחי: "${rawContent}"
+
+הנחיות קריטיות:
+1. פתח תמיד ב"דיירים יקרים," וסיים ב"תודה רבה על שיתוף הפעולה,\nועד הבית."
+2. שמור על כל הפרטים החשובים (תאריכים, שעות, קומות, הנחיות).
+3. זהה את הקטגוריה מתוך: water, elevator, electricity, cleaning, pest, parking, pruning, meeting, dues, holiday, renovation, general.
+4. החזר אך ורק תשובת JSON תקינה ללא markdown, בפורמט:
+{"title": "כותרת מלוטשת", "content": "תוכן מלוטש ומנוסח", "category": "water"}`;
+
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(key)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{ text: prompt }]
+      }],
+      generationConfig: {
+        responseMimeType: "application/json"
+      }
+    })
+  });
+
+  if (!res.ok) {
+    throw new Error(`Gemini API error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('Empty Gemini response');
+  return JSON.parse(text);
+}
+
+function setupSmartNoticeAssistant() {
+  const titleInput = document.getElementById('notice-title');
+  const contentInput = document.getElementById('notice-content');
+  const polishBtn = document.getElementById('ai-polish-notice-btn');
+  const polishBtnText = document.getElementById('ai-polish-btn-text');
+  const toggleKeyBtn = document.getElementById('toggle-gemini-key-btn');
+  const keyBox = document.getElementById('gemini-key-box');
+  const keyInput = document.getElementById('gemini-api-key-input');
+  const saveKeyBtn = document.getElementById('save-gemini-key-btn');
+  const engineStatus = document.getElementById('ai-engine-status-text');
+
+  // Load existing Gemini key if present
+  const existingKey = localStorage.getItem('smart_lobby_gemini_key') || '';
+  if (existingKey) {
+    if (keyInput) keyInput.value = existingKey;
+    if (engineStatus) engineStatus.textContent = '✨ מנוע Gemini 1.5 Flash מחובר ופעיל!';
+  }
+
+  if (toggleKeyBtn && keyBox) {
+    toggleKeyBtn.addEventListener('click', () => {
+      keyBox.classList.toggle('hidden');
+    });
+  }
+
+  if (saveKeyBtn && keyInput) {
+    saveKeyBtn.addEventListener('click', () => {
+      const k = keyInput.value.trim();
+      if (k) {
+        localStorage.setItem('smart_lobby_gemini_key', k);
+        if (engineStatus) engineStatus.textContent = '✨ מנוע Gemini 1.5 Flash מחובר ופעיל!';
+        showAdminToast('מפתח Gemini נשמר בהצלחה!', '🔑');
+      } else {
+        localStorage.removeItem('smart_lobby_gemini_key');
+        if (engineStatus) engineStatus.textContent = '⚡ מנוע ניסוח עברי מובנה פעיל (100% ללא צורך במפתח)';
+        showAdminToast('המפתח הוסר. חזרה למנוע הניסוח המובנה.', 'ℹ️');
+      }
+      if (keyBox) keyBox.classList.add('hidden');
+    });
+  }
+
+  // 1-Click Quick Draft Presets (with real existing images and recommended timing)
+  const draftBtns = document.querySelectorAll('.smart-draft-btn');
+  draftBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const draftKey = btn.dataset.draft;
+      const draft = SMART_DRAFTS[draftKey];
+      if (!draft) return;
+
+      if (titleInput) titleInput.value = draft.title;
+      if (contentInput) contentInput.value = draft.content;
+
+      // Recommended expiration timing
+      const expiresInput = document.getElementById('notice-expires');
+      if (expiresInput && draft.recommendedDays) {
+        const d = new Date(Date.now() + draft.recommendedDays * 24 * 60 * 60 * 1000);
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        expiresInput.value = d.toISOString().slice(0, 16);
+      }
+
+      // Urgent toggle
+      const urgentCheckbox = document.getElementById('notice-urgent');
+      if (urgentCheckbox) {
+        urgentCheckbox.checked = Boolean(draft.isUrgent);
+      }
+
+      // Auto-set image if not already set or using another notice default
+      const imgUrlInput = document.getElementById('notice-image-url');
+      const imgPreview = document.getElementById('notice-img-preview');
+      const imgPreviewBox = document.getElementById('notice-img-preview-box');
+      if (imgUrlInput && (!imgUrlInput.value || imgUrlInput.value.startsWith('images/notices/'))) {
+        imgUrlInput.value = draft.img;
+        if (imgPreview) imgPreview.src = draft.img;
+        if (imgPreviewBox) imgPreviewBox.classList.remove('hidden');
+      }
+
+      showAdminToast(`נטענה תבנית: ${draft.title.substring(0, 25)}...`, '📝');
+    });
+  });
+
+  // AI Polish Button Click
+  if (polishBtn) {
+    polishBtn.addEventListener('click', async () => {
+      const rawTitle = titleInput?.value.trim() || '';
+      const rawContent = contentInput?.value.trim() || '';
+
+      if (!rawTitle && !rawContent) {
+        showAdminToast('נא להזין כותרת או כמה מילות מפתח לפני הניסוח!', 'ℹ️');
+        return;
+      }
+
+      const prevText = polishBtnText?.textContent;
+      if (polishBtnText) polishBtnText.textContent = 'מנסח... ⏳';
+      polishBtn.disabled = true;
+
+      const geminiKey = localStorage.getItem('smart_lobby_gemini_key') || '';
+      let result = null;
+
+      if (geminiKey) {
+        try {
+          result = await polishNoticeWithGemini(geminiKey, rawTitle, rawContent);
+          showAdminToast('ההודעה נוסחה ושופרה באמצעות Gemini AI! ✨', '✨');
+        } catch (e) {
+          console.warn('[SmartAssistant] Gemini failed, falling back to heuristics:', e);
+        }
+      }
+
+      // Run heuristics to ensure full Hebrew polishing, urgency detection, image selection, and smart expiration
+      const heuristicData = polishNoticeWithHeuristics(result?.title || rawTitle, result?.content || rawContent);
+      if (!result) {
+        result = heuristicData;
+        showAdminToast('ההודעה שופרה ונוסחה בהצלחה! ✨', '✨');
+      }
+
+      if (result) {
+        if (titleInput && result.title) titleInput.value = result.title;
+        if (contentInput && result.content) contentInput.value = result.content;
+
+        // Auto-select topic image if not already selected
+        const imgUrlInput = document.getElementById('notice-image-url');
+        const imgPreview = document.getElementById('notice-img-preview');
+        const imgPreviewBox = document.getElementById('notice-img-preview-box');
+        const finalImage = result.imageUrl || heuristicData.imageUrl;
+        if (imgUrlInput && (!imgUrlInput.value || imgUrlInput.value.startsWith('images/notices/')) && finalImage) {
+          imgUrlInput.value = finalImage;
+          if (imgPreview) imgPreview.src = finalImage;
+          if (imgPreviewBox) imgPreviewBox.classList.remove('hidden');
+        }
+
+        // Auto-mark urgent if breakdown / fault / outage
+        const urgentCheckbox = document.getElementById('notice-urgent');
+        const finalUrgent = result.isUrgent !== undefined ? result.isUrgent : heuristicData.isUrgent;
+        if (urgentCheckbox && finalUrgent !== undefined) {
+          urgentCheckbox.checked = Boolean(finalUrgent);
+        }
+
+        // Auto-suggest expiration if today/tomorrow detected or suggested expiry available
+        const expiresInput = document.getElementById('notice-expires');
+        const finalExpiry = result.suggestedExpiry || heuristicData.suggestedExpiry;
+        if (expiresInput && (!expiresInput.value || /היום|מחר/.test(`${rawTitle} ${rawContent}`)) && finalExpiry) {
+          expiresInput.value = finalExpiry;
+        }
+      }
+
+      if (polishBtnText) polishBtnText.textContent = prevText || 'שפר ונסח אוטומטית';
+      polishBtn.disabled = false;
+    });
+  }
+}
 
 // ==========================================
 // 3.5 GALLERY IMAGE PICKER FOR NOTICES
@@ -1400,6 +2116,9 @@ function populateSettingsUI() {
 
   // Update Header Quick Radio Button State
   updateHeaderRadioStatus(Boolean(settingsData.radio?.enabled));
+
+  // Update Emergency Alert UI state
+  updateEmergencyAlertUI(settingsData.display?.emergencyAlert);
 }
 
 // ==========================================
@@ -1533,10 +2252,13 @@ async function saveSettingsToServer(newSettings, successMessage) {
   // 2. Also try local Node API if available
   if (isLocalServer()) {
     try {
+      const payloadToSend = currentRole === 'editor'
+        ? { radio: settingsData.radio, display: { emergencyAlert: settingsData.display?.emergencyAlert } }
+        : settingsData;
       await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: currentPin, newSettings: settingsData })
+        body: JSON.stringify({ pin: currentPin, newSettings: payloadToSend })
       });
     } catch (err) {}
   }
@@ -1751,4 +2473,16 @@ function setupDeviceLogsMonitoring() {
       setTimeout(() => { clearBtn.textContent = '🗑️ נקה יומן'; }, 1000);
     });
   }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    isNoticeActive,
+    pruneExpiredNoticeImages,
+    polishNoticeWithHeuristics,
+    EMERGENCY_PRESETS,
+    SMART_DRAFTS,
+    escapeHtml,
+    RADIO_STATIONS_MAP
+  };
 }

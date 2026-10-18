@@ -564,6 +564,7 @@ class BuildingSignageApp {
     } catch (e) {}
 
     this.applySettings();
+    this.buildSlides();
   }
 
   applySettings() {
@@ -656,6 +657,32 @@ class BuildingSignageApp {
     const oldDurationMs = this.slideDurationMs;
     this.slideDurationMs = durationSec * 1000;
 
+    // Emergency Alert Mode: High-contrast crimson card, radio silencing, slides freeze
+    const isEmergency = Boolean(this.settings?.display?.emergencyAlert?.active);
+    const emergencyStateChanged = Boolean(this.wasEmergencyAlert !== undefined && this.wasEmergencyAlert !== isEmergency);
+    document.body.classList.toggle('emergency-alert-mode', isEmergency);
+    if (isEmergency) {
+      this.stopRadioImmediate();
+      this.isSecretMuted = true;
+      if (this.slideTimer) {
+        clearInterval(this.slideTimer);
+        this.slideTimer = null;
+      }
+      if (this.progressTimer) {
+        clearInterval(this.progressTimer);
+        this.progressTimer = null;
+      }
+    } else {
+      if (this.wasEmergencyAlert) {
+        this.isSecretMuted = false;
+        this.checkRadioSchedule();
+      }
+    }
+    this.wasEmergencyAlert = isEmergency;
+    if (emergencyStateChanged) {
+      this.buildSlides();
+    }
+
     // Yom Kippur Strict Mode: Zero Motion & Absolute Silence
     const isYomKippur = this.isYomKippurModeActive();
     document.body.classList.toggle('yom-kippur-mode', isYomKippur);
@@ -670,7 +697,7 @@ class BuildingSignageApp {
         clearInterval(this.progressTimer);
         this.progressTimer = null;
       }
-    } else {
+    } else if (!isEmergency) {
       if (this.wasYomKippur) {
         this.isSecretMuted = false;
         this.checkRadioSchedule();
@@ -1429,12 +1456,26 @@ class BuildingSignageApp {
   // =========================================================
   // 4. SIDE COLUMN FEED (Touch-To-Jump)
   // =========================================================
-  isNoticeActive(notice) {
+  isNoticeActive(notice, nowInput = new Date()) {
     if (!notice || notice.hidden === true) return false;
+    const now = nowInput instanceof Date ? nowInput.getTime() : (typeof nowInput === 'number' ? nowInput : Date.now());
+    const currentDay = nowInput instanceof Date ? nowInput.getDay() : new Date(now).getDay();
+    if (notice.startsAt) {
+      const startTime = new Date(notice.startsAt).getTime();
+      if (!isNaN(startTime) && startTime > now) {
+        return false; // Scheduled for future
+      }
+    }
     if (notice.expiresAt) {
       const expTime = new Date(notice.expiresAt).getTime();
-      if (!isNaN(expTime) && expTime <= Date.now()) {
+      if (!isNaN(expTime) && expTime <= now) {
         return false; // Notice has expired!
+      }
+    }
+    if (Array.isArray(notice.recurringDays) && notice.recurringDays.length > 0) {
+      const days = notice.recurringDays.map(Number);
+      if (!days.includes(currentDay)) {
+        return false; // Not scheduled for today
       }
     }
     return true;
@@ -1490,6 +1531,21 @@ class BuildingSignageApp {
   // =========================================================
   buildSlides() {
     this.slides = [];
+
+    // Emergency Alert Mode: Exactly 1 high-contrast emergency slide, pinned continuously
+    if (this.settings?.display?.emergencyAlert?.active) {
+      const alertData = this.settings.display.emergencyAlert;
+      this.slides.push({
+        type: 'emergency_alert',
+        data: {
+          title: alertData.title || '🚨 הודעת חירום דחופה',
+          content: alertData.content || 'הנחיות דחופות לדיירי הבניין.',
+          updatedAt: alertData.updatedAt || new Date().toISOString()
+        }
+      });
+      this.renderSlideCards();
+      return;
+    }
 
     // Yom Kippur Strict Mode: Exactly 1 static slide with ZERO transitions and ZERO motion
     if (this.isYomKippurModeActive()) {
@@ -1815,6 +1871,36 @@ class BuildingSignageApp {
         `;
       }
 
+      // SLIDE TYPE 8: EMERGENCY ALERT (חידוש #4)
+      else if (slide.type === 'emergency_alert') {
+        const alert = slide.data;
+        let formattedTime = '';
+        try {
+          const d = new Date(alert.updatedAt);
+          if (!isNaN(d.getTime())) {
+            formattedTime = `${d.toLocaleDateString('he-IL')} • ${d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}`;
+          }
+        } catch (e) {}
+
+        contentHtml = `
+          <div class="emergency-alert-stage-card">
+            <div class="emergency-alert-banner">
+              <span class="emergency-icon-pulse">🚨</span>
+              <span class="emergency-badge-text">התרעת חירום מיידית • ועד הבניין</span>
+              <span class="emergency-icon-pulse">🚨</span>
+            </div>
+            <div class="emergency-alert-stage-body">
+              <h1 class="emergency-alert-title">${escapeHtml(alert.title)}</h1>
+              <div class="emergency-alert-content">${escapeHtml(alert.content)}</div>
+            </div>
+            <div class="emergency-alert-footer">
+              <span class="emergency-alert-time">עודכן: ${formattedTime || 'עכשיו'}</span>
+              <span class="emergency-alert-tag">${escapeHtml(this.settings?.building?.name || 'הירדן 5')}, ${escapeHtml(this.settings?.building?.city || 'חדרה')} • שידור חירום</span>
+            </div>
+          </div>
+        `;
+      }
+
       card.innerHTML = contentHtml;
       container.appendChild(card);
     });
@@ -1828,7 +1914,7 @@ class BuildingSignageApp {
         clearInterval(this.progressTimer);
         this.progressTimer = null;
       }
-    } else if (!this.isYomKippurModeActive() && !this.slideTimer) {
+    } else if (!this.isYomKippurModeActive() && !this.settings?.display?.emergencyAlert?.active && !this.slideTimer) {
       this.startSlideshow();
     }
   }
@@ -2077,7 +2163,7 @@ class BuildingSignageApp {
   }
 
   startRadioStream() {
-    if (this.isYomKippurModeActive()) {
+    if (this.isYomKippurModeActive() || this.settings?.display?.emergencyAlert?.active) {
       this.stopRadioImmediate();
       return;
     }
@@ -2108,7 +2194,7 @@ class BuildingSignageApp {
         }).catch(err => {
           console.log('[Radio] Autoplay policy note:', err.message);
           // Show tap prompt only if we are in schedule and still paused
-          if (this.isRadioInSchedule() && unmutePrompt) {
+          if (this.isRadioInSchedule() && unmutePrompt && !this.settings?.display?.emergencyAlert?.active) {
             unmutePrompt.style.display = 'flex';
           }
         });
@@ -2117,7 +2203,7 @@ class BuildingSignageApp {
   }
 
   recycleAudioBuffer(force = false) {
-    if (this.isYomKippurModeActive() || !this.isRadioInSchedule() || !this.audioPlayer || this.isSecretMuted) return;
+    if (this.isYomKippurModeActive() || this.settings?.display?.emergencyAlert?.active || !this.isRadioInSchedule() || !this.audioPlayer || this.isSecretMuted) return;
     if (!force && this.audioPlayer.paused) return;
     console.log(`♻️ [Radio] Recycling live audio stream buffer (force=${force}) to prevent stall / memory bloat...`);
     const currentSt = this.getCurrentRadioStation();
@@ -2137,14 +2223,14 @@ class BuildingSignageApp {
 
     setTimeout(() => {
       this.isRecyclingAudio = false;
-      if (this.isRadioInSchedule() && !this.isSecretMuted && this.audioPlayer && !this.isYomKippurModeActive()) {
+      if (this.isRadioInSchedule() && !this.isSecretMuted && this.audioPlayer && !this.isYomKippurModeActive() && !this.settings?.display?.emergencyAlert?.active) {
         this.startRadioStream();
       }
     }, 400);
   }
 
   checkRadioSchedule() {
-    if (this.isYomKippurModeActive()) {
+    if (this.isYomKippurModeActive() || this.settings?.display?.emergencyAlert?.active) {
       this.stopRadioImmediate();
       return;
     }
@@ -2219,16 +2305,24 @@ class BuildingSignageApp {
       this.fetchShabbatAndHolidays();
     }, 60 * 60 * 1000);
 
-    // Check notice expirations every 60 seconds and refresh display if any notice expired
-    let lastActiveNoticesCount = -1;
+    // Check notice status every 60 seconds (scheduled start, expiration, recurring day change)
+    const computeActiveNoticeKey = () => {
+      const activeIds = (this.notices || [])
+        .filter(n => this.isNoticeActive(n))
+        .map(n => n.id || n.title)
+        .sort()
+        .join(',');
+      return `${activeIds}:${new Date().getDay()}`;
+    };
+    let lastActiveNoticeKey = computeActiveNoticeKey();
     setInterval(() => {
-      const activeCount = (this.notices || []).filter(n => this.isNoticeActive(n)).length;
-      if (lastActiveNoticesCount !== -1 && activeCount !== lastActiveNoticesCount) {
-        console.log('📢 [Screen] Notice expiration detected. Updating side column and slides...');
+      const currentKey = computeActiveNoticeKey();
+      if (lastActiveNoticeKey !== '' && currentKey !== lastActiveNoticeKey) {
+        console.log('📢 [Screen] Notice active status change detected. Updating side column and slides...');
         this.renderSideColumn();
         this.buildSlides();
       }
-      lastActiveNoticesCount = activeCount;
+      lastActiveNoticeKey = currentKey;
     }, 60 * 1000);
   }
 
@@ -2247,6 +2341,9 @@ class BuildingSignageApp {
       } else if (e.key === 'smart_lobby_settings') {
         console.log('⚙️ Remote settings update detected, applying settings...');
         this.fetchSettings();
+      } else if (e.key === 'smart_lobby_notices' || !e.key) {
+        console.log('📢 Remote notices update detected, applying notices...');
+        this.fetchNotices();
       }
     });
   }
@@ -2481,6 +2578,12 @@ class BuildingSignageApp {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  window.signageApp = new BuildingSignageApp();
-});
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    window.signageApp = new BuildingSignageApp();
+  });
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { BuildingSignageApp };
+}

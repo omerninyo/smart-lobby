@@ -1,11 +1,12 @@
 {
   "name": "smart-lobby",
-  "version": "1.0.0",
+  "version": "2.5.0",
   "description": "Smart Digital Signage for Residential Building - Hayarden 5 Hadera",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "node --check server.js && node --check js/screen.js && node --check js/admin.js && node --check js/firebase-sync.js"
   },
   "keywords": [
     "digital-signage",

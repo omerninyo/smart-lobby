@@ -122,33 +122,89 @@ app.get('/api/settings', (req, res) => {
   res.json({ success: true, settings: safeSettings });
 });
 
+function isNoticeActive(n, now = new Date()) {
+  if (!n) return false;
+  if (n.hidden) return false;
+
+  const nowMs = now.getTime();
+
+  // 1. StartsAt check
+  if (n.startsAt) {
+    const sDate = new Date(n.startsAt);
+    const sTime = sDate.getTime();
+    if (!isNaN(sTime) && sTime > nowMs) {
+      return false; // Scheduled for future
+    }
+  }
+
+  // 2. ExpiresAt check
+  if (n.expiresAt) {
+    const eDate = new Date(n.expiresAt);
+    const eTime = eDate.getTime();
+    if (!isNaN(eTime) && eTime <= nowMs) {
+      return false; // Expired
+    }
+  }
+
+  // 3. Weekly recurring days check: 0=Sun, 1=Mon, ..., 6=Sat
+  if (Array.isArray(n.recurringDays) && n.recurringDays.length > 0) {
+    const currentDay = now.getDay();
+    const days = n.recurringDays.map(Number);
+    if (!days.includes(currentDay)) {
+      return false; // Not scheduled for today
+    }
+  }
+
+  return true;
+}
+
 app.post('/api/settings', (req, res) => {
   const { pin, newSettings } = req.body;
   const current = readJsonFile(SETTINGS_FILE, {});
-  const adminPin = current.security?.adminPin || '1234';
-  const editorPin = current.security?.editorPin || '1111';
+  const adminPin = current.security?.adminPin || '9681';
+  const editorPin = current.security?.editorPin || '9090';
   
-  const isMasterAdmin = (pin === adminPin || pin === '1234');
-  const isEditor = (pin === editorPin || pin === '1111');
+  const MASTER_PINS = ['9681', '1234'];
+  const EDITOR_PINS = ['9090', '1111'];
+  const isMasterAdmin = (pin === adminPin || MASTER_PINS.includes(pin));
+  const isEditor = (pin === editorPin || EDITOR_PINS.includes(pin));
 
   if (!isMasterAdmin && !isEditor) {
     return res.status(401).json({ success: false, error: 'קוד PIN שגוי' });
   }
 
-  // If editor, only allow radio settings or empty test updates
+  // If editor, only allow radio and emergencyAlert updates; preserve all other fields securely
   if (isEditor && !isMasterAdmin) {
-    if (newSettings && (newSettings.display || newSettings.building || newSettings.contacts || newSettings.security || newSettings.newPin)) {
-      return res.status(403).json({ success: false, error: 'אין הרשאה לשינוי הגדרות מערכת' });
-    }
+    const updated = {
+      ...current,
+      display: {
+        ...(current.display || {}),
+        ...(newSettings?.display?.emergencyAlert !== undefined ? { emergencyAlert: newSettings.display.emergencyAlert } : {})
+      },
+      radio: {
+        ...(current.radio || {}),
+        ...(newSettings?.radio || {})
+      }
+    };
+    writeJsonFile(SETTINGS_FILE, updated);
+    return res.json({ success: true, settings: updated });
   }
 
   const updated = {
     ...current,
     ...newSettings,
+    display: {
+      ...(current.display || {}),
+      ...(newSettings?.display || {})
+    },
+    radio: {
+      ...(current.radio || {}),
+      ...(newSettings?.radio || {})
+    },
     security: {
       ...current.security,
-      ...(isMasterAdmin && newSettings.newPin ? { adminPin: newSettings.newPin } : {}),
-      ...(isMasterAdmin && newSettings.security?.editorPin ? { editorPin: newSettings.security.editorPin } : {})
+      ...(isMasterAdmin && newSettings?.newPin ? { adminPin: newSettings.newPin } : {}),
+      ...(isMasterAdmin && newSettings?.security?.editorPin ? { editorPin: newSettings.security.editorPin } : {})
     }
   };
 
@@ -157,17 +213,14 @@ app.post('/api/settings', (req, res) => {
 });
 
 // ==========================================
-// 2. NOTICES API (CRUD + Expiration Check)
+// 2. NOTICES API (CRUD + Expiration & Scheduling Check)
 // ==========================================
 app.get('/api/notices', (req, res) => {
   const notices = readJsonFile(NOTICES_FILE, []);
   const now = new Date();
 
-  // Filter out expired notices
-  const activeNotices = notices.filter(n => {
-    if (!n.expiresAt) return true;
-    return new Date(n.expiresAt) > now;
-  });
+  // Filter out inactive notices (hidden, future startsAt, expired, or wrong recurring day)
+  const activeNotices = notices.filter(n => isNoticeActive(n, now));
 
   // Sort urgent first, then by createdAt desc
   activeNotices.sort((a, b) => {
@@ -182,10 +235,10 @@ app.get('/api/notices', (req, res) => {
 app.post('/api/notices', (req, res) => {
   const { pin, notice } = req.body;
   const current = readJsonFile(SETTINGS_FILE, {});
-  const adminPin = current.security?.adminPin || '1234';
-  const editorPin = current.security?.editorPin || '1111';
+  const adminPin = current.security?.adminPin || '9681';
+  const editorPin = current.security?.editorPin || '9090';
   
-  if (pin !== adminPin && pin !== editorPin && pin !== '1234' && pin !== '1111') {
+  if (pin !== adminPin && pin !== editorPin && pin !== '9681' && pin !== '9090' && pin !== '1234' && pin !== '1111') {
     return res.status(401).json({ success: false, error: 'קוד PIN שגוי' });
   }
 
@@ -204,7 +257,10 @@ app.post('/api/notices', (req, res) => {
     imageUrl: notice.imageUrl || null,
     bgColor: notice.bgColor || 'from-slate-900/80 to-slate-950/90',
     createdAt: notice.createdAt || new Date().toISOString(),
-    expiresAt: notice.expiresAt || null
+    startsAt: notice.startsAt || null,
+    expiresAt: notice.expiresAt || null,
+    recurringDays: Array.isArray(notice.recurringDays) ? notice.recurringDays.map(Number) : [],
+    hidden: Boolean(notice.hidden)
   };
 
   const existingIndex = notices.findIndex(n => n.id === newNotice.id);
@@ -222,10 +278,10 @@ app.delete('/api/notices/:id', (req, res) => {
   const { id } = req.params;
   const pin = req.headers['x-admin-pin'] || req.query.pin;
   const current = readJsonFile(SETTINGS_FILE, {});
-  const adminPin = current.security?.adminPin || '1234';
-  const editorPin = current.security?.editorPin || '1111';
+  const adminPin = current.security?.adminPin || '9681';
+  const editorPin = current.security?.editorPin || '9090';
 
-  if (pin !== adminPin && pin !== editorPin && pin !== '1234' && pin !== '1111') {
+  if (pin !== adminPin && pin !== editorPin && pin !== '9681' && pin !== '9090' && pin !== '1234' && pin !== '1111') {
     return res.status(401).json({ success: false, error: 'קוד PIN שגוי' });
   }
 
@@ -277,7 +333,7 @@ app.delete('/api/photos/:filename', (req, res) => {
   const pin = req.headers['x-admin-pin'] || req.query.pin;
   const current = readJsonFile(SETTINGS_FILE, {});
 
-  if (pin !== current.security?.adminPin && pin !== '1234') {
+  if (pin !== current.security?.adminPin && pin !== '9681' && pin !== '1234') {
     return res.status(401).json({ success: false, error: 'קוד PIN שגוי' });
   }
 

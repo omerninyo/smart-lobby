@@ -1538,3 +1538,120 @@ body.yom-kippur-mode .yom-kippur-card {
   border-radius: 20px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
 }
+
+/* =========================================================
+   EMERGENCY ALERT MODE OVERLAY & CARD (חידוש #4)
+   High-Contrast Crimson Theme, Pulsing Glow & Emergency Typography
+   ========================================================= */
+body.emergency-alert-mode .emergency-alert-stage-card,
+.emergency-alert-stage-card {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  text-align: center;
+  padding: 2.2rem 2.5rem;
+  background: linear-gradient(135deg, rgba(69, 10, 10, 0.98) 0%, rgba(127, 29, 29, 0.98) 50%, rgba(153, 27, 27, 0.98) 100%);
+  border: 3px solid #ef4444;
+  border-radius: var(--radius-xl, 24px);
+  box-shadow: 0 0 45px rgba(239, 68, 68, 0.7), inset 0 0 30px rgba(239, 68, 68, 0.3);
+  box-sizing: border-box;
+  animation: emergency-card-glow 2.5s infinite alternate ease-in-out;
+  overflow: hidden;
+}
+
+@keyframes emergency-card-glow {
+  0% {
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.5), inset 0 0 15px rgba(239, 68, 68, 0.2);
+    border-color: #ef4444;
+  }
+  100% {
+    box-shadow: 0 0 60px rgba(239, 68, 68, 0.9), inset 0 0 40px rgba(239, 68, 68, 0.45);
+    border-color: #fca5a5;
+  }
+}
+
+.emergency-alert-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid #ef4444;
+  border-radius: 9999px;
+  padding: 0.5rem 1.8rem;
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #fef08a;
+  letter-spacing: 0.05em;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+.emergency-icon-pulse {
+  font-size: 1.8rem;
+  animation: pulse-glow 1.5s infinite;
+  display: inline-block;
+}
+
+.emergency-alert-stage-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1.25rem;
+  width: 100%;
+  padding: 1rem 0;
+}
+
+.emergency-alert-title {
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 4.5vh, 2.85rem);
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.2;
+  text-shadow: 0 3px 15px rgba(0, 0, 0, 0.85);
+  margin: 0;
+}
+
+.emergency-alert-content {
+  font-size: clamp(1.2rem, 2.5vh, 1.65rem);
+  line-height: 1.6;
+  color: #fef2f2;
+  max-width: 92%;
+  white-space: pre-line;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 1.5rem 2.2rem;
+  border-radius: 18px;
+  border: 1px solid rgba(254, 202, 202, 0.35);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.emergency-alert-footer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(254, 202, 202, 0.3);
+  font-size: 0.95rem;
+  color: #fca5a5;
+  font-weight: 600;
+}
+
+body.lite-mode .emergency-alert-stage-card {
+  animation: none !important;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.6) !important;
+}
+
+/* Recurring day button active style for admin */
+.recurring-day-btn.selected {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #60a5fa !important;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5) !important;
+}
+
