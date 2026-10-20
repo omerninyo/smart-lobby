@@ -1,11 +1,13 @@
 <p align="center">
   <b><a href="README.md">🇬🇧 English</a></b> | 
-  <b><a href="README.he.md">🇮🇱 עברית (Hebrew)</a></b>
+  <b><a href="README.he.md">🇮🇱 עברית (Hebrew)</a></b> | 
+  <b><a href="CHANGELOG.md">📋 Full Changelog</a></b>
 </p>
 
-# 🏢 Smart Building Digital Signage (לוח שילוט דיגיטלי חכם לבניין)
-> A modern, autonomous, touchscreen-enabled Digital Signage Kiosk & Committee Management System for residential buildings.
+# 🏢 Smart Building Digital Signage (לוח שילוט דיגיטלי חכם לבניין) — v2.6.0
+> A modern, autonomous, touchscreen-enabled Digital Signage Kiosk & Smart Building Management Platform for residential lobbies and building committees (ועד בית).
 
+[![Version](https://img.shields.io/badge/Version-2.6.0-2563eb.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT%20with%20Attribution-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Web%20%7C%20Android%207%2B%20Kiosk-brightgreen.svg)]()
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-brightgreen.svg)](https://omerninyo.github.io/smart-lobby)
@@ -19,6 +21,24 @@
 * 📱 **Mobile & Desktop Admin Panel:** `https://<your-domain>/admin.html`
   * 🔑 **Default Master Admin PIN:** `1234` *(Customizable in settings)*
   * 👤 **Default Committee Member PIN:** `1111` *(Customizable in settings)*
+
+---
+
+## 🔄 Before vs. After — System Evolution to v2.6.0
+
+The table below summarizes the architectural and product evolution from the initial releases (`v1.0–v2.3`) to the current `v2.6.0` release:
+
+| Subsystem | ⬅️ Before (`v1.0–v2.3`) | ➡️ Now (`v2.6.0`) |
+| :--- | :--- | :--- |
+| **📢 Notice Scheduling & Storage Hygiene** | Immediate manual publishing only with basic expiration; risk of deleted default notices reappearing ("zombie notices"); unbounded Base64 image accumulation in Firestore. | **Future Start Scheduling (`startsAt`) & Weekly Recurring Days (`recurringDays: [0..6]`)** with live 60s transitions; persistent deletion registry (`smart_lobby_deleted_notices`); **Automated Base64 Image Pruning (`Auto-Prune`)** for notices expired >24h with live storage-savings badges. |
+| **✨ Smart Notice Authoring (AI & Heuristic Composer)** | Manual text entry from scratch; raw multi-megabyte mobile photo uploads on static hosting. | **Smart Committee Notice Assistant (`#ai-polish-notice-btn`)**: built-in zero-key Hebrew heuristic composer across 11 building topics + optional Google Gemini 1.5 Flash API integration + **7 1-Click Quick Templates (`SMART_DRAFTS`)** + **Client-Side HTML5 Canvas Image Compression (`720px`, quality `0.78`)**. |
+| **🚨 Emergency Mode & Home Front Command (Pikud HaOref)** | No emergency override or automated civil defense integration. | **Dual-Layer Emergency System:** 1) **Automated Pikud HaOref Poller (`startOrefAlertPoller`)** detecting active local alerts, displaying high-contrast shelter instructions (90s), muting live radio immediately, and auto-restoring routine after 10 minutes. 2) **1-Click Admin Emergency Broadcast Panel** (`oref`, `elevator`, `water`, `power`) accessible to both Master Admin and Committee Editor. |
+| **🌤️ Weather, Air Quality & Marine Station** | Basic 4-day temperature forecast only. | **Full Environmental & Marine Dashboard (Open-Meteo Air Quality & Marine APIs, zero key):** European Air Quality Index (`AQI`) with color badges, `UV` radiation index, coastal wave height & sea surface temperature, and an **Automated Smart Daily Resident Tip (`dailyTip`)** (laundry, windows/haze, heat hydration) on both the main stage slide and touch modal. |
+| **🚆 "Leaving the Building" Transit & Commute Slide** | Not available. | **Live Transit & Commute Slide (`transit_commute`):** Dynamic Israel Railways departures (South/Tel Aviv & North/Haifa with Shabbat/Motzaei Shabbat awareness), local & intercity bus lines, and estimated drive times on major highways (Road 2, Road 4, Road 9) with peak-hour congestion color badges. |
+| **🧠 "Elevator Moment of Interest" Infotainment Slide** | Slideshow rotated only building notices, weather, and Shabbat cards. | **Captivate-Style Daily Infotainment Slide (`daily_interest`):** 20 curated daily Hebrew sets rotating automatically by day of year (`dayOfYear % 20`), featuring: **📅 This Day in History / Did You Know?**, **🧠 Daily Resident Trivia (with answer box)**, and **💡 Practical Home & Community Tip**. |
+| **🕯️ Live Hebrew Calendar & Tradition** | Basic candle-lighting and holiday cards; Gregorian-only date under the clock; `holidays[0]` selection could mask major holidays behind minor entries. | **Live Hebrew Date in Header:** Full Hebrew date in traditional Hebrew letters under the digital clock (`יום רביעי, 21 באוקטובר • י' בחשוון תשפ"ז`), priority sorting for major holidays, and automatic header/modal badges for **🕯️ Hanukkah Candles, 🌾 Sefirat HaOmer, and 🌙 Rosh Chodesh**. |
+| **📰 News Ticker & Anti-Clickbait Engine** | Single RSS feed polled every 5 minutes via `rss2json` only (vulnerable to HTTP 429 quota limits and clickbait/sponsored headlines). | **Smart Mix (`smart_mix`) Anti-Clickbait Engine:** Automated clickbait & sponsored-content filter (`filterClickbaitAndFormatHeadline`), multi-source interleaved feeds across News, Science (`Hayadan`), Tech (`Geektime`), and Economy (`Globes`, `Calcalist`, `Kan`) with clean category tags (`[מדע]`, `[כלכלה]`, `[טכנולוגיה]`), 10-minute polling (50% quota reduction), and automatic `AllOrigins` XML `DOMParser` fallback. |
+| **🛡️ 24/7 Kiosk Hardware Stability, Audio Recovery & Blackbox** | Vulnerable to boot-time Wi-Fi drops, live radio stream buffer stalls, GPU overload on legacy Android SoCs (`rk3368`), and silent crashes. | **24/7 Mission-Critical Engineering:** Automatic Wi-Fi reconnect (`online` listener + dynamic Firebase SDK loader), 30s live radio stall detection & buffer recycling (`recycleAudioBuffer`), GPU-safe **Lite Mode** & **Resolution Selector (`auto`/`1080p`/`720p`)**, 45s modal auto-close watchdog, and a cloud-synced **Blackbox Flight Recorder (`device_logs` & `device_health`)** with rate-limiting circuit breaker and lazy subscriptions. |
 
 ---
 
@@ -56,62 +76,34 @@
 
 ---
 
-## 📖 Overview
-**Smart Building Digital Signage** is a lightweight, zero-bloat digital signage dashboard engineered specifically for residential lobby touchscreens (such as wall-mounted Android tablets or commercial smart screens). It replaces antiquated static slides with an interactive, rich, autonomous media board and an iPhone/Mobile-friendly administration panel for building committees (ועד בית).
+## ✨ Key Features & Capabilities (v2.6.0)
 
-Designed and developed by **[Omer Ninyo](https://github.com/omerninyo)**.
+### 📢 1. Smart Notice Board, Scheduling & AI/Heuristic Notice Assistant
+* **Scheduled & Weekly Recurring Notices:** Configure future publication timestamps (`startsAt`), expiration timestamps (`expiresAt`), and weekly recurring days (`recurringDays: Sun–Sat`) evaluated live every 60 seconds without page reloads.
+* **Smart Committee Notice Assistant (`✨ שפר ונסח אוטומטית`):** Converts rough notes or keywords into polite, well-structured Hebrew building announcements across 11 topics, auto-attaches a matching curated image, flags urgency for utility/elevator outages, and sets smart expiration dates. Works 100% offline via its built-in Hebrew heuristic composer, with optional Google Gemini 1.5 Flash API support.
+* **7 1-Click Quick Templates (`SMART_DRAFTS`):** Instant presets for water shutoffs, elevator maintenance, parking cleaning, pest control, tenant meetings, pruning schedule, and committee dues.
+* **Client-Side Image Compression & Auto-Pruning:** Mobile uploads are compressed via HTML5 Canvas (`720px`), and heavy Base64 images on notices expired for >24 hours are automatically pruned (`pruneExpiredNoticeImages`) to keep Firestore documents lean.
 
----
+### 🚨 2. Full-Screen Emergency Mode & Automated Pikud HaOref Integration
+* **Automated Home Front Command Polling (`startOrefAlertPoller`):** Silently monitors active Pikud HaOref alerts for the building's city every 15 seconds. Upon alert detection, immediately overrides the stage with high-contrast shelter instructions, silences background radio (`stopRadioImmediate()`), and automatically restores routine operation 10 minutes after the alert ends.
+* **1-Click Admin Emergency Panel:** Accessible at the top of Tab 1 to both Master Admin and Committee Editors with 4 instant presets (`oref`, `elevator`, `water`, `power`).
 
-## ✨ Key Features & Capabilities
+### 🌤️ 3. Smart Lobby Content Slides (Weather, Transit & Infotainment)
+* **Environmental, Air Quality & Marine Forecast:** Combines 4-day Open-Meteo forecasts with European `AQI`, `UV` index, coastal wave height & water temperature, and an automated smart resident tip (`dailyTip`).
+* **Transit, Train & Highway Commute (`transit_commute`):** Displays upcoming Israel Railways departures (South/Tel Aviv & North/Haifa with Shabbat awareness), key neighborhood bus lines, and live peak-hour drive-time estimations for major highways.
+* **Daily Interest & Trivia (`daily_interest`):** Captivate-style infotainment slide rotating 20 daily Hebrew sets ("This Day in History / Did You Know?", resident trivia puzzle with answer, and home/community tip).
 
-### 🔐 1. Role-Based Dual PIN System (מערכת הרשאות כפולה)
-* **👤 Simplified Committee Member Mode (PIN: `1111`):**
-  * Specially designed for non-technical or senior committee members.
-  * Displays **ONLY 2 Tabs**: 📢 **הודעות ומודעות** (Notice Board) and 📻 **מוזיקה ורדיו** (Radio Controls).
-  * Automatically **hides and locks** all complex system settings (Display, Opacity, Backlight Burn, Emergency Contacts, Security, Touch Guide) to prevent accidental alterations.
-* **🔑 Master Admin Mode (PIN: `1234`):**
-  * Full access to all 6 tabs, hardware calibration, background opacity sliders, theme management, and security PIN updates.
+### 🕯️ 4. Live Hebrew Calendar & Automated Holiday Suite
+* **Live Hebrew Date Header:** Renders the exact Hebrew calendar date in traditional Hebrew letters beneath the clock alongside the Gregorian date.
+* **Dynamic Hebcal GPS Engine:** Calculates candle lighting, Havdalah, Parashat HaShavua, contextual badges for **Hanukkah Candles, Sefirat HaOmer, and Rosh Chodesh**, and activates curated photographic wallpapers for 15 Jewish holidays and national dates.
 
-### 🖼️ 2. Dynamic Image & Wallpaper Gallery Picker (גלריית תמונות אינטראקטיבית)
-* **Modal Picker in Notice Form:** Directly browse and pick ANY image from the system's curated asset library with 1 click.
-* **Categorized Collections:**
-  * 📢 **הודעות ועד:** Maintenance & Renovations, Cleaning & Gardening, Pet Care, Hallway Maintenance.
-  * 🕯️ **שבת ומועדים:** Shabbat, Rosh Hashanah, Sukkot, Hanukkah, Pesach, Shavuot.
-  * 🌿 **נופי ישראל ואבסטרקט:** Jerusalem Sunset, Galilee Olive Groves, Fluid Gold Luxury.
-* **Custom Mobile Uploads:** Upload flyers/photos directly from iPhone or Android camera/gallery.
+### 📰 5. Smart Mix News Ticker & Anti-Clickbait Engine
+* **Curated Multi-Source Feeds:** Choose between **`smart_mix`** (interleaved News, Science, Tech & Economy), **`science_tech`** (`Hayadan` / `Geektime`), **`economy`** (`Globes` / `Calcalist`), **`kan_globes`**, or individual broadcasters (`Ynet`, `Kan`, `Mako`, `Walla`).
+* **Anti-Clickbait Filter (`filterClickbaitAndFormatHeadline`):** Strips sensationalist clickbait phrases and sponsored posts while adding clean subject badges (`[מדע]`, `[כלכלה]`, `[טכנולוגיה]`, `[חדשות]`), backed by a 10-minute polling interval and `AllOrigins` XML `DOMParser` fallback.
 
-### 📢 3. Interactive Notice Board & Permanent Deletion (לוח הודעות ועד)
-* **Urgent & Standard Notices:** Automatic priority styling (urgent alerts highlighted with glowing red badges).
-* **Vertical Split-Screen Layout (3:4):** 46% vertical photographic visual + 54% typography text for optimal viewing distance.
-* **Permanent Local Deletion:** Deleted notices are tracked persistently across reloads.
-* **Auto-Expiration:** Notices can be scheduled to automatically expire and disappear on a specific date.
-
-### 📻 4. Background Radio & Israeli Audio Suite (רדיו ומוזיקת רקע)
-* **Top Israeli Radio Stations:**
-  * 📻 **103FM (רדיו ללא הפסקה)**
-  * 📻 **גלגלצ (Galgalatz)**
-  * 📻 **גלי צה"ל (GLZ)**
-  * 🎵 **כאן 88 (Kan 88)**
-  * 🇮🇱 **כאן גימל (Kan Gimmel)**
-  * 🎻 **קול המוסיקה (Kol HaMusica)**
-  * 🌿 **Eco 99 FM**
-  * 📻 **רדיוס 100FM**
-  * ☕ **Chillout & Lofi Lounge (24/7)**
-  * 🕺 **I Love Dance & Hits**
-* **Admin Live Test Player:** Listen and verify radio streams directly inside the admin panel before deploying to the lobby.
-* **Daily Auto-Play Scheduler:** Define daily broadcast hours (e.g. `08:00`–`21:00`).
-* **Secret Mute Gesture:** Long-press the clock (1.2s) or double-tap the logo to instantly mute/unmute audio.
-
-### ⚡ 5. Real-Time Global Cloud Sync (Google Firebase Firestore)
-* **Instant Multi-Device Sync:** Any notice or setting updated from an iPhone/Android or laptop is synced instantly via Firebase Firestore (`onSnapshot`) and pushed to the lobby screen in real-time without page reloads.
-* **Offline Resilience:** Seamless fallback to LocalStorage and local JSON files if internet connection drops temporarily.
-* **Fork-Safe & Domain Protected:** Secured via Google Cloud authorized domain filters.
-
-### 🕯️ 6. Autonomous Jewish Calendar & Israeli Special Events (שבת ומועדי ישראל)
-* **Dynamic Hebcal GPS Engine:** Automatic calculation of candle lighting, Havdalah times, and Parashat HaShavua for your building's location.
-* **Automated Festive Themes:** Auto-activates matching photographic wallpapers for Shabbat, Rosh Hashanah, Yom Kippur, Sukkot, Hanukkah, Tu BiShvat, Purim, Pesach, Memorial Days, Independence Day, Shavuot, and Tu B'Av.
-* **National Dates:** Special themes for 1st of September (שלום כיתה א'), New Year's, Family Day, and Elections.
+### 🛡️ 6. 24/7 Hardware Resilience, Lite Mode & Blackbox Flight Recorder
+* **Lite Mode & Resolution Scaling (`auto` / `1080p` / `720p`):** Bypasses GPU-intensive `backdrop-filter: blur()`, `box-shadow` pulses, and Ken-Burns transforms for rock-solid stability on low-spec Android 7+ WebView kiosks (`Rockchip rk3368`).
+* **Blackbox Flight Recorder (`device_logs` & `device_health`):** Streams live uptime, JS heap usage, active viewport resolution, and crash/reload diagnostics to Tab 5 in Admin, protected by a session rate-limiting circuit breaker.
 
 ---
 
@@ -119,115 +111,55 @@ Designed and developed by **[Omer Ninyo](https://github.com/omerninyo)**.
 
 ```mermaid
 graph TD
-    A[Lobby Screen Kiosk / Touch Display] -->|Realtime WebSocket| B(Firebase Cloud Firestore)
-    C[Open-Meteo Weather API] -->|Live 4-Day Forecast| A
-    D[Hebcal GPS API] -->|Candle Lighting & Parasha| A
-    E[Israeli Radio Streams] -->|Background Audio| A
-    F[RSS News Provider] -->|Live Marquee Ticker| A
-    G[Mobile / Desktop Admin Panel] -->|HTTPS Cloud Sync| B
-    H[Dual PIN Authentication] -->|PIN 1111| H1[Committee Member: Simple Notices & Radio]
-    H -->|PIN 1234| H2[Master Admin: Full System Control]
-    H -->|CRUD & Settings| I[Storage Layer / LocalStorage / Cloud DB]
-    I -->|Sync State| B
+    A["Lobby Screen Kiosk (index.html)"] -->|Realtime WebSocket| B("Firebase Cloud Firestore")
+    C["Open-Meteo Weather + AQI + Marine APIs"] -->|Forecast, Air & Sea| A
+    D["Hebcal GPS + Intl Hebrew Calendar"] -->|Shabbat, Holidays & Hebrew Date| A
+    E["Israeli Radio Streams (10 Stations)"] -->|Stall-Protected Audio| A
+    F["Smart Mix RSS + AllOrigins XML Fallback"] -->|Anti-Clickbait Ticker| A
+    O["Pikud HaOref Alert Poller"] -->|Auto Shelter Override| A
+    G["Mobile / Desktop Admin Panel (admin.html)"] -->|HTTPS Cloud Sync| B
+    H["Dual PIN Authentication"] -->|Committee Editor PIN| H1["Notices, Emergency & Radio"]
+    H -->|Master Admin PIN| H2["Full 6-Tab System & Blackbox Telemetry"]
 ```
-
-* **Frontend:** Vanilla JavaScript (ES6+), GPU-accelerated CSS transforms (`translate3d`), Fluid Typography (`clamp()`), Tailwind CSS.
-* **Hosting:** GitHub Pages with automated Actions CI/CD.
-* **Zero External Dependencies:** Built specifically to guarantee 60fps smoothness even on legacy Android 7 hardware.
 
 ---
 
 ## 📱 Admin Panel Tabs & Access Levels
 
-| לשונית | תיאור | גישת מנהל ראשי (`1234`) | גישת חבר ועד (`1111`) |
+| Tab | Description | Master Admin (`1234`) | Committee Editor (`1111`) |
 | :--- | :--- | :---: | :---: |
-| 📢 **הודעות ומודעות** | יצירה, עריכה, מחיקה ובחירת תמונות מהגלריה | ✅ | ✅ |
-| 📻 **מוזיקה ורדיו** | הפעלה/השתקה, בחירת תחנה, ווליום ובדיקת סאונד | ✅ | ✅ |
-| 🎨 **תצוגה, רקע וחגים** | שקיפות רקעים, ערכות נושא, פיצוי צריבה, חגים | ✅ | ❌ *(מוסתר)* |
-| 📞 **אנשי קשר וחירום** | מספרי טלפון למעלית, מוקד עירייה וחירום | ✅ | ❌ *(מוסתר)* |
-| ⚙️ **הגדרות ואבטחה** | פרטי בניין, מקור חדשות, שינוי קודי PIN | ✅ | ❌ *(מוסתר)* |
-| 💡 **עזרה ומפת מגע** | מדריך מחוות מגע במסך ונקודות אינטראקציה | ✅ | ❌ *(מוסתר)* |
+| 📢 **1. Notices & Emergency** | Emergency Alert Panel + Auto-Oref toggle, scheduled/recurring notices, Smart AI/Heuristic Composer, image gallery | ✅ | ✅ |
+| 🎨 **2. Display, Slides & News** | Lite Mode, Resolution Selector (`1080p`/`720p`), Transit & Daily Interest slide toggles, `smart_mix` news selector, opacity & burn-in compensation | ✅ | ❌ *(Hidden)* |
+| 📞 **3. Contacts & Emergency** | Building service numbers (elevator, municipality, water, electricity, committee) | ✅ | ❌ *(Hidden)* |
+| 📻 **4. Music & Radio** | Station selector, daily broadcast schedule, volume control, live test player | ✅ | ✅ |
+| ⚙️ **5. Settings, Health & Blackbox** | Building GPS settings, live Device Health monitor (`device_health`), Blackbox Flight Recorder (`device_logs`), PIN management | ✅ | ❌ *(Hidden)* |
+| 💡 **6. Help & Touch Map** | Interactive touch gestures guide and hardware interaction map | ✅ | ❌ *(Hidden)* |
 
 ---
 
-## 🚀 Deployment Pathways & Hosting Options
+## 📦 Release History
 
-### 1️⃣ Option A: GitHub Pages (Recommended)
-* **Zero Cost & Instant Setup:** Powered by GitHub Actions.
-* **API Handling:** Fetches live weather directly from Open-Meteo, Jewish calendar from Hebcal, and news feeds via RSS.
+| Version | Date | Highlights |
+| :--- | :---: | :--- |
+| **`v2.6.0`** | `2026-10-21` | **Smart Lobby Widgets, Auto Pikud HaOref & Anti-Clickbait News Engine:** Added Open-Meteo Air Quality (`AQI`), `UV`, Marine wave/water temp & smart `dailyTip` to weather slide; added **Transit & Commute slide (`transit_commute`)**; added **Daily Interest & Trivia slide (`daily_interest`)** with 20 daily Hebrew sets; added **Live Hebrew Calendar Header** & Hanukkah/Omer/Rosh Chodesh badges; added **Automatic Pikud HaOref Alert Poller (`startOrefAlertPoller`)**; added **Smart Mix (`smart_mix`) Anti-Clickbait RSS Engine**. |
+| **`v2.5.0`** | `2026-10-18` | **Smart Admin Innovations (#2, #4, #5):** Added notice start scheduling (`startsAt`) & weekly recurring days (`recurringDays`); added **Full-Screen Emergency Alert Mode** with 1-click presets and automatic radio mute; added **Smart Committee Notice Assistant (`✨ שפר ונסח אוטומטית`)** with 11-topic offline Hebrew composer, optional Gemini API support, and 7 quick drafts; added automatic Base64 image pruning (`Auto-Prune`) on load and save. |
+| **`v2.4.6`** | `2026-10-18` | **24/7 Network & Kiosk Resilience (Deep Audit Quick Wins):** Automatic Wi-Fi reconnect & dynamic Firebase SDK recovery; lazy subscriptions for `device_health` and `device_logs`; 30s live radio stall detection & buffer recycling; static hosting `/api/...` bypass; 45s modal auto-close watchdog; zombie notice prevention; Flight Recorder circuit breaker; 10-minute RSS polling with `AllOrigins` XML fallback. |
+| **`v2.4.5`** | `2026-10-13` | **Android GPU Optimization & Client Image Compression:** Fixed Shabbat header rendering (`applySettings`); added client-side HTML5 Canvas image compression (`compressImageToDataUrl`); unified `toggleSecretMute`; optimized `Lite Mode` for `rk3368` Android WebView (disabled Ken-Burns & `box-shadow` pulses, 30-min audio buffer recycle). |
+| **`v2.4.3–2.4.4`** | `2026-09-28` | **Blackbox Flight Recorder & Screen Resolution Selector:** Added cloud crash/event diagnostics (`smart_lobby/device_logs`) and real-time screen resolution scaling (`auto` / `1080p` / `720p`) with live viewport reporting in `device_health`. |
+| **`v2.4.0–2.4.2`** | `2026-09-16` | **Two-Tier Design Spec & Schedule Precision:** Added `device_health` telemetry, exact 23:00 radio cutoff and 23:05/04:00 memory watchdog reloads, N12 (Mako) RSS support, and notice expiration filtering. |
+| **`v2.1.0–2.3.0`** | `2026-09-04` | **Firebase Cloud Sync, Dual-PIN Security & Lite Mode:** Real-time Firestore synchronization, role-based PIN access, 15 Jewish holiday photographic themes, and hardware Lite Mode. |
 
-### 2️⃣ Option B: Self-Hosted Node.js / Docker
-* Standalone Node.js Express server (`server.js`) with local JSON storage (`data/`) and image uploads (`public/uploads/`).
-* Run locally:
-  ```bash
-  npm install
-  npm start
-  ```
-
----
-
-## 📺 Recommended Hardware & Android Kiosk Setup Guide
-
-For permanent residential lobby installations (wall-mounted Android tablets, smart TVs, or commercial signage touchscreens running 24/7), we recommend two excellent kiosk applications:
-
-### 🥇 1. [Webview Kiosk](https://webviewkiosk.nktnet.uk) (Top Recommended - 100% Free & Open Source)
-* 🆓 **100% Free & Open Source (FOSS):** No licensing fees, no watermarks, no paywalls.
-* 📱 **Ultra-Lightweight & Legacy-Friendly:** Runs exceptionally smoothly on older Android tablets with minimal RAM and CPU overhead.
-* 🔒 **Lock Task Mode (Screen Pinning):** Locks the display strictly to the lobby web app, hides system bars, and prevents exiting.
-* 🛡️ **Password & Biometric Protected Settings:** Prevents unauthorized tampering with kiosk configuration.
-* 📦 **Easy Installation:** Available on [Google Play](https://play.google.com/store/apps/details?id=uk.nktnet.webviewkiosk), [F-Droid](https://f-droid.org/), and direct APK releases on [GitHub](https://github.com/nktnet1/webview-kiosk).
+*(See [`CHANGELOG.md`](CHANGELOG.md) for the complete technical changelog).*
 
 ---
 
-### 🥈 2. [Fully Kiosk Browser](https://www.fully-kiosk.com/) (Advanced Commercial Option)
-* ⚡ **Legacy Hardware Compatibility:** Seamless 60fps hardware-accelerated rendering.
-* 🔒 **Locked Kiosk Mode:** Full kiosk lockdown and navigation bar concealment.
-* 🔌 **Auto-Start & Power-Loss Recovery:** Automatically launches the lobby dashboard immediately upon device boot.
-* 💡 **Motion Detection via Front Camera:** Automatically wakes the display when residents approach.
-
-### ⚙️ Recommended Fully Kiosk Browser Configuration:
-1. **Web Browsing Settings:**
-   * **Start URL:** `https://<your-building-domain>/` (or your building's GitHub Pages domain).
-   * **Enable WebGL / Hardware Acceleration:** `ON`
-   * **Clear Cache on Start:** `OFF` (preserves instant offline loading).
-2. **Device Management Settings:**
-   * **Keep Screen On:** `ON` (when connected to AC power).
-   * **Run as Launcher / Kiosk Mode:** `ON` (locks device to signage).
-3. **Audio & Media Settings:**
-   * **Autoplay Audio:** `Enabled` (for smooth background radio playback).
-
----
-
-## 🌍 How to Deploy for Your Own Building (Open Source Guide)
-Anyone is welcome to fork this repository and launch a smart lobby board for their own residential building in 3 minutes:
-
-1. **Fork this repository** to your own GitHub account.
-2. **Customize your building settings** in `data/settings.json` (Building name, city, and GPS coordinates for accurate Shabbat and weather times).
-3. **Enable GitHub Pages:**
-   * Go to **Settings** ➡️ **Pages** in your repository.
-   * Under **Build and deployment**, select **Deploy from a branch** ➡️ choose `main` / `root` (or GitHub Actions).
-   * Your building dashboard is immediately live!
+## 🌍 How to Deploy for Your Own Building (3-Minute Open Source Guide)
+1. **Fork or click `Use this template`** on this repository.
+2. **Customize your building settings** in `data/settings.json` (Building name, city, and GPS coordinates).
+3. **Enable GitHub Pages** under **Settings ➡️ Pages** (via GitHub Actions or `main` branch).
 4. *(Optional)* **Enable Real-Time Cloud Sync (Firebase Firestore):**
-   * Create a free project at [Firebase Console](https://console.firebase.google.com).
-   * **Setup Cloud Firestore Database:**
-     * In the Firebase Console, go to **Build** ➡️ **Firestore Database** ➡️ click **Create database**.
-     * Select a nearby location (e.g. `eur3` Europe-West or `me-west1` Tel Aviv).
-     * **CRITICAL - Security Rules:** Go to the **Rules** tab, replace the default 30-day expiring test rule with the contents of [`firestore.rules`](firestore.rules), and click **Publish**:
-       ```javascript
-       rules_version = '2';
-       service cloud.firestore {
-         match /databases/{database}/documents {
-           match /smart_lobby/{docId} {
-             allow read, write: if true;
-           }
-         }
-       }
-       ```
-       *(Note: Do not leave the default 30-day test mode, otherwise Firebase will lock your database after 30 days!)*
-   * **Configure Web Client:**
-     * In Project Settings ➡️ General ➡️ Your apps, create a **Web app** (`</>`).
-     * Copy `js/config.example.js` to `js/config.js` and paste your Firebase credentials (`apiKey`, `projectId`, etc.).
-   * Now updates made from any phone or computer will sync live to your lobby screen!
+   * Create a free project at [Firebase Console](https://console.firebase.google.com), provision **Firestore Database**, and publish the rules from [`firestore.rules`](firestore.rules).
+   * Copy `js/config.example.js` to `js/config.js` and paste your Firebase Web app credentials.
 
 ---
 

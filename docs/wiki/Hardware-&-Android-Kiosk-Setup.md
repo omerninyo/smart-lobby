@@ -1,24 +1,29 @@
-# 📺 Hardware & Android Kiosk Setup Guide
+# 📺 Hardware & Android Kiosk Setup Guide (v2.6.0)
 
-## 📱 Recommended Devices
-* **Android Tablets:** 10.1" to 15.6" Android tablets (Android 7.0 and up). Samsung Galaxy Tab A series, Lenovo Tab series, or dedicated commercial touch screens.
-* **Smart TVs / Touch Monitors:** Any wall-mounted Android TV or display with landscape 16:9 resolution (1080p Full HD or 720p).
-* **Power Supply:** Permanent wall-recessed 5V/2A or 9V USB-C power supply.
+## 📱 Recommended Devices & Display Profiles
+* **Android Kiosks & Media Boxes:** 10.1" to 21.5" Android touchscreens or commercial displays powered by Android TV / Kiosk boxes (Android 7.1.2+, including legacy SoCs like `Rockchip rk3368`).
+* **Smart Resolution Scaling (Tab 2 in Admin):**
+  * `auto`: Responsive fluid scaling based on device viewport.
+  * `1080p`: Locked Full HD (`1920x1080`) typography and card proportions.
+  * `720p`: Optimized larger typography and touch targets for compact tablets (`1280x800`).
+* **Hardware Lite Mode (`body.lite-mode`):** Recommended for Android 7–9 devices. Disables GPU-heavy `backdrop-filter: blur()`, Ken-Burns background scaling, and `box-shadow` pulse animations while keeping a fixed dark wallpaper and crisp solid cards.
 
 ---
 
-## 🏆 Recommended App: Fully Kiosk Browser
-We officially recommend **[Fully Kiosk Browser & Launcher](https://www.fully-kiosk.com/)** for all permanent lobby installations.
+## 🏆 Recommended Kiosk Apps
 
-### ⚙️ Step-by-Step Configuration:
-1. **Web Browsing:**
-   * **Start URL:** Set to your building's live URL (e.g. `https://<your-domain>/`).
-   * **Enable WebGL:** `ON` (ensures GPU-accelerated 60fps transitions).
-   * **Enable Hardware Acceleration:** `ON`.
-   * **Clear Cache on Start:** `OFF` (preserves offline loading).
-2. **Device Management:**
-   * **Keep Screen On:** `ON` (while power connected).
-   * **Run as Launcher (Kiosk Mode):** `ON` (prevents exiting to Android desktop).
-   * **Auto-Start on Boot:** `ON` (recovers automatically after power outages).
-3. **Audio Settings:**
-   * **Autoplay Audio:** `Enabled` (allows background radio streaming without manual touch interaction).
+### 🥇 1. [Webview Kiosk](https://webviewkiosk.nktnet.uk) (100% Free & Open Source)
+* Lightweight FOSS wrapper ideal for Android 7+ hardware with minimal RAM overhead.
+* Supports Lock Task Mode (Screen Pinning) and password-protected settings.
+
+### 🥈 2. [Fully Kiosk Browser](https://www.fully-kiosk.com/) (Commercial Standard)
+1. **Web Browsing:** Start URL set to `https://<your-domain>/`, Enable Hardware Acceleration `ON`, Clear Cache on Start `OFF`.
+2. **Device Management:** Keep Screen On `ON`, Run as Launcher `ON`, Auto-Start on Boot `ON`.
+3. **Audio Settings:** Autoplay Audio `Enabled`.
+
+---
+
+## 🛡️ Built-In 24/7 Watchdogs & Blackbox Diagnostics
+* **45-Second Modal Auto-Close:** Any touch modal (`#interactive-modal`) left open by a resident automatically closes after 45 seconds so it never blocks the main slideshow or night reloads.
+* **Nightly Memory Watchdog:** Performs a clean reload at `23:05` (after radio shutoff) and `04:00 AM` to clear WebView heap accumulation.
+* **Blackbox Flight Recorder (Tab 5 in Admin):** Logs clean reloads, remote force reloads, JS errors, and unexpected hardware restarts (`unclean_crash_restart`) to Firestore `smart_lobby/device_logs`.
