@@ -2299,6 +2299,59 @@ class BuildingSignageApp {
     this.renderSlideCards();
   }
 
+  resolveNoticeImageUrl(notice, slideIdx = 0) {
+    if (!notice || !notice.imageUrl) return '';
+    const rawUrl = String(notice.imageUrl).trim();
+    if (!rawUrl || rawUrl.startsWith('data:image/')) return rawUrl;
+
+    const baseImg = rawUrl.split('?')[0];
+    const textCombined = `${notice.title || ''} ${notice.content || ''}`;
+
+    // Curated lightweight pools (750px optimized JPEGs, ~140-220KB each)
+    const petsPool = [
+      'images/notices/pets_cleanliness.jpg',
+      'images/notices/pets_french_bulldog_lobby.jpg',
+      'images/notices/pets_poodle_garden.jpg',
+      'images/notices/pets_border_collie_park.jpg'
+    ];
+    const lobbyBuildingPool = [
+      'images/notices/peaceful_morning_lobby.jpg',
+      'images/notices/modern_israeli_building_exterior.jpg',
+      'images/notices/luxury_boutique_lobby_warm.jpg',
+      'images/notices/evening_building_courtyard.jpg'
+    ];
+
+    // Deterministic seed from notice ID + rotation tick so multiple notices never show the exact same image simultaneously
+    const idSeed = String(notice.id || '').split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    const cycleTick = this.settings?.display?.liteMode
+      ? Math.floor(Date.now() / (60 * 60 * 1000)) // Rotate once per hour in Lite Mode (zero extra decode overhead)
+      : (this.noticeImageCycleTick || 0);
+
+    // 1. Pets / Dogs pool rotation:
+    // Rotate automatically across all 4 dogs when notice uses the default pets_cleanliness.jpg
+    if (baseImg === 'images/notices/pets_cleanliness.jpg' || (/כלב|כלבים|חיות מחמד/.test(textCombined) && baseImg === 'images/notices/peaceful_morning_lobby.jpg')) {
+      return petsPool[(idSeed + cycleTick + slideIdx) % petsPool.length];
+    }
+
+    // 2. Specific contextual upgrade for generic default images (Elevator / Parking)
+    if (baseImg === 'images/notices/maintenance.jpg' && /מעלית/.test(textCombined)) {
+      return (cycleTick + slideIdx) % 2 === 0
+        ? 'images/notices/modern_elevator_interior.jpg'
+        : 'images/notices/maintenance.jpg';
+    }
+    if (baseImg === 'images/notices/clean_hallway_care.jpg' && /חניה|חניון|רכב/.test(textCombined)) {
+      return 'images/notices/clean_underground_parking.jpg';
+    }
+
+    // 3. Lobby & Building pool rotation:
+    // Rotate automatically across all 4 buildings/lobbies when notice uses the default peaceful_morning_lobby.jpg
+    if (baseImg === 'images/notices/peaceful_morning_lobby.jpg') {
+      return lobbyBuildingPool[(idSeed + cycleTick + slideIdx) % lobbyBuildingPool.length];
+    }
+
+    return rawUrl;
+  }
+
   renderSlideCards() {
     const container = document.getElementById('slides-container');
     if (!container) return;
@@ -2329,11 +2382,12 @@ class BuildingSignageApp {
         else if (n.isUrgent) typeIcon = '🚨';
 
         if (n.imageUrl) {
+          const resolvedImgUrl = this.resolveNoticeImageUrl(n, idx);
           // Split Layout
           contentHtml = `
             <div class="stage-notice-split-layout">
               <div class="notice-attached-img-box">
-                <img src="${n.imageUrl}" alt="תמונה מצורפת" loading="lazy" decoding="async" />
+                <img class="stage-notice-dynamic-img" src="${resolvedImgUrl}" alt="תמונה מצורפת" loading="lazy" decoding="async" />
               </div>
               <div class="stage-notice-layout">
                 <div class="notice-header-row">
@@ -2798,13 +2852,28 @@ class BuildingSignageApp {
 
   goToSlide(index) {
     if (this.slides.length === 0) return;
+    const prevIdx = this.currentSlideIndex;
     this.currentSlideIndex = (index + this.slides.length) % this.slides.length;
     this.slideStartTime = Date.now();
+
+    // Advance notice image variety pool on full deck wrap-around (when not in Lite Mode)
+    if (this.currentSlideIndex === 0 && prevIdx > 0 && !this.settings?.display?.liteMode) {
+      this.noticeImageCycleTick = (this.noticeImageCycleTick || 0) + 1;
+    }
 
     const allCards = document.querySelectorAll('.slide-card');
     allCards.forEach((c, idx) => {
       if (idx === this.currentSlideIndex) {
         c.classList.add('active');
+        // Refresh only the single active slide's notice image if rotating through the pool
+        const activeSlide = this.slides[idx];
+        if (activeSlide && activeSlide.type === 'notice' && activeSlide.data?.imageUrl) {
+          const imgEl = c.querySelector('.stage-notice-dynamic-img');
+          const nextUrl = this.resolveNoticeImageUrl(activeSlide.data, idx);
+          if (imgEl && nextUrl && imgEl.getAttribute('src') !== nextUrl) {
+            imgEl.setAttribute('src', nextUrl);
+          }
+        }
       } else {
         c.classList.remove('active');
       }

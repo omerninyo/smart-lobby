@@ -31,7 +31,7 @@ The table below summarizes the architectural and product evolution from the init
 | Subsystem | ⬅️ Before (`v1.0–v2.3`) | ➡️ Now (`v2.6.0`) |
 | :--- | :--- | :--- |
 | **📢 Notice Scheduling & Storage Hygiene** | Immediate manual publishing only with basic expiration; risk of deleted default notices reappearing ("zombie notices"); unbounded Base64 image accumulation in Firestore. | **Future Start Scheduling (`startsAt`) & Weekly Recurring Days (`recurringDays: [0..6]`)** with live 60s transitions; persistent deletion registry (`smart_lobby_deleted_notices`); **Automated Base64 Image Pruning (`Auto-Prune`)** for notices expired >24h with live storage-savings badges. |
-| **✨ Smart Notice Authoring (AI & Heuristic Composer)** | Manual text entry from scratch; raw multi-megabyte mobile photo uploads on static hosting. | **Smart Committee Notice Assistant (`#ai-polish-notice-btn`)**: built-in zero-key Hebrew heuristic composer across 11 building topics + optional Google Gemini 1.5 Flash API integration + **7 1-Click Quick Templates (`SMART_DRAFTS`)** + **Client-Side HTML5 Canvas Image Compression (`720px`, quality `0.78`)**. |
+| **✨ Smart Notice Authoring & Enriched Image Pools** | Manual text entry from scratch; limited 6-image notice gallery (repeating the same single dog and lobby photo); raw multi-megabyte mobile photo uploads. | **Smart Committee Notice Assistant (`#ai-polish-notice-btn`)**: built-in zero-key Hebrew heuristic composer across 11 topics + optional Gemini 1.5 Flash API + **7 1-Click Quick Templates (`SMART_DRAFTS`)** + **Client-Side Canvas Image Compression (`720px`)** + **14 lightweight vertical (`3:4`, `750px`, `~150KB`) curated notice images** (4 dog breeds, 4 buildings/lobbies, modern elevator, underground parking) with **zero-overhead dynamic rotation (`resolveNoticeImageUrl`)**. |
 | **🚨 Emergency Mode & Home Front Command (Pikud HaOref)** | No emergency override or automated civil defense integration. | **Dual-Layer Emergency System:** 1) **Automated Pikud HaOref Poller (`startOrefAlertPoller`)** detecting active local alerts, displaying high-contrast shelter instructions (90s), muting live radio immediately, and auto-restoring routine after 10 minutes. 2) **1-Click Admin Emergency Broadcast Panel** (`oref`, `elevator`, `water`, `power`) accessible to both Master Admin and Committee Editor. |
 | **🌤️ Weather, Air Quality & Marine Station** | Basic 4-day temperature forecast only. | **Full Environmental & Marine Dashboard (Open-Meteo Air Quality & Marine APIs, zero key):** European Air Quality Index (`AQI`) with color badges, `UV` radiation index, coastal wave height & sea surface temperature, and an **Automated Smart Daily Resident Tip (`dailyTip`)** (laundry, windows/haze, heat hydration) on both the main stage slide and touch modal. |
 | **🚆 "Leaving the Building" Transit & Commute Slide** | Not available. | **Live Transit & Commute Slide (`transit_commute`):** Dynamic Israel Railways departures (South/Tel Aviv & North/Haifa with Shabbat/Motzaei Shabbat awareness), local & intercity bus lines, and estimated drive times on major highways (Road 2, Road 4, Road 9) with peak-hour congestion color badges. |
@@ -42,11 +42,35 @@ The table below summarizes the architectural and product evolution from the init
 
 ---
 
-## 📸 Comprehensive Visual Showcase
+## 📸 Comprehensive Visual Showcase (Updated for v2.6.0)
 
-### 🖥️ 1. Main Lobby Touchscreen Kiosk Display (1080p Interactive Stage)
+### 🆕 1. v2.6.0 New Smart Lobby Slides, Emergency Mode & Enriched Galleries
 
-| 🐕 Notice: Pets & Lawn Care (Vertical 3:4 Layout) | 🌿 Notice: Pruning & Waste Schedule |
+| 🌤️ 4-Day Forecast + Hadera Air Quality (`AQI`), `UV`, Marine Sea State & Live Hebrew Date | 🚆 "Leaving the Building" — Hadera West Trains, Local Buses & Live Highway Drive Times |
+| :---: | :---: |
+| ![Weather Air & Sea v2.6.0](docs/screenshots/12_kiosk_weather_air_sea_v260.png) | ![Transit & Commute v2.6.0](docs/screenshots/13_kiosk_transit_commute_v260.png) |
+
+| 🧠 "Moment of Interest" — Did You Know, Daily Resident Trivia & Home Tip | 🚨 Full-Screen Emergency / Pikud HaOref Shelter Override (with Auto Radio Mute) |
+| :---: | :---: |
+| ![Daily Interest & Trivia v2.6.0](docs/screenshots/14_kiosk_daily_interest_trivia_v260.png) | ![Emergency Mode v2.6.0](docs/screenshots/15_kiosk_emergency_oref_v260.png) |
+
+| 🐶 Enriched Dog Notice Pool (French Bulldog in Lobby / Toy Poodle / Border Collie) | 🏢 Enriched Building & Lobby Pool (Modern Israeli Exterior / Boutique Lobby / Courtyard) |
+| :---: | :---: |
+| ![Enriched Dog Notice v2.6.0](docs/screenshots/19_kiosk_notice_new_dogs_v260.png) | ![Enriched Building Notice v2.6.0](docs/screenshots/20_kiosk_notice_new_building_v260.png) |
+
+| 🛠️ Admin v2.6.0: Emergency Broadcast Panel, Auto-Oref Toggle & Storage Savings Badge | 🖼️ Admin v2.6.0: Enriched 14-Image Notice Gallery (Dogs, Buildings, Elevator, Parking) |
+| :---: | :---: |
+| ![Admin Emergency & Notices v2.6.0](docs/screenshots/16_admin_emergency_and_ai_assistant_v260.png) | ![Admin Enriched Gallery v2.6.0](docs/screenshots/17_admin_gallery_enriched_v260.png) |
+
+| 🎛️ Admin v2.6.0 (Tab 2): Transit & Trivia Slide Toggles + `smart_mix` Anti-Clickbait News | 📞 Lobby Kiosk: Building Service & Emergency Contacts Directory |
+| :---: | :---: |
+| ![Admin Slides & News v2.6.0](docs/screenshots/18_admin_display_slides_and_news_v260.png) | ![Emergency Contacts Directory](docs/screenshots/06_kiosk_contacts_directory.png) |
+
+---
+
+### 🖥️ 2. Additional Main Lobby Touchscreen Kiosk Views (1080p Interactive Stage)
+
+| 🐕 Notice: Pets & Lawn Care (Golden Retriever) | 🌿 Notice: Pruning & Waste Schedule |
 | :---: | :---: |
 | ![Pets Notice](docs/screenshots/01_kiosk_notice_pets.png) | ![Pruning Notice](docs/screenshots/02_kiosk_notice_pruning.png) |
 
@@ -54,25 +78,21 @@ The table below summarizes the architectural and product evolution from the init
 | :---: | :---: |
 | ![Hallway Notice](docs/screenshots/03_kiosk_notice_hallway.png) | ![Welcome Notice](docs/screenshots/04_kiosk_notice_lobby.png) |
 
-| 🕯️ Grand Hero Slide: Shabbat & Candle Lighting | 📞 Building Service & Emergency Contacts Directory |
+| 🕯️ Grand Hero Slide: Shabbat & Candle Lighting | 🔐 Dual-PIN Mobile Access Keypad |
 | :---: | :---: |
-| ![Shabbat Grand Hero](docs/screenshots/05_kiosk_shabbat_hero.png) | ![Emergency Contacts Directory](docs/screenshots/06_kiosk_contacts_directory.png) |
+| ![Shabbat Grand Hero](docs/screenshots/05_kiosk_shabbat_hero.png) | ![PIN Login](docs/screenshots/07_admin_mobile_pin_login.png) |
 
 ---
 
-### 📱 2. Mobile & Tablet Committee Administration Panel (iOS / Android)
+### 📱 3. Mobile Administration Views (iOS / Android)
 
-| 🔐 1. Dual-PIN Access Keypad | 📢 2. Notice Management Tab |
+| 📢 1. Mobile Notice Management Tab | 🎨 2. Display & Opacity Calibration |
 | :---: | :---: |
-| ![PIN Login](docs/screenshots/07_admin_mobile_pin_login.png) | ![Notices Tab](docs/screenshots/08_admin_mobile_notices_tab.png) |
+| ![Notices Tab](docs/screenshots/08_admin_mobile_notices_tab.png) | ![Display Tab](docs/screenshots/09_admin_mobile_display_tab.png) |
 
-| 🎨 3. Display & Opacity Calibration | 📻 4. Background Radio & 103FM Player |
+| 📻 3. Background Radio & 103FM Player | 💡 4. Touch Gestures & Hardware Map |
 | :---: | :---: |
-| ![Display Tab](docs/screenshots/09_admin_mobile_display_tab.png) | ![Radio Tab](docs/screenshots/10_admin_mobile_radio_tab.png) |
-
-| 💡 5. Touch Gestures & Hardware Map | 🖼️ 6. Curated AI Image Gallery Picker |
-| :---: | :---: |
-| ![Touch Guide](docs/screenshots/11_admin_mobile_touch_guide.png) | ![Gallery Picker](docs/screenshots/04_admin_gallery_picker.png) |
+| ![Radio Tab](docs/screenshots/10_admin_mobile_radio_tab.png) | ![Touch Guide](docs/screenshots/11_admin_mobile_touch_guide.png) |
 
 ---
 
@@ -82,6 +102,7 @@ The table below summarizes the architectural and product evolution from the init
 * **Scheduled & Weekly Recurring Notices:** Configure future publication timestamps (`startsAt`), expiration timestamps (`expiresAt`), and weekly recurring days (`recurringDays: Sun–Sat`) evaluated live every 60 seconds without page reloads.
 * **Smart Committee Notice Assistant (`✨ שפר ונסח אוטומטית`):** Converts rough notes or keywords into polite, well-structured Hebrew building announcements across 11 topics, auto-attaches a matching curated image, flags urgency for utility/elevator outages, and sets smart expiration dates. Works 100% offline via its built-in Hebrew heuristic composer, with optional Google Gemini 1.5 Flash API support.
 * **7 1-Click Quick Templates (`SMART_DRAFTS`):** Instant presets for water shutoffs, elevator maintenance, parking cleaning, pest control, tenant meetings, pruning schedule, and committee dues.
+* **Enriched 14-Image Notice Catalog & Zero-Overhead Dynamic Rotation (`resolveNoticeImageUrl`):** Includes 4 diverse dog images (Golden Retriever, French Bulldog in lobby, Toy Poodle on garden path, Border Collie in courtyard), 4 building/lobby images (Morning Lobby, Modern Israeli Building Exterior, Warm Boutique Lobby with Olive Tree, Evening Courtyard), plus dedicated modern elevator and underground parking photography. Pre-optimized to `750px` width (`100KB–250KB` per file) and rotated dynamically without preloading hidden images (`decoding="async"`).
 * **Client-Side Image Compression & Auto-Pruning:** Mobile uploads are compressed via HTML5 Canvas (`720px`), and heavy Base64 images on notices expired for >24 hours are automatically pruned (`pruneExpiredNoticeImages`) to keep Firestore documents lean.
 
 ### 🚨 2. Full-Screen Emergency Mode & Automated Pikud HaOref Integration

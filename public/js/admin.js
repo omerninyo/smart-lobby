@@ -137,14 +137,14 @@ const SMART_DRAFTS = {
   elevator: {
     title: 'הודעה על עבודות שירות ובדיקה במעלית',
     content: 'דיירים יקרים,\n\nביום [תאריך] בין השעות [שעות] תתבצע בדיקה תקופתית ועבודות שירות במעלית הבניין על ידי טכנאי מוסמך.\nבזמן זה המעלית תהיה מושבתת לסירוגין.\n\nבברכה,\nועד הבית.',
-    img: 'images/notices/maintenance.jpg',
+    img: 'images/notices/modern_elevator_interior.jpg',
     recommendedDays: 2,
     isUrgent: true
   },
   cleaning: {
     title: 'ניקיון ושטיפה יסודית של החניון והלובי',
     content: 'דיירים יקרים,\n\nביום [תאריך] יתבצע ניקיון ושטיפה יסודית בחניון ובשטחי הלובי והקומות.\nנודה לפינוי חפצים אישיים מרחבת החניה כדי לאפשר גישה נוחה למכונות הניקוי.\n\nתודה רבה על שיתוף הפעולה,\nועד הבית.',
-    img: 'images/notices/clean_hallway_care.jpg',
+    img: 'images/notices/clean_underground_parking.jpg',
     recommendedDays: 3,
     isUrgent: false
   },
@@ -158,7 +158,7 @@ const SMART_DRAFTS = {
   meeting: {
     title: 'הזמנה לאסיפת דיירים שנתית',
     content: 'דיירים יקרים,\n\nאסיפת הדיירים השנתית של הבניין תתקיים ביום [תאריך] בשעה 20:00 בלובי הבניין.\nעל סדר היום: דו"ח כספי שנתי, תכנית שדרוג ושיפוץ, ובחירת ועד לשנה הקרובה.\n\nנוכחות כולם חשובה מאוד לעתיד הבניין!\nועד הבית.',
-    img: 'images/notices/peaceful_morning_lobby.jpg',
+    img: 'images/notices/luxury_boutique_lobby_warm.jpg',
     recommendedDays: 7,
     isUrgent: false
   },
@@ -172,7 +172,7 @@ const SMART_DRAFTS = {
   dues: {
     title: 'תזכורת ידידותית: תשלום מסי ועד בית לחודש הנוכחי',
     content: 'דיירים יקרים,\n\nתזכורת להסדרת דמי ועד הבית לחודש הנוכחי. תשלום מסודר מאפשר לנו לתחזק את המעלית, הניקיון, התאורה והביטוח של הבניין ברמה הגבוהה ביותר.\nניתן להעביר בהעברה בנקאית או באפליקציית ביט/פייבוקס.\n\nתודה לכל הדיירים המקדימים לשלם,\nועד הבית.',
-    img: 'images/notices/peaceful_morning_lobby.jpg',
+    img: 'images/notices/modern_israeli_building_exterior.jpg',
     recommendedDays: 30,
     isUrgent: false
   }
@@ -1229,19 +1229,36 @@ function polishNoticeWithHeuristics(rawTitle, rawContent) {
   }
 
   // 5. Select Valid Existing Topic Image from Repository
+  const dogImagesPool = [
+    'images/notices/pets_cleanliness.jpg',
+    'images/notices/pets_french_bulldog_lobby.jpg',
+    'images/notices/pets_poodle_garden.jpg',
+    'images/notices/pets_border_collie_park.jpg'
+  ];
+  const lobbyBuildingPool = [
+    'images/notices/peaceful_morning_lobby.jpg',
+    'images/notices/luxury_boutique_lobby_warm.jpg',
+    'images/notices/modern_israeli_building_exterior.jpg',
+    'images/notices/evening_building_courtyard.jpg'
+  ];
+  const isPetsTopic = /כלב|כלבים|חיות מחמד|רצועה|גינת כלבים/.test(combined);
   const topicImages = {
     water: 'images/notices/maintenance.jpg',
-    elevator: 'images/notices/maintenance.jpg',
+    elevator: 'images/notices/modern_elevator_interior.jpg',
     electricity: 'images/notices/maintenance.jpg',
-    cleaning: 'images/notices/clean_hallway_care.jpg',
+    cleaning: isPetsTopic
+      ? dogImagesPool[Math.floor(Date.now() / 1000) % dogImagesPool.length]
+      : 'images/notices/clean_hallway_care.jpg',
     pest: 'images/notices/gardening_cleaning.jpg',
-    parking: 'images/notices/clean_hallway_care.jpg',
+    parking: 'images/notices/clean_underground_parking.jpg',
     pruning: 'images/notices/pruning_waste.jpg',
-    meeting: 'images/notices/peaceful_morning_lobby.jpg',
-    dues: 'images/notices/peaceful_morning_lobby.jpg',
+    meeting: 'images/notices/luxury_boutique_lobby_warm.jpg',
+    dues: 'images/notices/modern_israeli_building_exterior.jpg',
     holiday: 'images/wallpapers/shabbat/shabbat_candles_luxury.jpg',
     renovation: 'images/notices/maintenance.jpg',
-    general: 'images/notices/peaceful_morning_lobby.jpg'
+    general: isPetsTopic
+      ? dogImagesPool[Math.floor(Date.now() / 1000) % dogImagesPool.length]
+      : lobbyBuildingPool[Math.floor(Date.now() / 1000) % lobbyBuildingPool.length]
   };
   const imageUrl = topicImages[category] || topicImages.general;
 

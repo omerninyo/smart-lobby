@@ -124,18 +124,58 @@
   "notice_topics": [
     {
       "id": "notice-peaceful-lobby",
-      "name": "בוקר טוב ויום רגוע",
+      "name": "לובי הבניין — בוקר מואר ורגוע",
       "url": "images/notices/peaceful_morning_lobby.jpg"
     },
     {
-      "id": "notice-hallway-clean",
-      "name": "ניקיון מסדרון ומעלית",
-      "url": "images/notices/clean_hallway_care.jpg"
+      "id": "notice-boutique-lobby-warm",
+      "name": "לובי בוטיק חמים ועץ זית",
+      "url": "images/notices/luxury_boutique_lobby_warm.jpg"
+    },
+    {
+      "id": "notice-building-exterior",
+      "name": "חזית בניין מגורים מודרני",
+      "url": "images/notices/modern_israeli_building_exterior.jpg"
+    },
+    {
+      "id": "notice-evening-courtyard",
+      "name": "שביל כניסה לבניין בשעת בין-ערביים",
+      "url": "images/notices/evening_building_courtyard.jpg"
     },
     {
       "id": "notice-pets",
-      "name": "חיות מחמד וגינה",
+      "name": "חיות מחמד — גולדן רטריבר בגינה",
       "url": "images/notices/pets_cleanliness.jpg"
+    },
+    {
+      "id": "notice-pets-french-bulldog",
+      "name": "חיות מחמד — בולדוג צרפתי בלובי",
+      "url": "images/notices/pets_french_bulldog_lobby.jpg"
+    },
+    {
+      "id": "notice-pets-poodle",
+      "name": "חיות מחמד — פודל בשביל הגינה",
+      "url": "images/notices/pets_poodle_garden.jpg"
+    },
+    {
+      "id": "notice-pets-border-collie",
+      "name": "חיות מחמד — בורדר קולי בחצר הבניין",
+      "url": "images/notices/pets_border_collie_park.jpg"
+    },
+    {
+      "id": "notice-hallway-clean",
+      "name": "ניקיון מסדרון ומבואת קומה",
+      "url": "images/notices/clean_hallway_care.jpg"
+    },
+    {
+      "id": "notice-elevator-modern",
+      "name": "מעלית הבניין — תחזוקה ושמירה",
+      "url": "images/notices/modern_elevator_interior.jpg"
+    },
+    {
+      "id": "notice-underground-parking",
+      "name": "חניון תת-קרקעי — סדר וניקיון",
+      "url": "images/notices/clean_underground_parking.jpg"
     },
     {
       "id": "notice-pruning",
@@ -149,7 +189,7 @@
     },
     {
       "id": "notice-maintenance",
-      "name": "תחזוקה ומערכות",
+      "name": "תחזוקה ומערכות הבניין",
       "url": "images/notices/maintenance.jpg"
     }
   ]
