@@ -359,12 +359,22 @@ app.get('/api/weather', async (req, res) => {
   }
 
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,precipitation_probability_max,sunrise,sunset&timezone=Asia%2FJerusalem`;
-    
-    const response = await fetch(url, { headers: { 'User-Agent': 'BuildingSignage/1.0' } });
-    if (!response.ok) throw new Error(`Weather fetch failed: ${response.status}`);
-    
-    const data = await response.json();
+    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max,precipitation_probability_max,sunrise,sunset&timezone=Asia%2FJerusalem`;
+    const aqUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi,pm10,pm2_5,uv_index&timezone=Asia%2FJerusalem`;
+    const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=32.4400&longitude=34.8800&current=wave_height,sea_surface_temperature&timezone=Asia%2FJerusalem`;
+
+    const [wRes, aqRes, marineRes] = await Promise.allSettled([
+      fetch(weatherUrl, { headers: { 'User-Agent': 'BuildingSignage/1.0' } }).then(r => r.ok ? r.json() : null),
+      fetch(aqUrl, { headers: { 'User-Agent': 'BuildingSignage/1.0' } }).then(r => r.ok ? r.json() : null),
+      fetch(marineUrl, { headers: { 'User-Agent': 'BuildingSignage/1.0' } }).then(r => r.ok ? r.json() : null)
+    ]);
+
+    const data = wRes.status === 'fulfilled' && wRes.value ? wRes.value : null;
+    if (!data) throw new Error('Primary weather fetch failed');
+
+    const aqData = aqRes.status === 'fulfilled' ? aqRes.value : null;
+    const marineData = marineRes.status === 'fulfilled' ? marineRes.value : null;
+
     const current = data.current;
     const daily = data.daily;
     const code = current.weather_code;
@@ -396,6 +406,62 @@ app.get('/api/weather', async (req, res) => {
     const sunrise = daily?.sunrise?.[0] ? daily.sunrise[0].split('T')[1].slice(0, 5) : '06:15';
     const sunset = daily?.sunset?.[0] ? daily.sunset[0].split('T')[1].slice(0, 5) : '19:15';
 
+    // 1. Air Quality (European AQI)
+    const aqiVal = aqData?.current?.european_aqi ?? 30;
+    let aqiLabel = 'אוויר נקי';
+    let aqiColor = '#22c55e';
+    if (aqiVal > 70) {
+      aqiLabel = 'אובך / זיהום אוויר גבוה';
+      aqiColor = '#f97316';
+    } else if (aqiVal > 40) {
+      aqiLabel = 'איכות אוויר בינונית';
+      aqiColor = '#eab308';
+    }
+
+    // 2. UV Index
+    let uvVal = aqData?.current?.uv_index;
+    if (uvVal === undefined || uvVal === null || (uvVal === 0 && !current.is_day)) {
+      uvVal = daily?.uv_index_max?.[0] ?? 3;
+    }
+    uvVal = Math.round(uvVal);
+    let uvLabel = 'נמוכה';
+    let uvColor = '#22c55e';
+    if (uvVal >= 8) {
+      uvLabel = 'גבוהה מאוד';
+      uvColor = '#ef4444';
+    } else if (uvVal >= 6) {
+      uvLabel = 'גבוהה';
+      uvColor = '#f97316';
+    } else if (uvVal >= 3) {
+      uvLabel = 'בינונית';
+      uvColor = '#eab308';
+    }
+
+    // 3. Hadera Beach / Marine
+    const waveHeightM = marineData?.current?.wave_height ?? 0.45;
+    const waveCm = Math.round(waveHeightM * 100);
+    let seaDesc = 'ים נוח';
+    if (waveCm >= 200) seaDesc = 'ים רוגש';
+    else if (waveCm >= 100) seaDesc = 'ים גבה גלי';
+    else if (waveCm >= 50) seaDesc = 'ים גלי';
+
+    const seaWaveHeightCm = `${waveCm} ס"מ • ${seaDesc}`;
+    const seaTemp = `${Math.round(marineData?.current?.sea_surface_temperature ?? 24)}°`;
+
+    // 4. Smart Daily Tip
+    const isRain = (daily?.precipitation_probability_max?.[0] || 0) >= 40 ||
+      [51, 53, 55, 61, 63, 65, 80, 81, 82, 95].includes(code) ||
+      (current.precipitation && current.precipitation > 0);
+
+    let dailyTip = '👕 מזג אוויר נוח לתליית כביסה ולפעילות בחוץ';
+    if (isRain) {
+      dailyTip = '🌧️ צפוי גשם היום — מומלץ לא לתלות כביסה בחוץ';
+    } else if (aqiVal > 70) {
+      dailyTip = '🌫️ אובך באוויר — מומלץ להגיף חלונות';
+    } else if (Math.round(current.apparent_temperature) > 31 || Math.round(current.temperature_2m) > 31) {
+      dailyTip = '☀️ עומס חום גבוה — הקפידו על שתייה מרובה';
+    }
+
     const formattedWeather = {
       city: cityName,
       temperature: Math.round(current.temperature_2m),
@@ -408,7 +474,15 @@ app.get('/api/weather', async (req, res) => {
       iconEmoji: current.is_day ? weatherInfo.day : weatherInfo.night,
       tempMax: daily?.temperature_2m_max?.[0] ? Math.round(daily.temperature_2m_max[0]) : null,
       tempMin: daily?.temperature_2m_min?.[0] ? Math.round(daily.temperature_2m_min[0]) : null,
-      uvIndex: daily?.uv_index_max?.[0] || null,
+      uvIndex: uvVal,
+      uvLabel,
+      uvColor,
+      aqi: aqiVal,
+      aqiLabel,
+      aqiColor,
+      seaWaveHeightCm,
+      seaTemp,
+      dailyTip,
       sunrise,
       sunset,
       forecast,
@@ -433,6 +507,15 @@ app.get('/api/weather', async (req, res) => {
         iconEmoji: '☀️',
         tempMax: 30,
         tempMin: 22,
+        uvIndex: 4,
+        uvLabel: 'בינונית',
+        uvColor: '#eab308',
+        aqi: 28,
+        aqiLabel: 'אוויר נקי',
+        aqiColor: '#22c55e',
+        seaWaveHeightCm: '50 ס"מ • ים נוח',
+        seaTemp: '24°',
+        dailyTip: '👕 מזג אוויר נוח לתליית כביסה ולפעילות בחוץ',
         sunrise: '06:15',
         sunset: '19:15',
         forecast: [
@@ -490,9 +573,10 @@ app.get('/api/shabbat-holidays', async (req, res) => {
         };
       } else if (item.category === 'parashat') {
         parasha = item.hebrew || item.title;
-      } else if (item.category === 'holiday') {
+      } else if (item.category === 'holiday' || item.category === 'roshchodesh' || item.category === 'omer' || item.category === 'fast') {
         holidays.push({
           title: item.hebrew || item.title,
+          category: item.category,
           subcat: item.subcat,
           date: item.date
         });
@@ -566,18 +650,129 @@ app.get('/api/shabbat-holidays', async (req, res) => {
 });
 
 // ==========================================
-// 6. RSS NEWS TICKER (Ynet / Walla / Mako / Kan)
+// 5.1 PIKUD HAOREF ACTIVE ALERTS API (Hadera Area)
+// ==========================================
+let orefCache = { data: null, timestamp: 0 };
+app.get('/api/oref', async (req, res) => {
+  const CACHE_TTL_MS = 10 * 1000; // 10s cache
+  if (orefCache.data && (Date.now() - orefCache.timestamp < CACHE_TTL_MS)) {
+    return res.json({ success: true, cached: true, ...orefCache.data });
+  }
+
+  try {
+    const url = 'https://www.oref.org.il/WarningMessages/alert/alerts.json';
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://www.oref.org.il/',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+
+    if (!response.ok) {
+      return res.json({ success: true, active: false, data: [] });
+    }
+
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      orefCache = { data: { active: false, data: [] }, timestamp: Date.now() };
+      return res.json({ success: true, active: false, data: [] });
+    }
+
+    const json = JSON.parse(text.replace(/^\uFEFF/, ''));
+    const hasData = Array.isArray(json.data) && json.data.length > 0;
+    const result = {
+      active: hasData,
+      id: json.id,
+      title: json.title,
+      data: json.data || [],
+      desc: json.desc
+    };
+
+    orefCache = { data: result, timestamp: Date.now() };
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.json({ success: true, active: false, data: [] });
+  }
+});
+
+// ==========================================
+// 6. RSS NEWS TICKER (Smart Mix, Kan, Globes, Calcalist, Hayadan, Geektime, Ynet)
 // ==========================================
 const RSS_FEEDS = {
   ynet: 'https://www.ynet.co.il/Integration/StoryRss2.xml',
   walla: 'https://rss.walla.co.il/feed/1',
   mako: 'https://rcs.mako.co.il/rss/news-israel.xml',
-  kan: 'https://www.kan.org.il/rss/news.xml'
+  kan: 'https://www.kan.org.il/rss/news.xml',
+  globes: 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=2',
+  calcalist: 'https://www.calcalist.co.il/GeneralRSS/0,16335,L-8,00.xml',
+  hayadan: 'https://www.hayadan.org.il/feed',
+  geektime: 'https://www.geektime.co.il/feed/'
 };
 
+const COMPOSITE_FEEDS = {
+  smart_mix: [
+    { key: 'kan', label: 'חדשות' },
+    { key: 'globes', label: 'כלכלה' },
+    { key: 'hayadan', label: 'מדע' }
+  ],
+  science_tech: [
+    { key: 'hayadan', label: 'מדע' },
+    { key: 'geektime', label: 'טכנולוגיה' }
+  ],
+  economy: [
+    { key: 'globes', label: 'כלכלה' },
+    { key: 'calcalist', label: 'שוק ההון' }
+  ],
+  kan_globes: [
+    { key: 'kan', label: 'חדשות' },
+    { key: 'globes', label: 'כלכלה' }
+  ]
+};
+
+function filterClickbaitAndFormatHeadline(title, categoryLabel = '') {
+  if (!title || typeof title !== 'string') return null;
+  let clean = title
+    .replace(/<[^>]*>?/gm, '')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&nbsp;/g, ' ')
+    .trim();
+
+  // Length check: filter out titles shorter than 15 chars
+  if (clean.length < 15) return null;
+
+  // Anti-clickbait and marketing filter
+  const clickbaitPatterns = [
+    'לא תאמינו', 'לא תאמין', 'צפו:', 'תיעוד:', 'הלם',
+    'שבר את הרשת', 'סערה ברשת', 'בשיתוף', 'ממומן',
+    'תוכן שיווקי', 'הדרמה של'
+  ];
+  for (const pattern of clickbaitPatterns) {
+    if (clean.includes(pattern)) return null;
+  }
+
+  // Remove noisy broadcast prefixes
+  clean = clean.replace(/^(מבזק:|דיווח:|פרסום ראשון:|הותר לפרסום:|עדכון:)\s*/, '');
+
+  if (categoryLabel && !clean.startsWith('[')) {
+    clean = `[${categoryLabel}] ${clean}`;
+  }
+  return clean;
+}
+
+const FALLBACK_NEWS_ITEMS = [
+  { title: '[מדע] טלסקופ החלל ג\'יימס וב גילה גלקסיות עתיקות מזמן היווצרות היקום' },
+  { title: '[כלכלה] בנק ישראל מפרסם סקירה תקופתית על יציבות המשק והאינפלציה' },
+  { title: '[קהילה] ועד הבית מאחל יום נעים, בריאות ושקט לכל דיירי ואורחי הבניין' },
+  { title: '[טכנולוגיה] חוקרים פיתחו סוללות נתרן יעילות וברות קיימא לרכבים חשמליים' },
+  { title: '[בניין] שמירה על ניקיון וסדר בשטחים המשותפים תורמת לאיכות החיים של כולנו' },
+  { title: '[בטיחות] נא לוודא כי דלת הלובי הראשית והשער נסגרים כראוי לאחר כניסה ויציאה' }
+];
+
 app.get('/api/news', async (req, res) => {
-  const source = req.query.source || 'ynet';
-  const feedUrl = RSS_FEEDS[source] || RSS_FEEDS.ynet;
+  const source = req.query.source || 'smart_mix';
 
   const CACHE_TTL_MS = 6 * 60 * 1000; // 6 mins
   if (newsCache[source]?.data && (Date.now() - newsCache[source].timestamp < CACHE_TTL_MS)) {
@@ -585,25 +780,74 @@ app.get('/api/news', async (req, res) => {
   }
 
   try {
+    // A. Handle Composite Feeds (smart_mix, science_tech, economy, kan_globes)
+    if (COMPOSITE_FEEDS[source]) {
+      const feedConfigs = COMPOSITE_FEEDS[source];
+      const feedResults = await Promise.allSettled(
+        feedConfigs.map(async cfg => {
+          const feedUrl = RSS_FEEDS[cfg.key];
+          if (!feedUrl) return [];
+          const feed = await rssParser.parseURL(feedUrl);
+          const rawItems = (feed.items || []).slice(0, 10);
+          const cleaned = [];
+          for (const item of rawItems) {
+            const formatted = filterClickbaitAndFormatHeadline(item.title, cfg.label);
+            if (formatted) {
+              cleaned.push({
+                title: formatted,
+                pubDate: item.pubDate,
+                link: item.link
+              });
+            }
+          }
+          return cleaned;
+        })
+      );
+
+      const arrays = feedResults
+        .filter(r => r.status === 'fulfilled' && Array.isArray(r.value))
+        .map(r => r.value);
+
+      // Interleave items from composite feeds
+      const interleaved = [];
+      const maxLen = Math.max(...arrays.map(a => a.length), 0);
+      for (let i = 0; i < maxLen; i++) {
+        for (const arr of arrays) {
+          if (arr[i]) interleaved.push(arr[i]);
+        }
+      }
+
+      if (interleaved.length >= 3) {
+        const finalItems = interleaved.slice(0, 18);
+        newsCache[source] = { data: finalItems, timestamp: Date.now() };
+        return res.json({ success: true, items: finalItems });
+      }
+    }
+
+    // B. Handle Single Feeds
+    const feedUrl = RSS_FEEDS[source] || RSS_FEEDS.ynet;
     const feed = await rssParser.parseURL(feedUrl);
-    const items = (feed.items || []).slice(0, 15).map(item => {
-      // Clean HTML tags and entities from title & description
-      const cleanTitle = (item.title || '')
-        .replace(/<[^>]*>?/gm, '')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/&amp;/g, '&')
-        .trim();
+    const labelMap = { ynet: 'Ynet', kan: 'כאן', walla: 'וואלה', mako: 'N12', globes: 'גלובס', calcalist: 'כלכליסט', hayadan: 'מדע', geektime: 'טכנולוגיה' };
+    const label = labelMap[source] || '';
 
-      return {
-        title: cleanTitle,
-        pubDate: item.pubDate,
-        link: item.link
-      };
-    }).filter(i => i.title.length > 5);
+    const items = [];
+    for (const item of (feed.items || []).slice(0, 15)) {
+      const formatted = filterClickbaitAndFormatHeadline(item.title, label);
+      if (formatted) {
+        items.push({
+          title: formatted,
+          pubDate: item.pubDate,
+          link: item.link
+        });
+      }
+    }
 
-    newsCache[source] = { data: items, timestamp: Date.now() };
-    res.json({ success: true, items });
+    if (items.length >= 3) {
+      newsCache[source] = { data: items, timestamp: Date.now() };
+      return res.json({ success: true, items });
+    }
+
+    throw new Error(`Insufficient clean headlines for source ${source}`);
   } catch (err) {
     console.error(`RSS error (${source}):`, err.message);
     if (newsCache[source]?.data) {
@@ -611,11 +855,7 @@ app.get('/api/news', async (req, res) => {
     }
     res.json({
       success: true,
-      items: [
-        { title: 'ועד הבית מאחל יום נעים, בריאות ושקט לכל דיירי ואורחי הבניין' },
-        { title: 'שמירה על ניקיון וסדר בשטחים המשותפים תורמת לאיכות החיים של כולנו' },
-        { title: 'נא לוודא כי דלת הלובי הראשית סגורה לאחר כניסה ויציאה' }
-      ]
+      items: FALLBACK_NEWS_ITEMS
     });
   }
 });

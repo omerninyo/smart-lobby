@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20261018_innovations_v250">
+  <link rel="stylesheet" href="css/style.css?v=20261021_widgets_v260">
   
   <style>
     /* Reliable Pure CSS Switch (Compatible with all browsers & Tailwind v2) */
@@ -374,11 +374,19 @@
           </div>
 
           <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-red-900/50">
-            <div class="flex items-center gap-2.5">
-              <input type="checkbox" id="emergency-alert-active" class="w-5 h-5 text-red-600 rounded cursor-pointer shrink-0 accent-red-600" />
-              <label for="emergency-alert-active" class="text-xs sm:text-sm font-bold text-red-300 cursor-pointer">
-                הפעל מצב חירום מיידית על המסך
-              </label>
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div class="flex items-center gap-2.5">
+                <input type="checkbox" id="emergency-alert-active" class="w-5 h-5 text-red-600 rounded cursor-pointer shrink-0 accent-red-600" />
+                <label for="emergency-alert-active" class="text-xs sm:text-sm font-bold text-red-300 cursor-pointer">
+                  הפעל מצב חירום מיידית על המסך
+                </label>
+              </div>
+              <div class="flex items-center gap-2.5">
+                <input type="checkbox" id="emergency-auto-oref" class="w-5 h-5 text-orange-500 rounded cursor-pointer shrink-0 accent-orange-500" checked />
+                <label for="emergency-auto-oref" class="text-xs sm:text-sm font-bold text-orange-200 cursor-pointer">
+                  🔔 חיבור אוטומטי להתרעות פיקוד העורף (מופעל אוטומטית בעת אזעקה בחדרה)
+                </label>
+              </div>
             </div>
             <button type="button" id="emergency-alert-save-btn" class="w-full sm:w-auto px-5 py-2.5 bg-red-600 hover:bg-red-500 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-black shadow-lg transition border border-red-400 flex items-center justify-center gap-2">
               <span>🚨</span>
@@ -910,7 +918,7 @@
 
             <!-- 6. Bottom News Ticker & Navigation Controls -->
             <div class="bg-gray-950 p-3 rounded-lg border border-gray-800 space-y-1.5">
-              <label class="block text-xs font-bold text-gray-200">🔘 רכיבי ניווט ומבזקים</label>
+              <label class="block text-xs font-bold text-gray-200">🔘 רכיבי ניווט ושקופיות מידע</label>
               <div class="space-y-1.5 pt-1">
                 <label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
                   <input type="checkbox" id="setting-show-news-ticker" class="w-4 h-4 text-blue-600 rounded shrink-0" checked />
@@ -919,6 +927,14 @@
                 <label class="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
                   <input type="checkbox" id="setting-show-stage-arrows" class="w-4 h-4 text-blue-600 rounded shrink-0" checked />
                   <span>הצג חצי העברת שקופיות במגע</span>
+                </label>
+                <label class="flex items-center gap-2 text-xs text-blue-300 cursor-pointer">
+                  <input type="checkbox" id="setting-show-transit-slide" class="w-4 h-4 text-blue-600 rounded shrink-0" checked />
+                  <span>🚆 הצג שקופית תחבורה, רכבת חדרה מערב וזמני נסיעה</span>
+                </label>
+                <label class="flex items-center gap-2 text-xs text-purple-300 cursor-pointer">
+                  <input type="checkbox" id="setting-show-interest-slide" class="w-4 h-4 text-purple-600 rounded shrink-0" checked />
+                  <span>🧠 הצג שקופית 'רגע של עניין' (היום בהיסטוריה, טריוויה וטיפ יומי)</span>
                 </label>
               </div>
             </div>
@@ -938,10 +954,14 @@
             <div>
               <label class="block text-xs text-gray-300 font-bold mb-1">מקור מבזקי חדשות (RSS)</label>
               <select id="setting-rss-source" class="input-field">
+                <option value="smart_mix">🌟 תמהיל חכם ללובי (ללא קליקבייט — חדשות, מדע, כלכלה וטכנולוגיה)</option>
+                <option value="science_tech">🔬 מדע, טבע וטכנולוגיה (הידען / גיקטיים)</option>
+                <option value="economy">📈 כלכלה, נדל"ן וצרכנות (גלובס / כלכליסט)</option>
+                <option value="kan_globes">🏛️ כאן חדשות + גלובס (ענייני ורגוע)</option>
+                <option value="kan">כאן חדשות</option>
                 <option value="ynet">Ynet ידיעות אחרונות</option>
                 <option value="walla">וואלה! חדשות</option>
                 <option value="mako">N12 חדשות (מאקו)</option>
-                <option value="kan">כאן חדשות</option>
               </select>
             </div>
             <div>
@@ -1455,7 +1475,7 @@
   <!-- Firebase Cloud Firestore SDK (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-  <script src="js/firebase-sync.js?v=20261018_innovations_v250"></script>
-  <script src="js/admin.js?v=20261018_innovations_v250"></script>
+  <script src="js/firebase-sync.js?v=20261021_widgets_v260"></script>
+  <script src="js/admin.js?v=20261021_widgets_v260"></script>
 </body>
 </html>

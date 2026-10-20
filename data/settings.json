@@ -28,9 +28,17 @@
     "headerShabbatPosition": "center",
     "sideColumnWidth": "normal",
     "showStageArrows": true,
-    "newsSource": "ynet",
+    "showTransitSlide": true,
+    "showInterestSlide": true,
+    "newsSource": "smart_mix",
     "customTickerText": "ועד הבית מאחל יום נעים ובטוח לכל הדיירים והאורחים!",
-    "liteMode": true
+    "liteMode": true,
+    "emergencyAlert": {
+      "active": false,
+      "autoOref": true,
+      "title": "",
+      "content": ""
+    }
   },
   "contacts": [
     {

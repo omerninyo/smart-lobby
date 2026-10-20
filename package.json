@@ -1,6 +1,6 @@
 {
   "name": "smart-lobby",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "Smart Digital Signage for Residential Building - Hayarden 5 Hadera",
   "main": "server.js",
   "scripts": {

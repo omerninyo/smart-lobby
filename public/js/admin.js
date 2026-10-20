@@ -980,13 +980,14 @@ window.deleteNotice = async function(id) {
 // 3.1 EMERGENCY ALERT CONTROLS (חידוש #4)
 // ==========================================
 function updateEmergencyAlertUI(alertData) {
-  const alert = alertData || settingsData?.display?.emergencyAlert || { active: false, title: '', content: '' };
+  const alert = alertData || settingsData?.display?.emergencyAlert || { active: false, autoOref: true, title: '', content: '' };
   const badge = document.getElementById('emergency-alert-status-badge');
   const cancelBtn = document.getElementById('emergency-alert-cancel-btn');
   const liveBanner = document.getElementById('emergency-active-banner');
   const panel = document.getElementById('emergency-alert-panel');
   const saveBtnText = document.getElementById('emergency-alert-save-btn-text');
   const activeChk = document.getElementById('emergency-alert-active');
+  const autoOrefChk = document.getElementById('emergency-auto-oref');
   const updatedAtText = document.getElementById('emergency-updated-at-text');
   const titleInput = document.getElementById('emergency-alert-title');
   const contentInput = document.getElementById('emergency-alert-content');
@@ -994,6 +995,7 @@ function updateEmergencyAlertUI(alertData) {
   const isActive = Boolean(alert.active);
 
   if (activeChk) activeChk.checked = isActive;
+  if (autoOrefChk) autoOrefChk.checked = alert.autoOref !== false;
 
   if (isActive) {
     if (badge) {
@@ -1043,6 +1045,7 @@ function setupEmergencyAlertUI() {
   const titleInput = document.getElementById('emergency-alert-title');
   const contentInput = document.getElementById('emergency-alert-content');
   const activeChk = document.getElementById('emergency-alert-active');
+  const autoOrefChk = document.getElementById('emergency-auto-oref');
   const saveBtn = document.getElementById('emergency-alert-save-btn');
   const cancelBtn = document.getElementById('emergency-alert-cancel-btn');
   const presetBtns = panel.querySelectorAll('.emergency-preset-btn');
@@ -1059,11 +1062,34 @@ function setupEmergencyAlertUI() {
     });
   });
 
+  if (autoOrefChk) {
+    autoOrefChk.addEventListener('change', async () => {
+      const autoOref = autoOrefChk.checked !== false;
+      const currentAlert = settingsData?.display?.emergencyAlert || {};
+      const updatedAlert = {
+        ...currentAlert,
+        autoOref
+      };
+      const updatedSettings = {
+        ...settingsData,
+        display: {
+          ...settingsData?.display,
+          emergencyAlert: updatedAlert
+        }
+      };
+      await saveSettingsToServer(
+        updatedSettings,
+        autoOref ? 'החיבור האוטומטי לפיקוד העורף הופעל' : 'החיבור האוטומטי לפיקוד העורף הושבת'
+      );
+    });
+  }
+
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
       const title = titleInput?.value.trim() || '';
       const content = contentInput?.value.trim() || '';
       const isActive = Boolean(activeChk?.checked);
+      const autoOref = Boolean(autoOrefChk ? autoOrefChk.checked : true);
 
       if (isActive && (!title || !content)) {
         showAdminToast('נא להזין כותרת ותוכן להתרעת החירום לפני ההפעלה!', '⚠️');
@@ -1072,6 +1098,7 @@ function setupEmergencyAlertUI() {
 
       const alertData = {
         active: isActive,
+        autoOref,
         title: title || (isActive ? 'הודעת חירום לדיירי הבניין' : ''),
         content: content || '',
         updatedAt: new Date().toISOString()
@@ -1098,8 +1125,10 @@ function setupEmergencyAlertUI() {
   if (cancelBtn) {
     cancelBtn.addEventListener('click', async () => {
       if (activeChk) activeChk.checked = false;
+      const autoOref = autoOrefChk ? autoOrefChk.checked : (settingsData?.display?.emergencyAlert?.autoOref !== false);
       const alertData = {
         active: false,
+        autoOref,
         title: titleInput?.value.trim() || '',
         content: contentInput?.value.trim() || '',
         updatedAt: new Date().toISOString()
@@ -1676,8 +1705,10 @@ function setupDisplayControls() {
           sideColumnWidth: document.getElementById('setting-side-width')?.value || 'normal',
           showNewsTicker: document.getElementById('setting-show-news-ticker')?.checked !== false,
           showStageArrows: document.getElementById('setting-show-stage-arrows')?.checked !== false,
+          showTransitSlide: document.getElementById('setting-show-transit-slide')?.checked !== false,
+          showInterestSlide: document.getElementById('setting-show-interest-slide')?.checked !== false,
           customTickerText: document.getElementById('setting-custom-ticker')?.value.trim() || '',
-          newsSource: document.getElementById('setting-rss-source')?.value || settingsData?.display?.newsSource || 'ynet',
+          newsSource: document.getElementById('setting-rss-source')?.value || settingsData?.display?.newsSource || 'smart_mix',
           yomKippurMode: document.getElementById('setting-yom-kippur-mode')?.value || 'auto',
           theme: selectedThemeMode,
           customTheme
@@ -2036,6 +2067,12 @@ function populateSettingsUI() {
   const showStageArrows = document.getElementById('setting-show-stage-arrows');
   if (showStageArrows) showStageArrows.checked = settingsData.display?.showStageArrows !== false;
 
+  const showTransitSlide = document.getElementById('setting-show-transit-slide');
+  if (showTransitSlide) showTransitSlide.checked = settingsData.display?.showTransitSlide !== false;
+
+  const showInterestSlide = document.getElementById('setting-show-interest-slide');
+  if (showInterestSlide) showInterestSlide.checked = settingsData.display?.showInterestSlide !== false;
+
   const customTicker = document.getElementById('setting-custom-ticker');
   if (customTicker) customTicker.value = settingsData.display?.customTickerText || '';
 
@@ -2110,7 +2147,7 @@ function populateSettingsUI() {
 
   if (bldName) bldName.value = settingsData.building?.name || 'הירדן 5';
   if (bldCity) bldCity.value = settingsData.building?.city || 'חדרה';
-  if (rssSource) rssSource.value = settingsData.display?.newsSource || 'ynet';
+  if (rssSource) rssSource.value = settingsData.display?.newsSource || 'smart_mix';
   if (pinInput) pinInput.placeholder = settingsData.security?.adminPin ? 'מוגדר (הזן לשינוי)' : 'ברירת מחדל: 1234';
   if (editorPinInput) editorPinInput.placeholder = settingsData.security?.editorPin ? 'מוגדר (הזן לשינוי)' : 'ברירת מחדל: 1111';
 
