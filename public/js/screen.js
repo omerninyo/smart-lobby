@@ -130,22 +130,42 @@ const DAILY_INTEREST_SETS = [
   }
 ];
 
-function filterClickbaitAndFormatHeadline(title, categoryLabel = '') {
-  if (!title || typeof title !== 'string') return null;
-  let clean = title
+function decodeHtmlEntities(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1')
     .replace(/<[^>]*>?/gm, '')
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(Number(dec)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/&#39;|&apos;|&#039;/g, "'")
+    .replace(/&ndash;|&#8211;/g, '–')
+    .replace(/&mdash;|&#8212;/g, '—')
     .replace(/&amp;/g, '&')
     .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
+}
+
+function filterClickbaitAndFormatHeadline(title, categoryLabel = '') {
+  if (!title || typeof title !== 'string') return null;
+  let clean = decodeHtmlEntities(title);
+
+  // Strip noisy trailing pipe/suffix tags while keeping the real news story
+  clean = clean
+    .replace(/\s*\|\s*(תיעוד|צפו|וידאו|שידור חי|שידור ישיר|בלעדי|כל הפרטים).*$/i, '')
+    .replace(/\s*-\s*(וואלה!?\s*חדשות|ynet|גלובס|מעריב|N12)$/i, '')
+    .trim();
+
+  // Remove noisy broadcast prefixes
+  clean = clean.replace(/^(מבזק:|דיווח:|פרסום ראשון:|הותר לפרסום:|עדכון:|צפו:|תיעוד:)\s*/i, '').trim();
 
   // Length check: filter out titles shorter than 15 chars
   if (clean.length < 15) return null;
 
   // Anti-clickbait and marketing filter
   const clickbaitPatterns = [
-    'לא תאמינו', 'לא תאמין', 'צפו:', 'תיעוד:', 'הלם',
+    'לא תאמינו', 'לא תאמין',
     'שבר את הרשת', 'סערה ברשת', 'בשיתוף', 'ממומן',
     'תוכן שיווקי', 'הדרמה של'
   ];
@@ -153,13 +173,27 @@ function filterClickbaitAndFormatHeadline(title, categoryLabel = '') {
     if (clean.includes(pattern)) return null;
   }
 
-  // Remove noisy broadcast prefixes
-  clean = clean.replace(/^(מבזק:|דיווח:|פרסום ראשון:|הותר לפרסום:|עדכון:)\s*/, '');
-
   if (categoryLabel && !clean.startsWith('[')) {
     clean = `[${categoryLabel}] ${clean}`;
   }
   return clean;
+}
+
+function extractXmlRssTitles(rawText) {
+  if (!rawText || typeof rawText !== 'string') return [];
+  const titles = [];
+  const itemRegex = /<item[\s>][\s\S]*?<\/item>/gi;
+  const matches = rawText.match(itemRegex) || [];
+  for (const itemXml of matches) {
+    const titleMatch = itemXml.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    if (titleMatch && titleMatch[1]) {
+      const cleaned = decodeHtmlEntities(titleMatch[1]);
+      if (cleaned.length >= 15) {
+        titles.push(cleaned);
+      }
+    }
+  }
+  return titles;
 }
 
 const FALLBACK_NEWS_ITEMS = [
@@ -857,15 +891,29 @@ class BuildingSignageApp {
   }
 
   openNewsModal() {
-    const newsRows = this.newsItems.slice(0, 8).map((item, i) => `
-      <div style="padding: 0.75rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: flex-start; gap: 0.6rem;">
-        <span style="color: #ef4444; font-weight: 800;">${i + 1}.</span>
-        <span style="font-size: 1.05rem; color: #f1f5f9; line-height: 1.4;">${escapeHtml(item.title)}</span>
-      </div>
-    `).join('');
+    const items = (this.newsItems && this.newsItems.length > 0) ? this.newsItems : FALLBACK_NEWS_ITEMS;
+    const updatedStr = this.lastNewsUpdateTime
+      ? new Date(this.lastNewsUpdateTime).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+      : 'כעת';
 
-    this.openModal('📰 מבזקי חדשות אחרונים', `
-      <div style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 60vh; overflow-y: auto;">
+    const newsRows = items.slice(0, 24).map((item, i) => {
+      const rawTitle = String(item.title || '');
+      const tagMatch = rawTitle.match(/^\[([^\]]+)\]\s*(.*)$/);
+      const tagHtml = tagMatch
+        ? `<span style="display:inline-block; padding: 0.1rem 0.5rem; border-radius: 0.35rem; font-size: 0.78rem; font-weight: 800; background: rgba(56,189,248,0.16); border: 1px solid rgba(56,189,248,0.35); color: #7dd3fc; margin-left: 0.4rem;">${escapeHtml(tagMatch[1])}</span>`
+        : '';
+      const cleanBody = tagMatch ? tagMatch[2] : rawTitle;
+
+      return `
+        <div style="padding: 0.7rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: flex-start; gap: 0.6rem;">
+          <span style="color: #ef4444; font-weight: 800; min-width: 1.4rem;">${i + 1}.</span>
+          <span style="font-size: 1.02rem; color: #f1f5f9; line-height: 1.45;">${tagHtml}${escapeHtml(cleanBody)}</span>
+        </div>
+      `;
+    }).join('');
+
+    this.openModal(`📰 מבזקי חדשות חיים (${items.length} כותרות • עודכן ב-${updatedStr})`, `
+      <div style="display: flex; flex-direction: column; gap: 0.4rem; max-height: 62vh; overflow-y: auto; padding-left: 0.25rem;">
         ${newsRows}
       </div>
     `);
@@ -1745,13 +1793,33 @@ class BuildingSignageApp {
   async fetchNews() {
     const requestedSource = this.settings?.display?.newsSource || 'smart_mix';
 
+    // Immediately hydrate from recent live cache on boot if newsItems is currently empty
+    if (!this.newsItems || this.newsItems.length === 0) {
+      try {
+        const cached = JSON.parse(localStorage.getItem('smart_lobby_live_news_cache') || 'null');
+        if (cached && Array.isArray(cached.items) && cached.items.length >= 6) {
+          this.newsItems = cached.items;
+          this.lastNewsUpdateTime = cached.timestamp || Date.now();
+          this.renderNewsTicker();
+        }
+      } catch (e) {}
+    }
+
     if (this.isLocalServer()) {
       try {
-        const res = await fetch(`/api/news?source=${requestedSource}`);
+        const res = await fetchWithTimeout(`/api/news?source=${requestedSource}`, {}, 9000);
         if (res.ok) {
           const data = await res.json();
-          if (data.success && data.items && data.items.length > 0) {
+          if (data.success && Array.isArray(data.items) && data.items.length >= 6 && !data.isStaticFallback) {
             this.newsItems = data.items;
+            this.lastNewsUpdateTime = Date.now();
+            try {
+              localStorage.setItem('smart_lobby_live_news_cache', JSON.stringify({
+                source: requestedSource,
+                timestamp: this.lastNewsUpdateTime,
+                items: this.newsItems
+              }));
+            } catch (e) {}
             this.renderNewsTicker();
             return;
           }
@@ -1759,69 +1827,139 @@ class BuildingSignageApp {
       } catch (e) {}
     }
 
-    // Client-side RSS feeds catalog (production on GitHub Pages)
+    // Multi-channel live Israeli feeds catalog (Direct CORS WP-JSON + Live XML RSS)
     const RSS_FEEDS = {
       ynet: 'https://www.ynet.co.il/Integration/StoryRss2.xml',
-      walla: 'https://rss.walla.co.il/feed/1',
+      ynet_mivzak: 'https://www.ynet.co.il/Integration/StoryRss1854.xml',
+      ynet_econ: 'https://www.ynet.co.il/Integration/StoryRss6.xml',
+      ynet_tech: 'https://www.ynet.co.il/Integration/StoryRss544.xml',
+      walla: 'https://rss.walla.co.il/feed/22',
+      walla_main: 'https://rss.walla.co.il/feed/1',
       mako: 'https://rcs.mako.co.il/rss/news-israel.xml',
-      kan: 'https://www.kan.org.il/rss/news.xml',
+      maariv: 'https://www.maariv.co.il/Rss/RssFeedsMivzakiChadashot',
       globes: 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=2',
-      calcalist: 'https://www.calcalist.co.il/GeneralRSS/0,16335,L-8,00.xml',
+      calcalist: 'https://www.ynet.co.il/Integration/StoryRss6.xml',
+      kan: 'https://www.ynet.co.il/Integration/StoryRss1854.xml',
       hayadan: 'https://www.hayadan.org.il/feed',
       geektime: 'https://www.geektime.co.il/feed/'
     };
 
+    // Direct CORS-open JSON endpoints (respond in ~50-250ms directly in browser)
+    const DIRECT_WP_JSON = {
+      hayadan: 'https://www.hayadan.org.il/wp-json/wp/v2/posts?per_page=10&_fields=title,date',
+      geektime: 'https://www.geektime.co.il/wp-json/wp/v2/posts?per_page=10&_fields=title,date'
+    };
+
     const COMPOSITE_FEEDS = {
       smart_mix: [
-        { key: 'kan', label: 'חדשות' },
-        { key: 'globes', label: 'כלכלה' },
-        { key: 'hayadan', label: 'מדע' }
-      ],
-      science_tech: [
+        { key: 'ynet', label: 'Ynet' },
+        { key: 'mako', label: 'N12' },
+        { key: 'globes', label: 'גלובס' },
+        { key: 'walla', label: 'וואלה' },
+        { key: 'maariv', label: 'מעריב' },
         { key: 'hayadan', label: 'מדע' },
         { key: 'geektime', label: 'טכנולוגיה' }
       ],
+      science_tech: [
+        { key: 'hayadan', label: 'הידען • מדע' },
+        { key: 'geektime', label: 'גיקטיים • טק' },
+        { key: 'ynet_tech', label: 'Ynet דיגיטל' }
+      ],
       economy: [
-        { key: 'globes', label: 'כלכלה' },
-        { key: 'calcalist', label: 'שוק ההון' }
+        { key: 'globes', label: 'גלובס' },
+        { key: 'ynet_econ', label: 'Ynet כלכלה' },
+        { key: 'geektime', label: 'הייטק' }
       ],
       kan_globes: [
-        { key: 'kan', label: 'חדשות' },
-        { key: 'globes', label: 'כלכלה' }
+        { key: 'ynet', label: 'Ynet' },
+        { key: 'globes', label: 'גלובס' },
+        { key: 'mako', label: 'N12' },
+        { key: 'maariv', label: 'מעריב' },
+        { key: 'ynet_econ', label: 'כלכלה' }
+      ],
+      kan: [
+        { key: 'ynet', label: 'Ynet' },
+        { key: 'mako', label: 'N12' },
+        { key: 'globes', label: 'גלובס' },
+        { key: 'walla', label: 'וואלה' },
+        { key: 'maariv', label: 'מעריב' },
+        { key: 'hayadan', label: 'מדע' },
+        { key: 'geektime', label: 'טכנולוגיה' }
+      ],
+      calcalist: [
+        { key: 'ynet_econ', label: 'כלכלה' },
+        { key: 'globes', label: 'גלובס' }
+      ],
+      ynet: [
+        { key: 'ynet', label: 'Ynet' },
+        { key: 'ynet_mivzak', label: 'Ynet מבזקים' }
+      ],
+      walla: [
+        { key: 'walla', label: 'וואלה' },
+        { key: 'walla_main', label: 'וואלה חדשות' }
+      ],
+      mako: [
+        { key: 'mako', label: 'N12' },
+        { key: 'ynet_mivzak', label: 'מבזקים' }
       ]
     };
 
-    const fetchFeedItems = async (feedUrl, label) => {
-      // 1. Try rss2json
+    const fetchFeedItems = async (feedKey, feedUrl, label) => {
+      // 0. Fast Path: Direct CORS-open WordPress REST JSON API (~50-250ms)
+      if (DIRECT_WP_JSON[feedKey]) {
+        try {
+          const res = await fetchWithTimeout(DIRECT_WP_JSON[feedKey], {}, 6000);
+          if (res.ok) {
+            const posts = await res.json();
+            if (Array.isArray(posts)) {
+              const parsed = [];
+              for (const p of posts.slice(0, 10)) {
+                const rawTitle = p?.title?.rendered || '';
+                const formatted = filterClickbaitAndFormatHeadline(rawTitle, label);
+                if (formatted) parsed.push({ title: formatted });
+              }
+              if (parsed.length > 0) return parsed;
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (!feedUrl) return [];
+
+      // 1. Primary Live XML RSS Gateway: r.jina.ai (CORS-open, supports Ynet, N12/Mako, Globes, Walla, Maariv)
       try {
-        const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
-        const res = await fetchWithTimeout(apiUrl, {}, 6000);
+        const jinaUrl = `https://r.jina.ai/${feedUrl}`;
+        const res = await fetchWithTimeout(jinaUrl, {
+          headers: { 'Accept': 'application/json', 'X-Return-Format': 'text' }
+        }, 11000);
         if (res.ok) {
           const data = await res.json();
-          if (data.status === 'ok' && Array.isArray(data.items)) {
-            const items = [];
-            for (const i of data.items.slice(0, 10)) {
-              const formatted = filterClickbaitAndFormatHeadline(i.title, label);
-              if (formatted) items.push({ title: formatted });
-            }
-            if (items.length > 0) return items;
+          const rawXml = data?.data?.text || data?.data?.content || '';
+          const rawTitles = extractXmlRssTitles(rawXml);
+          const parsed = [];
+          for (const rawTitle of rawTitles.slice(0, 12)) {
+            const formatted = filterClickbaitAndFormatHeadline(rawTitle, label);
+            if (formatted) parsed.push({ title: formatted });
           }
+          if (parsed.length > 0) return parsed;
         }
       } catch (e) {}
 
-      // 2. Try allorigins proxy
+      // 2. Secondary XML Gateway: allorigins proxy
       try {
         const allOriginsUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`;
-        const res = await fetchWithTimeout(allOriginsUrl, {}, 6000);
+        const res = await fetchWithTimeout(allOriginsUrl, {}, 9000);
         if (res.ok) {
           const data = await res.json();
           if (data.contents) {
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(data.contents, 'text/xml');
-            const items = Array.from(xmlDoc.querySelectorAll('item')).slice(0, 10);
+            let rawTitles = extractXmlRssTitles(data.contents);
+            if (rawTitles.length === 0) {
+              const parser = new DOMParser();
+              const xmlDoc = parser.parseFromString(data.contents, 'text/xml');
+              rawTitles = Array.from(xmlDoc.querySelectorAll('item')).map(item => item.querySelector('title')?.textContent || '');
+            }
             const parsed = [];
-            for (const item of items) {
-              const rawTitle = item.querySelector('title')?.textContent || '';
+            for (const rawTitle of rawTitles.slice(0, 12)) {
               const formatted = filterClickbaitAndFormatHeadline(rawTitle, label);
               if (formatted) parsed.push({ title: formatted });
             }
@@ -1830,47 +1968,93 @@ class BuildingSignageApp {
         }
       } catch (e) {}
 
+      // 3. Tertiary Gateway: rss2json
+      try {
+        const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+        const res = await fetchWithTimeout(apiUrl, {}, 6000);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'ok' && Array.isArray(data.items)) {
+            const items = [];
+            for (const i of data.items.slice(0, 12)) {
+              const formatted = filterClickbaitAndFormatHeadline(i.title, label);
+              if (formatted) items.push({ title: formatted });
+            }
+            if (items.length > 0) return items;
+          }
+        }
+      } catch (e) {}
+
       return [];
     };
 
-    try {
-      // Handle composite feeds
-      if (COMPOSITE_FEEDS[requestedSource]) {
-        const configs = COMPOSITE_FEEDS[requestedSource];
-        const results = await Promise.allSettled(
-          configs.map(cfg => fetchFeedItems(RSS_FEEDS[cfg.key], cfg.label))
-        );
-        const arrays = results
-          .filter(r => r.status === 'fulfilled' && Array.isArray(r.value))
-          .map(r => r.value);
-
-        const interleaved = [];
-        const maxLen = Math.max(...arrays.map(a => a.length), 0);
-        for (let i = 0; i < maxLen; i++) {
-          for (const arr of arrays) {
-            if (arr[i]) interleaved.push(arr[i]);
+    const interleaveAndDedupe = (arrays, maxItems = 26) => {
+      const interleaved = [];
+      const seenCore = new Set();
+      const maxLen = Math.max(...arrays.map(a => a.length), 0);
+      for (let i = 0; i < maxLen; i++) {
+        for (const arr of arrays) {
+          if (arr[i] && arr[i].title) {
+            const core = arr[i].title.replace(/^\[[^\]]+\]\s*/, '').slice(0, 32);
+            if (!seenCore.has(core)) {
+              seenCore.add(core);
+              interleaved.push(arr[i]);
+              if (interleaved.length >= maxItems) return interleaved;
+            }
           }
         }
-        if (interleaved.length >= 3) {
-          this.newsItems = interleaved.slice(0, 18);
-          this.renderNewsTicker();
-          return;
-        }
-      } else {
-        // Handle single feed
-        const targetFeed = RSS_FEEDS[requestedSource] || RSS_FEEDS.ynet;
-        const labelMap = { ynet: 'Ynet', kan: 'כאן', walla: 'וואלה', mako: 'N12', globes: 'גלובס', calcalist: 'כלכליסט', hayadan: 'מדע', geektime: 'טכנולוגיה' };
-        const label = labelMap[requestedSource] || '';
-        const items = await fetchFeedItems(targetFeed, label);
-        if (items.length >= 3) {
-          this.newsItems = items.slice(0, 15);
-          this.renderNewsTicker();
-          return;
-        }
+      }
+      return interleaved;
+    };
+
+    try {
+      const configs = COMPOSITE_FEEDS[requestedSource] || [
+        { key: requestedSource, label: ({ ynet: 'Ynet', kan: 'חדשות', walla: 'וואלה', mako: 'N12', globes: 'גלובס', calcalist: 'כלכלה', hayadan: 'מדע', geektime: 'טכנולוגיה' })[requestedSource] || 'חדשות' }
+      ];
+
+      const collectedByIndex = configs.map(() => []);
+      let hasRenderedProgressive = false;
+
+      await Promise.allSettled(
+        configs.map(async (cfg, idx) => {
+          const items = await fetchFeedItems(cfg.key, RSS_FEEDS[cfg.key] || RSS_FEEDS.ynet, cfg.label);
+          if (items.length > 0) {
+            collectedByIndex[idx] = items;
+            const currentMerged = interleaveAndDedupe(collectedByIndex.filter(a => a.length > 0), 26);
+            // Progressive render as soon as first wave of feeds arrives
+            if (!hasRenderedProgressive && currentMerged.length >= 5) {
+              hasRenderedProgressive = true;
+              this.newsItems = currentMerged;
+              this.lastNewsUpdateTime = Date.now();
+              this.renderNewsTicker();
+            }
+          }
+        })
+      );
+
+      const finalMerged = interleaveAndDedupe(collectedByIndex.filter(a => a.length > 0), 26);
+      if (finalMerged.length >= 3) {
+        this.newsItems = finalMerged;
+        this.lastNewsUpdateTime = Date.now();
+        try {
+          localStorage.setItem('smart_lobby_live_news_cache', JSON.stringify({
+            source: requestedSource,
+            timestamp: this.lastNewsUpdateTime,
+            items: finalMerged
+          }));
+        } catch (e) {}
+        this.renderNewsTicker();
+        return;
       }
     } catch (e) {}
 
-    // Fallback Curated Items if all networks fail
+    // If network failed completely, keep existing/cached live items if available
+    if (this.newsItems && this.newsItems.length >= 3) {
+      this.renderNewsTicker();
+      return;
+    }
+
+    // Last-resort Fallback Curated Items if offline on clean first boot
     this.newsItems = FALLBACK_NEWS_ITEMS;
     this.renderNewsTicker();
   }
@@ -1906,13 +2090,35 @@ class BuildingSignageApp {
       { title: 'שמירה על ניקיון וסדר בשטחים המשותפים תורמת לאיכות החיים של כולנו' }
     ];
 
+    // Dynamically scale marquee duration based on total items so reading speed stays constant and comfortable
+    const itemCount = Math.max(items.length + (this.settings?.display?.customTickerText ? 1 : 0), 6);
+    const slowSec = Math.round(itemCount * 9.5);
+    const normalSec = Math.round(itemCount * 7.0);
+    const fastSec = Math.round(itemCount * 4.5);
+    tickerContent.style.setProperty('--ticker-duration-slow', `${slowSec}s`);
+    tickerContent.style.setProperty('--ticker-duration-normal', `${normalSec}s`);
+    tickerContent.style.setProperty('--ticker-duration-fast', `${fastSec}s`);
+    tickerContent.style.setProperty('--ticker-duration', `${normalSec}s`);
+
     items.forEach(item => {
-      itemsHtml += `
-        <span class="ticker-item">
-          <span class="ticker-item-bullet">●</span>
-          ${escapeHtml(item.title)}
-        </span>
-      `;
+      const rawTitle = String(item.title || '');
+      const tagMatch = rawTitle.match(/^\[([^\]]+)\]\s*(.*)$/);
+      if (tagMatch) {
+        itemsHtml += `
+          <span class="ticker-item">
+            <span class="ticker-item-bullet">●</span>
+            <span class="ticker-source-tag">${escapeHtml(tagMatch[1])}</span>
+            <span>${escapeHtml(tagMatch[2])}</span>
+          </span>
+        `;
+      } else {
+        itemsHtml += `
+          <span class="ticker-item">
+            <span class="ticker-item-bullet">●</span>
+            <span>${escapeHtml(rawTitle)}</span>
+          </span>
+        `;
+      }
     });
 
     // Duplicate ticker items twice for seamless 100% continuous marquee loop

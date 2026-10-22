@@ -701,32 +701,44 @@ app.get('/api/oref', async (req, res) => {
 // ==========================================
 const RSS_FEEDS = {
   ynet: 'https://www.ynet.co.il/Integration/StoryRss2.xml',
-  walla: 'https://rss.walla.co.il/feed/1',
+  ynet_mivzak: 'https://www.ynet.co.il/Integration/StoryRss1854.xml',
+  ynet_econ: 'https://www.ynet.co.il/Integration/StoryRss6.xml',
+  ynet_tech: 'https://www.ynet.co.il/Integration/StoryRss544.xml',
+  walla: 'https://rss.walla.co.il/feed/22',
+  walla_main: 'https://rss.walla.co.il/feed/1',
   mako: 'https://rcs.mako.co.il/rss/news-israel.xml',
-  kan: 'https://www.kan.org.il/rss/news.xml',
+  maariv: 'https://www.maariv.co.il/Rss/RssFeedsMivzakiChadashot',
+  kan: 'https://www.ynet.co.il/Integration/StoryRss1854.xml',
   globes: 'https://www.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=2',
-  calcalist: 'https://www.calcalist.co.il/GeneralRSS/0,16335,L-8,00.xml',
+  calcalist: 'https://www.ynet.co.il/Integration/StoryRss6.xml',
   hayadan: 'https://www.hayadan.org.il/feed',
   geektime: 'https://www.geektime.co.il/feed/'
 };
 
 const COMPOSITE_FEEDS = {
   smart_mix: [
-    { key: 'kan', label: 'חדשות' },
-    { key: 'globes', label: 'כלכלה' },
-    { key: 'hayadan', label: 'מדע' }
+    { key: 'ynet', label: 'Ynet' },
+    { key: 'mako', label: 'N12' },
+    { key: 'globes', label: 'גלובס' },
+    { key: 'hayadan', label: 'מדע' },
+    { key: 'geektime', label: 'טכנולוגיה' },
+    { key: 'walla', label: 'וואלה' }
   ],
   science_tech: [
-    { key: 'hayadan', label: 'מדע' },
-    { key: 'geektime', label: 'טכנולוגיה' }
+    { key: 'hayadan', label: 'הידען • מדע' },
+    { key: 'geektime', label: 'גיקטיים • טק' },
+    { key: 'ynet_tech', label: 'דיגיטל' }
   ],
   economy: [
-    { key: 'globes', label: 'כלכלה' },
-    { key: 'calcalist', label: 'שוק ההון' }
+    { key: 'globes', label: 'גלובס' },
+    { key: 'ynet_econ', label: 'כלכלה' },
+    { key: 'geektime', label: 'הייטק' }
   ],
   kan_globes: [
-    { key: 'kan', label: 'חדשות' },
-    { key: 'globes', label: 'כלכלה' }
+    { key: 'ynet', label: 'חדשות' },
+    { key: 'globes', label: 'גלובס' },
+    { key: 'mako', label: 'N12' },
+    { key: 'maariv', label: 'מעריב' }
   ]
 };
 
@@ -818,7 +830,7 @@ app.get('/api/news', async (req, res) => {
       }
 
       if (interleaved.length >= 3) {
-        const finalItems = interleaved.slice(0, 18);
+        const finalItems = interleaved.slice(0, 26);
         newsCache[source] = { data: finalItems, timestamp: Date.now() };
         return res.json({ success: true, items: finalItems });
       }
@@ -827,11 +839,11 @@ app.get('/api/news', async (req, res) => {
     // B. Handle Single Feeds
     const feedUrl = RSS_FEEDS[source] || RSS_FEEDS.ynet;
     const feed = await rssParser.parseURL(feedUrl);
-    const labelMap = { ynet: 'Ynet', kan: 'כאן', walla: 'וואלה', mako: 'N12', globes: 'גלובס', calcalist: 'כלכליסט', hayadan: 'מדע', geektime: 'טכנולוגיה' };
+    const labelMap = { ynet: 'Ynet', kan: 'חדשות', walla: 'וואלה', mako: 'N12', globes: 'גלובס', calcalist: 'כלכלה', hayadan: 'מדע', geektime: 'טכנולוגיה' };
     const label = labelMap[source] || '';
 
     const items = [];
-    for (const item of (feed.items || []).slice(0, 15)) {
+    for (const item of (feed.items || []).slice(0, 20)) {
       const formatted = filterClickbaitAndFormatHeadline(item.title, label);
       if (formatted) {
         items.push({
@@ -855,6 +867,7 @@ app.get('/api/news', async (req, res) => {
     }
     res.json({
       success: true,
+      isStaticFallback: true,
       items: FALLBACK_NEWS_ITEMS
     });
   }

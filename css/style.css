@@ -1175,13 +1175,26 @@ body.high-contrast-side .env-stat-box {
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  animation: ticker-marquee 70s linear infinite;
+  animation: ticker-marquee var(--ticker-duration, 95s) linear infinite;
   will-change: transform;
 }
 
-.ticker-speed-slow { animation-duration: 95s !important; }
-.ticker-speed-normal { animation-duration: 70s !important; }
-.ticker-speed-fast { animation-duration: 40s !important; }
+.ticker-speed-slow { animation-duration: var(--ticker-duration-slow, 95s) !important; }
+.ticker-speed-normal { animation-duration: var(--ticker-duration-normal, 70s) !important; }
+.ticker-speed-fast { animation-duration: var(--ticker-duration-fast, 40s) !important; }
+
+.ticker-source-tag {
+  display: inline-block;
+  padding: 0.1rem 0.48rem;
+  border-radius: 0.38rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  background: rgba(56, 189, 248, 0.16);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #7dd3fc;
+  margin-left: 0.35rem;
+  letter-spacing: 0.2px;
+}
 
 .ticker-content:hover {
   animation-play-state: paused;
