@@ -1184,12 +1184,14 @@ function buildCleaningScheduleStrings(daysArray) {
 
   const prepPhrases = safeDays.map(d => CLEANING_PREP_EVENINGS_B[d]);
   const prepJoined = joinHebrewPhrases(prepPhrases);
+  const prepDaysNumbers = Array.from(new Set(safeDays.map(d => (d + 6) % 7))).sort((a, b) => a - b);
 
-  const title = `ניקיון הבניין (${cleaningDaysShort}) — פינוי חפצים ערב קודם`;
-  const content = `ניקיון שוטף של הבניין מתבצע באופן קבוע ${cleaningDaysPhrase}. נא לפנות יום קודם (${prepJoined}) את כל החפצים מהמסדרונות, הקומות והלובי — כולל שטיחים, עגלות, אופניים, נעליים ושקיות — כדי לאפשר שטיפה וניקיון יסודיים של כלל השטחים המשותפים. תודה על שיתוף הפעולה!`;
+  const title = `פינוי חפצים מהמסדרונות והלובי — ${prepJoined}`;
+  const content = `ניקיון הבניין מתבצע ${cleaningDaysPhrase} בשעות הבוקר המוקדמות. לכן חשוב להקפיד ולפנות יום קודם (${prepJoined}) את כל החפצים מהמסדרונות, הקומות והלובי — כולל שטיחים, עגלות, אופניים, נעליים ושקיות — כדי לאפשר שטיפה וניקיון יסודיים על הבוקר. תודה על שיתוף הפעולה!`;
 
   return {
     days: safeDays,
+    prepDaysNumbers,
     cleaningDaysPhrase,
     cleaningDaysShort,
     prepJoined,
@@ -1198,15 +1200,17 @@ function buildCleaningScheduleStrings(daysArray) {
   };
 }
 
-function renderCleaningSchedulePanelState(daysArray, enabled = true) {
+function renderCleaningSchedulePanelState(daysArray, enabled = true, displayMode = 'always') {
   const group = document.getElementById('cleaning-days-btn-group');
   const enabledChk = document.getElementById('cleaning-schedule-enabled');
+  const modeSelect = document.getElementById('cleaning-display-mode');
   const summaryDays = document.getElementById('cleaning-schedule-summary-days');
   const summaryPrep = document.getElementById('cleaning-schedule-summary-prep');
   if (!group) return;
 
   const info = buildCleaningScheduleStrings(daysArray);
   if (enabledChk) enabledChk.checked = enabled !== false;
+  if (modeSelect && displayMode) modeSelect.value = displayMode;
 
   group.querySelectorAll('.cleaning-day-btn').forEach(btn => {
     const d = Number(btn.getAttribute('data-day'));
@@ -1220,11 +1224,11 @@ function renderCleaningSchedulePanelState(daysArray, enabled = true) {
     }
   });
 
-  if (summaryDays) {
-    summaryDays.textContent = `📅 ימי ניקיון קבועים: ${info.cleaningDaysPhrase}${enabled === false ? ' (מוסתר כעת מהמסך)' : ''}`;
-  }
   if (summaryPrep) {
     summaryPrep.textContent = `🧹 פינוי חפצים ערב קודם: ${info.prepJoined} (שטיחים, עגלות, אופניים, נעליים ושקיות)`;
+  }
+  if (summaryDays) {
+    summaryDays.textContent = `📅 לקראת ניקיון הבוקר המוקדם: ${info.cleaningDaysPhrase}${enabled === false ? ' (מוסתר כעת מהמסך)' : ''}`;
   }
 }
 
@@ -1247,9 +1251,10 @@ function syncCleaningSchedulePanelFromNotices(notices) {
     const days = Array.isArray(existing.cleaningDays) && existing.cleaningDays.length > 0
       ? existing.cleaningDays
       : [0, 4];
-    renderCleaningSchedulePanelState(days, existing.hidden !== true);
+    const mode = (Array.isArray(existing.recurringDays) && existing.recurringDays.length > 0) ? 'prep_only' : 'always';
+    renderCleaningSchedulePanelState(days, existing.hidden !== true, mode);
   } else {
-    renderCleaningSchedulePanelState([0, 4], true);
+    renderCleaningSchedulePanelState([0, 4], true, 'always');
   }
 }
 
@@ -1259,10 +1264,11 @@ function setupCleaningScheduleUI() {
 
   const group = document.getElementById('cleaning-days-btn-group');
   const enabledChk = document.getElementById('cleaning-schedule-enabled');
+  const modeSelect = document.getElementById('cleaning-display-mode');
   const saveBtn = document.getElementById('save-cleaning-schedule-btn');
 
   // Initialize default [0, 4] (Sunday & Thursday)
-  renderCleaningSchedulePanelState([0, 4], true);
+  renderCleaningSchedulePanelState([0, 4], true, 'always');
 
   if (group) {
     group.querySelectorAll('.cleaning-day-btn').forEach(btn => {
@@ -1280,14 +1286,22 @@ function setupCleaningScheduleUI() {
         } else {
           nextSelected = [...currentSelected, dayNum];
         }
-        renderCleaningSchedulePanelState(nextSelected, enabledChk ? enabledChk.checked : true);
+        renderCleaningSchedulePanelState(
+          nextSelected,
+          enabledChk ? enabledChk.checked : true,
+          modeSelect ? modeSelect.value : 'always'
+        );
       });
     });
   }
 
   if (enabledChk) {
     enabledChk.addEventListener('change', () => {
-      renderCleaningSchedulePanelState(getSelectedCleaningDaysFromUI(), enabledChk.checked);
+      renderCleaningSchedulePanelState(
+        getSelectedCleaningDaysFromUI(),
+        enabledChk.checked,
+        modeSelect ? modeSelect.value : 'always'
+      );
     });
   }
 
@@ -1295,6 +1309,7 @@ function setupCleaningScheduleUI() {
     saveBtn.addEventListener('click', async () => {
       const selectedDays = getSelectedCleaningDaysFromUI();
       const isEnabled = enabledChk ? enabledChk.checked : true;
+      const displayMode = modeSelect ? modeSelect.value : 'always';
       const info = buildCleaningScheduleStrings(selectedDays);
 
       let currentNotices = Object.values(window._adminNoticesMap || {});
@@ -1318,7 +1333,7 @@ function setupCleaningScheduleUI() {
         createdAt: existingNotice?.createdAt || new Date().toISOString(),
         startsAt: null,
         expiresAt: null,
-        recurringDays: []
+        recurringDays: displayMode === 'prep_only' ? info.prepDaysNumbers : []
       };
 
       if (existingIdx !== -1) {

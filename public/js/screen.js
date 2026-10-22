@@ -2776,21 +2776,19 @@ class BuildingSignageApp {
         const isCleaningSchedule = n.id === 'notice-cleaning-schedule' || (Array.isArray(n.cleaningDays) && n.cleaningDays.length > 0);
         const todayDay = new Date().getDay();
         const cleaningDaysArr = Array.isArray(n.cleaningDays) ? n.cleaningDays.map(Number) : [];
+        // Cleaning takes place early in the morning, so the critical day is the day BEFORE cleaning
         const isPrepEveningToday = isCleaningSchedule && cleaningDaysArr.includes((todayDay + 1) % 7);
-        const isCleaningDayToday = isCleaningSchedule && cleaningDaysArr.includes(todayDay);
 
         const urgentClass = (n.isUrgent || isPrepEveningToday) ? 'urgent' : '';
         let badgeText = n.isUrgent ? '⚠️ הודעה דחופה' : '📢 הודעת ועד';
         if (isPrepEveningToday) {
-          badgeText = '🧹 מחר יום ניקיון — נא לפנות חפצים הערב!';
-        } else if (isCleaningDayToday) {
-          badgeText = '🧼 היום יום ניקיון בבניין';
+          badgeText = '🧹 מחר על הבוקר ניקיון — נא לפנות חפצים הערב!';
         } else if (isCleaningSchedule) {
-          badgeText = '🧼 ימי ניקיון קבועים בבניין';
+          badgeText = '🧹 פינוי חפצים ערב לפני ניקיון';
         }
 
         let typeIcon = '📢';
-        if (isCleaningSchedule) typeIcon = '🧼';
+        if (isCleaningSchedule) typeIcon = '🧹';
         else if (n.type === 'maintenance') typeIcon = '🛠️';
         else if (n.type === 'reminder') typeIcon = '🧹';
         else if (n.type === 'celebration') typeIcon = '🎉';
