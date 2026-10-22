@@ -22,6 +22,19 @@
     "expiresAt": null
   },
   {
+    "id": "notice-cleaning-schedule",
+    "type": "reminder",
+    "title": "ניקיון הבניין (ימי ראשון וחמישי) — פינוי חפצים ערב קודם",
+    "content": "ניקיון שוטף של הבניין מתבצע באופן קבוע בימי ראשון וחמישי. נא לפנות יום קודם (במוצאי שבת וביום רביעי בערב) את כל החפצים מהמסדרונות, הקומות והלובי — כולל שטיחים, עגלות, אופניים, נעליים ושקיות — כדי לאפשר שטיפה וניקיון יסודיים של כלל השטחים המשותפים. תודה על שיתוף הפעולה!",
+    "author": "ועד הבית",
+    "isUrgent": false,
+    "hidden": false,
+    "cleaningDays": [0, 4],
+    "imageUrl": "images/notices/modern_elevator_interior.jpg",
+    "createdAt": "2026-10-22T18:00:00.000Z",
+    "expiresAt": null
+  },
+  {
     "id": "notice-cleanliness-trash",
     "type": "reminder",
     "title": "שמירה על ניקיון וסדר בבניין",

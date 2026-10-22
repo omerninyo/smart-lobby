@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20261022_trivia_v263">
+  <link rel="stylesheet" href="css/style.css?v=20261022_cleaning_v264">
   
   <style>
     /* Reliable Pure CSS Switch (Compatible with all browsers & Tailwind v2) */
@@ -395,6 +395,47 @@
           </div>
         </div>
       </div>
+
+      <!-- Permanent Building Cleaning Schedule Configurator -->
+      <div id="cleaning-schedule-panel" class="bg-gradient-to-r from-cyan-950/60 via-teal-950/50 to-gray-900 border border-cyan-600/50 rounded-2xl p-3.5 sm:p-4 space-y-3 shadow-lg">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-cyan-900/50 pb-2.5">
+          <div class="flex items-center gap-2.5">
+            <span class="text-xl sm:text-2xl shrink-0">🧼</span>
+            <div>
+              <h3 class="font-bold text-xs sm:text-sm text-cyan-200">לוח ימי ניקיון קבועים בבניין (מודעה קבועה ברוטציה)</h3>
+              <p class="text-[11px] text-gray-300">בחר את ימי הניקיון הקבועים — המערכת תחשב אוטומטית את הערב הקודם לפינוי שטיחים, עגלות, אופניים, נעליים ושקיות מהמסדרונות והלובי</p>
+            </div>
+          </div>
+          <label class="flex items-center gap-2 text-xs font-bold text-cyan-300 cursor-pointer shrink-0">
+            <input type="checkbox" id="cleaning-schedule-enabled" class="w-4 h-4 rounded accent-cyan-500" checked />
+            <span>הצג ברוטציה קבועה</span>
+          </label>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-gray-300">בחר את ימי הניקיון הקבועים בבניין (ניתן לבחור מספר ימים):</label>
+          <div class="flex flex-wrap gap-1.5 sm:gap-2" id="cleaning-days-btn-group">
+            <button type="button" class="cleaning-day-btn px-3 py-1.5 rounded-xl text-xs font-bold border transition active:scale-95 bg-cyan-600 text-white border-cyan-400" data-day="0">ראשון</button>
+            <button type="button" class="cleaning-day-btn px-3 py-1.5 rounded-xl text-xs font-bold border transition active:scale-95 bg-gray-800 text-gray-300 border-gray-600" data-day="1">שני</button>
+            <button type="button" class="cleaning-day-btn px-3 py-1.5 rounded-xl text-xs font-bold border transition active:scale-95 bg-gray-800 text-gray-300 border-gray-600" data-day="2">שלישי</button>
+            <button type="button" class="cleaning-day-btn px-3 py-1.5 rounded-xl text-xs font-bold border transition active:scale-95 bg-gray-800 text-gray-300 border-gray-600" data-day="3">רביעי</button>
+            <button type="button" class="cleaning-day-btn px-3 py-1.5 rounded-xl text-xs font-bold border transition active:scale-95 bg-cyan-600 text-white border-cyan-400" data-day="4">חמישי</button>
+            <button type="button" class="cleaning-day-btn px-3 py-1.5 rounded-xl text-xs font-bold border transition active:scale-95 bg-gray-800 text-gray-300 border-gray-600" data-day="5">שישי</button>
+          </div>
+        </div>
+
+        <div class="bg-gray-950/70 border border-cyan-800/40 rounded-xl p-2.5 sm:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div class="text-xs text-gray-200 space-y-0.5">
+            <div id="cleaning-schedule-summary-days" class="font-bold text-cyan-300">📅 ימי ניקיון קבועים: בימי ראשון וחמישי</div>
+            <div id="cleaning-schedule-summary-prep" class="text-[11px] text-gray-300">🧹 פינוי חפצים ערב קודם: במוצאי שבת וביום רביעי בערב (שטיחים, עגלות, אופניים, נעליים ושקיות)</div>
+          </div>
+          <button type="button" id="save-cleaning-schedule-btn" class="w-full sm:w-auto px-4 py-2 bg-cyan-600 hover:bg-cyan-500 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md transition shrink-0 flex items-center justify-center gap-1.5">
+            <span>💾</span>
+            <span>עדכן ימי ניקיון ופרסם במסך</span>
+          </button>
+        </div>
+      </div>
+
       <div class="flex justify-between items-center">
         <div>
           <h2 class="text-base sm:text-lg font-bold">הודעות הוועד בלוח</h2>
@@ -1588,7 +1629,7 @@
   <!-- Firebase Cloud Firestore SDK (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-  <script src="js/firebase-sync.js?v=20261022_trivia_v263"></script>
-  <script src="js/admin.js?v=20261022_trivia_v263"></script>
+  <script src="js/firebase-sync.js?v=20261022_cleaning_v264"></script>
+  <script src="js/admin.js?v=20261022_cleaning_v264"></script>
 </body>
 </html>

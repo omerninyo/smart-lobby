@@ -1921,9 +1921,9 @@ class BuildingSignageApp {
     const items = [];
     if (channelKey === 'building_notices') {
       const activeNotices = (this.notices || []).filter(n => this.isNoticeActive(n));
-      for (const n of activeNotices.slice(0, 5)) {
+      for (const n of activeNotices.slice(0, 6)) {
         const snippet = String(n.content || '').replace(/\s+/g, ' ').trim();
-        const shortSnippet = snippet.length > 70 ? snippet.slice(0, 67) + '...' : snippet;
+        const shortSnippet = snippet.length > 75 ? snippet.slice(0, 72) + '...' : snippet;
         items.push({ title: `[ועד הבית] ${n.title}${shortSnippet ? ' — ' + shortSnippet : ''}` });
       }
     } else if (channelKey === 'local_weather' && this.weather) {
@@ -1946,8 +1946,12 @@ class BuildingSignageApp {
         const cleanTitle = String(set.history.title).replace(/^[^\u0590-\u05FFa-zA-Z0-9]+/, '').trim();
         items.push({ title: `[הידעת?] ${cleanTitle}: ${set.history.text}` });
       }
+      if (set?.trivia) {
+        items.push({ title: `[טריוויה] ${set.trivia.question} — תשובה: ${set.trivia.answer}` });
+      }
       if (set?.tip) {
-        items.push({ title: `[טיפ לבניין] ${set.tip.title}: ${set.tip.text}` });
+        const cleanTipTitle = String(set.tip.title).replace(/^[^\u0590-\u05FFa-zA-Z0-9]+/, '').trim();
+        items.push({ title: `[מדע ביומיום] ${cleanTipTitle}: ${set.tip.text}` });
       }
     }
     return items;
@@ -2769,11 +2773,25 @@ class BuildingSignageApp {
       // SLIDE TYPE 1: NOTICE (Supports Split Layout)
       if (slide.type === 'notice') {
         const n = slide.data;
-        const urgentClass = n.isUrgent ? 'urgent' : '';
-        const badgeText = n.isUrgent ? '⚠️ הודעה דחופה' : '📢 הודעת ועד';
+        const isCleaningSchedule = n.id === 'notice-cleaning-schedule' || (Array.isArray(n.cleaningDays) && n.cleaningDays.length > 0);
+        const todayDay = new Date().getDay();
+        const cleaningDaysArr = Array.isArray(n.cleaningDays) ? n.cleaningDays.map(Number) : [];
+        const isPrepEveningToday = isCleaningSchedule && cleaningDaysArr.includes((todayDay + 1) % 7);
+        const isCleaningDayToday = isCleaningSchedule && cleaningDaysArr.includes(todayDay);
+
+        const urgentClass = (n.isUrgent || isPrepEveningToday) ? 'urgent' : '';
+        let badgeText = n.isUrgent ? '⚠️ הודעה דחופה' : '📢 הודעת ועד';
+        if (isPrepEveningToday) {
+          badgeText = '🧹 מחר יום ניקיון — נא לפנות חפצים הערב!';
+        } else if (isCleaningDayToday) {
+          badgeText = '🧼 היום יום ניקיון בבניין';
+        } else if (isCleaningSchedule) {
+          badgeText = '🧼 ימי ניקיון קבועים בבניין';
+        }
 
         let typeIcon = '📢';
-        if (n.type === 'maintenance') typeIcon = '🛠️';
+        if (isCleaningSchedule) typeIcon = '🧼';
+        else if (n.type === 'maintenance') typeIcon = '🛠️';
         else if (n.type === 'reminder') typeIcon = '🧹';
         else if (n.type === 'celebration') typeIcon = '🎉';
         else if (n.isUrgent) typeIcon = '🚨';

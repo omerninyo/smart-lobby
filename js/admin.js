@@ -200,6 +200,7 @@ if (typeof document !== 'undefined') {
     setupDeviceHealthMonitoring();
     setupNoticesForm();
     setupEmergencyAlertUI();
+    setupCleaningScheduleUI();
     setupSmartNoticeAssistant();
   setupGalleryPicker();
   setupDisplayControls();
@@ -793,6 +794,7 @@ async function loadNotices() {
       }
     } catch (e) {}
 
+    syncCleaningSchedulePanelFromNotices(notices);
     renderNoticesList(notices);
   } catch (err) {
     console.error('[Admin] Error loading notices:', err);
@@ -1145,6 +1147,224 @@ function setupEmergencyAlertUI() {
       const ok = await saveSettingsToServer(updatedSettings, 'מצב החירום בוטל והמסך חזר לשגרה!');
       if (ok) {
         updateEmergencyAlertUI(alertData);
+      }
+    });
+  }
+}
+
+// ==========================================
+// 3.1.5 PERMANENT BUILDING CLEANING SCHEDULE CONFIGURATOR
+// ==========================================
+const CLEANING_DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+const CLEANING_PREP_EVENINGS_B = {
+  0: 'במוצאי שבת',
+  1: 'ביום ראשון בערב',
+  2: 'ביום שני בערב',
+  3: 'ביום שלישי בערב',
+  4: 'ביום רביעי בערב',
+  5: 'ביום חמישי בערב',
+  6: 'ביום שישי בצהריים'
+};
+
+function joinHebrewPhrases(items) {
+  if (!Array.isArray(items) || items.length === 0) return '';
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} ו${items[1]}`;
+  return `${items.slice(0, -1).join(', ')} ו${items[items.length - 1]}`;
+}
+
+function buildCleaningScheduleStrings(daysArray) {
+  const days = Array.from(new Set((Array.isArray(daysArray) ? daysArray : [0, 4]).map(Number).filter(d => d >= 0 && d <= 6))).sort((a, b) => a - b);
+  const safeDays = days.length > 0 ? days : [0, 4];
+
+  const dayNames = safeDays.map(d => CLEANING_DAY_NAMES[d]);
+  const daysJoined = joinHebrewPhrases(dayNames);
+  const cleaningDaysPhrase = safeDays.length === 1 ? `ביום ${dayNames[0]}` : `בימי ${daysJoined}`;
+  const cleaningDaysShort = safeDays.length === 1 ? `יום ${dayNames[0]}` : `ימי ${daysJoined}`;
+
+  const prepPhrases = safeDays.map(d => CLEANING_PREP_EVENINGS_B[d]);
+  const prepJoined = joinHebrewPhrases(prepPhrases);
+
+  const title = `ניקיון הבניין (${cleaningDaysShort}) — פינוי חפצים ערב קודם`;
+  const content = `ניקיון שוטף של הבניין מתבצע באופן קבוע ${cleaningDaysPhrase}. נא לפנות יום קודם (${prepJoined}) את כל החפצים מהמסדרונות, הקומות והלובי — כולל שטיחים, עגלות, אופניים, נעליים ושקיות — כדי לאפשר שטיפה וניקיון יסודיים של כלל השטחים המשותפים. תודה על שיתוף הפעולה!`;
+
+  return {
+    days: safeDays,
+    cleaningDaysPhrase,
+    cleaningDaysShort,
+    prepJoined,
+    title,
+    content
+  };
+}
+
+function renderCleaningSchedulePanelState(daysArray, enabled = true) {
+  const group = document.getElementById('cleaning-days-btn-group');
+  const enabledChk = document.getElementById('cleaning-schedule-enabled');
+  const summaryDays = document.getElementById('cleaning-schedule-summary-days');
+  const summaryPrep = document.getElementById('cleaning-schedule-summary-prep');
+  if (!group) return;
+
+  const info = buildCleaningScheduleStrings(daysArray);
+  if (enabledChk) enabledChk.checked = enabled !== false;
+
+  group.querySelectorAll('.cleaning-day-btn').forEach(btn => {
+    const d = Number(btn.getAttribute('data-day'));
+    const active = info.days.includes(d);
+    if (active) {
+      btn.className = 'cleaning-day-btn px-3 py-1.5 rounded-xl text-xs font-bold border transition active:scale-95 bg-cyan-600 text-white border-cyan-400 shadow-sm';
+      btn.setAttribute('data-active', 'true');
+    } else {
+      btn.className = 'cleaning-day-btn px-3 py-1.5 rounded-xl text-xs font-bold border transition active:scale-95 bg-gray-800 text-gray-300 border-gray-600 hover:bg-gray-700';
+      btn.setAttribute('data-active', 'false');
+    }
+  });
+
+  if (summaryDays) {
+    summaryDays.textContent = `📅 ימי ניקיון קבועים: ${info.cleaningDaysPhrase}${enabled === false ? ' (מוסתר כעת מהמסך)' : ''}`;
+  }
+  if (summaryPrep) {
+    summaryPrep.textContent = `🧹 פינוי חפצים ערב קודם: ${info.prepJoined} (שטיחים, עגלות, אופניים, נעליים ושקיות)`;
+  }
+}
+
+function getSelectedCleaningDaysFromUI() {
+  const group = document.getElementById('cleaning-days-btn-group');
+  if (!group) return [0, 4];
+  const selected = [];
+  group.querySelectorAll('.cleaning-day-btn').forEach(btn => {
+    if (btn.getAttribute('data-active') === 'true') {
+      selected.push(Number(btn.getAttribute('data-day')));
+    }
+  });
+  return selected.length > 0 ? selected.sort((a, b) => a - b) : [0, 4];
+}
+
+function syncCleaningSchedulePanelFromNotices(notices) {
+  if (!Array.isArray(notices)) return;
+  const existing = notices.find(n => n && n.id === 'notice-cleaning-schedule');
+  if (existing) {
+    const days = Array.isArray(existing.cleaningDays) && existing.cleaningDays.length > 0
+      ? existing.cleaningDays
+      : [0, 4];
+    renderCleaningSchedulePanelState(days, existing.hidden !== true);
+  } else {
+    renderCleaningSchedulePanelState([0, 4], true);
+  }
+}
+
+function setupCleaningScheduleUI() {
+  const panel = document.getElementById('cleaning-schedule-panel');
+  if (!panel) return;
+
+  const group = document.getElementById('cleaning-days-btn-group');
+  const enabledChk = document.getElementById('cleaning-schedule-enabled');
+  const saveBtn = document.getElementById('save-cleaning-schedule-btn');
+
+  // Initialize default [0, 4] (Sunday & Thursday)
+  renderCleaningSchedulePanelState([0, 4], true);
+
+  if (group) {
+    group.querySelectorAll('.cleaning-day-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const isCurrentlyActive = btn.getAttribute('data-active') === 'true';
+        const currentSelected = getSelectedCleaningDaysFromUI();
+        const dayNum = Number(btn.getAttribute('data-day'));
+        let nextSelected;
+        if (isCurrentlyActive) {
+          if (currentSelected.length <= 1) {
+            showAdminToast('יש לבחור לפחות יום ניקיון אחד בשבוע', 'ℹ️');
+            return;
+          }
+          nextSelected = currentSelected.filter(d => d !== dayNum);
+        } else {
+          nextSelected = [...currentSelected, dayNum];
+        }
+        renderCleaningSchedulePanelState(nextSelected, enabledChk ? enabledChk.checked : true);
+      });
+    });
+  }
+
+  if (enabledChk) {
+    enabledChk.addEventListener('change', () => {
+      renderCleaningSchedulePanelState(getSelectedCleaningDaysFromUI(), enabledChk.checked);
+    });
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const selectedDays = getSelectedCleaningDaysFromUI();
+      const isEnabled = enabledChk ? enabledChk.checked : true;
+      const info = buildCleaningScheduleStrings(selectedDays);
+
+      let currentNotices = Object.values(window._adminNoticesMap || {});
+      if (currentNotices.length === 0) {
+        currentNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
+      }
+
+      const existingIdx = currentNotices.findIndex(n => n && n.id === 'notice-cleaning-schedule');
+      const existingNotice = existingIdx !== -1 ? currentNotices[existingIdx] : null;
+
+      const cleaningNotice = {
+        id: 'notice-cleaning-schedule',
+        type: 'reminder',
+        title: info.title,
+        content: info.content,
+        author: existingNotice?.author || 'ועד הבית',
+        isUrgent: false,
+        hidden: !isEnabled,
+        cleaningDays: info.days,
+        imageUrl: existingNotice?.imageUrl || 'images/notices/modern_elevator_interior.jpg',
+        createdAt: existingNotice?.createdAt || new Date().toISOString(),
+        startsAt: null,
+        expiresAt: null,
+        recurringDays: []
+      };
+
+      if (existingIdx !== -1) {
+        currentNotices[existingIdx] = cleaningNotice;
+      } else {
+        currentNotices.unshift(cleaningNotice);
+      }
+
+      // Ensure it is not in deleted notices list
+      try {
+        const deletedIds = JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]');
+        if (deletedIds.includes('notice-cleaning-schedule')) {
+          localStorage.setItem('smart_lobby_deleted_notices', JSON.stringify(deletedIds.filter(id => id !== 'notice-cleaning-schedule')));
+        }
+      } catch (e) {}
+
+      currentNotices = pruneExpiredNoticeImages(currentNotices);
+      localStorage.setItem('smart_lobby_notices', JSON.stringify(currentNotices));
+
+      let cloudSuccess = true;
+      if (window.FirebaseSync) {
+        cloudSuccess = await window.FirebaseSync.saveNotices(currentNotices);
+      }
+
+      if (isLocalServer()) {
+        try {
+          await fetch('/api/notices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: currentPin, notice: cleaningNotice })
+          });
+        } catch (e) {}
+      }
+
+      try { window.dispatchEvent(new Event('storage')); } catch (e) {}
+      await loadNotices();
+
+      if (cloudSuccess) {
+        showAdminToast(
+          isEnabled
+            ? `ימי הניקיון (${info.cleaningDaysShort}) עודכנו במודעה הקבועה במסך!`
+            : 'מודעת הניקיון הקבועה הוסתרה מהמסך.',
+          '🧼'
+        );
+      } else {
+        showAdminToast('ימי הניקיון נשמרו מקומית, אך הסנכרון לענן נכשל.', '⚠️');
       }
     });
   }
