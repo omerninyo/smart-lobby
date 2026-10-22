@@ -147,7 +147,7 @@ function decodeHtmlEntities(str) {
     .trim();
 }
 
-function filterClickbaitAndFormatHeadline(title, categoryLabel = '') {
+function filterClickbaitAndFormatHeadline(title, categoryLabel = '', enableClickbaitFilter = true) {
   if (!title || typeof title !== 'string') return null;
   let clean = decodeHtmlEntities(title);
 
@@ -163,14 +163,16 @@ function filterClickbaitAndFormatHeadline(title, categoryLabel = '') {
   // Length check: filter out titles shorter than 15 chars
   if (clean.length < 15) return null;
 
-  // Anti-clickbait and marketing filter
-  const clickbaitPatterns = [
-    'לא תאמינו', 'לא תאמין',
-    'שבר את הרשת', 'סערה ברשת', 'בשיתוף', 'ממומן',
-    'תוכן שיווקי', 'הדרמה של'
-  ];
-  for (const pattern of clickbaitPatterns) {
-    if (clean.includes(pattern)) return null;
+  // Anti-clickbait and marketing filter (configurable)
+  if (enableClickbaitFilter !== false) {
+    const clickbaitPatterns = [
+      'לא תאמינו', 'לא תאמין',
+      'שבר את הרשת', 'סערה ברשת', 'בשיתוף', 'ממומן',
+      'תוכן שיווקי', 'הדרמה של'
+    ];
+    for (const pattern of clickbaitPatterns) {
+      if (clean.includes(pattern)) return null;
+    }
   }
 
   if (categoryLabel && !clean.startsWith('[')) {
@@ -277,9 +279,10 @@ class BuildingSignageApp {
       this.fetchShabbatAndHolidays(),
       this.fetchNotices(),
       this.fetchPhotos(),
-      this.fetchWallpapers(),
-      this.fetchNews()
+      this.fetchWallpapers()
     ]);
+    // Start news fetch after local notices/weather/shabbat are ready (progressive render makes it instant)
+    this.fetchNews();
 
     this.buildSlides();
     this.renderSideColumn();
@@ -325,13 +328,37 @@ class BuildingSignageApp {
             return;
           }
 
-          const oldNewsSource = this.settings?.display?.newsSource;
-          this.settings = { ...this.settings, ...cloudSettings };
+          const oldNewsSignature = JSON.stringify({
+            s: this.settings?.display?.newsSource,
+            c: this.settings?.display?.newsChannels,
+            f: this.settings?.display?.filterClickbait,
+            u: this.settings?.display?.customRssUrl
+          });
+          this.settings = {
+            ...this.settings,
+            ...cloudSettings,
+            display: {
+              ...(this.settings?.display || {}),
+              ...(cloudSettings.display || {})
+            }
+          };
+          // If cloud settings came from before modular newsChannels existed, keep smart_mix channels active
+          if (!Array.isArray(cloudSettings.display?.newsChannels) || cloudSettings.display.newsChannels.length === 0) {
+            this.settings.display.newsChannels = ['ynet', 'mako', 'globes', 'hayadan', 'geektime', 'building_notices', 'local_weather'];
+            this.settings.display.newsSource = 'smart_mix';
+          }
           this.applySettings();
 
-          // Trigger immediate news refresh if news source changed in cloud
-          if (cloudSettings.display?.newsSource && cloudSettings.display.newsSource !== oldNewsSource) {
-            console.log(`📰 [Screen] Live news source changed from ${oldNewsSource} to ${cloudSettings.display.newsSource}. Fetching fresh headlines...`);
+          const newNewsSignature = JSON.stringify({
+            s: this.settings?.display?.newsSource,
+            c: this.settings?.display?.newsChannels,
+            f: this.settings?.display?.filterClickbait,
+            u: this.settings?.display?.customRssUrl
+          });
+
+          // Trigger immediate news refresh if news configuration changed in cloud
+          if (newNewsSignature !== oldNewsSignature) {
+            console.log(`📰 [Screen] Live modular news config updated. Fetching fresh headlines...`);
             this.fetchNews();
           } else {
             this.renderNewsTicker();
@@ -1790,39 +1817,55 @@ class BuildingSignageApp {
     this.buildSlides();
   }
 
+  buildLocalTickerChannelItems(channelKey) {
+    const items = [];
+    if (channelKey === 'building_notices') {
+      const activeNotices = (this.notices || []).filter(n => this.isNoticeActive(n));
+      for (const n of activeNotices.slice(0, 5)) {
+        const snippet = String(n.content || '').replace(/\s+/g, ' ').trim();
+        const shortSnippet = snippet.length > 70 ? snippet.slice(0, 67) + '...' : snippet;
+        items.push({ title: `[ועד הבית] ${n.title}${shortSnippet ? ' — ' + shortSnippet : ''}` });
+      }
+    } else if (channelKey === 'local_weather' && this.weather) {
+      items.push({
+        title: `[מזג אוויר • חדרה] כעת ${this.weather.temperature}° (${this.weather.description || 'נאה'}) • איכות אוויר: ${this.weather.aqiLabel || 'אוויר נקי'} (${this.weather.aqi ?? 28} AQI) • חוף חדרה: ${this.weather.seaWaveHeightCm || 'ים נוח'}`
+      });
+      if (this.weather.dailyTip) {
+        const cleanTip = String(this.weather.dailyTip).replace(/^[^\u0590-\u05FFa-zA-Z0-9]+/, '').trim();
+        items.push({ title: `[המלצת היום] ${cleanTip}` });
+      }
+    } else if (channelKey === 'shabbat_calendar') {
+      const hebDate = this.formatHebrewDate(new Date());
+      const parasha = this.shabbatData?.parasha ? ` • ${this.shabbatData.parasha}` : '';
+      const candle = this.shabbatData?.candleLighting?.time ? ` • כניסת שבת: ${this.shabbatData.candleLighting.time}` : '';
+      const havdalah = this.shabbatData?.havdalah?.time ? ` • יציאת שבת: ${this.shabbatData.havdalah.time}` : '';
+      items.push({ title: `[לוח עברי] היום ${hebDate}${parasha}${candle}${havdalah}` });
+    } else if (channelKey === 'daily_trivia') {
+      const set = this.getDailyInterestData();
+      if (set?.history) {
+        const cleanTitle = String(set.history.title).replace(/^[^\u0590-\u05FFa-zA-Z0-9]+/, '').trim();
+        items.push({ title: `[הידעת?] ${cleanTitle}: ${set.history.text}` });
+      }
+      if (set?.tip) {
+        items.push({ title: `[טיפ לבניין] ${set.tip.title}: ${set.tip.text}` });
+      }
+    }
+    return items;
+  }
+
   async fetchNews() {
     const requestedSource = this.settings?.display?.newsSource || 'smart_mix';
+    const enableClickbaitFilter = this.settings?.display?.filterClickbait !== false;
+    const customRssUrl = (this.settings?.display?.customRssUrl || '').trim();
 
     // Immediately hydrate from recent live cache on boot if newsItems is currently empty
     if (!this.newsItems || this.newsItems.length === 0) {
       try {
         const cached = JSON.parse(localStorage.getItem('smart_lobby_live_news_cache') || 'null');
-        if (cached && Array.isArray(cached.items) && cached.items.length >= 6) {
+        if (cached && Array.isArray(cached.items) && cached.items.length >= 4) {
           this.newsItems = cached.items;
           this.lastNewsUpdateTime = cached.timestamp || Date.now();
           this.renderNewsTicker();
-        }
-      } catch (e) {}
-    }
-
-    if (this.isLocalServer()) {
-      try {
-        const res = await fetchWithTimeout(`/api/news?source=${requestedSource}`, {}, 9000);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && Array.isArray(data.items) && data.items.length >= 6 && !data.isStaticFallback) {
-            this.newsItems = data.items;
-            this.lastNewsUpdateTime = Date.now();
-            try {
-              localStorage.setItem('smart_lobby_live_news_cache', JSON.stringify({
-                source: requestedSource,
-                timestamp: this.lastNewsUpdateTime,
-                items: this.newsItems
-              }));
-            } catch (e) {}
-            this.renderNewsTicker();
-            return;
-          }
         }
       } catch (e) {}
     }
@@ -1844,67 +1887,74 @@ class BuildingSignageApp {
       geektime: 'https://www.geektime.co.il/feed/'
     };
 
+    const CHANNEL_LABELS = {
+      ynet: 'Ynet',
+      ynet_mivzak: 'Ynet מבזקים',
+      ynet_econ: 'Ynet כלכלה',
+      ynet_tech: 'Ynet דיגיטל',
+      mako: 'N12',
+      walla: 'וואלה',
+      walla_main: 'וואלה חדשות',
+      maariv: 'מעריב',
+      globes: 'גלובס',
+      calcalist: 'כלכלה',
+      kan: 'מבזקים',
+      hayadan: 'מדע',
+      geektime: 'טכנולוגיה'
+    };
+
+    const LOCAL_CHANNEL_KEYS = new Set(['building_notices', 'local_weather', 'shabbat_calendar', 'daily_trivia']);
+
     // Direct CORS-open JSON endpoints (respond in ~50-250ms directly in browser)
     const DIRECT_WP_JSON = {
       hayadan: 'https://www.hayadan.org.il/wp-json/wp/v2/posts?per_page=10&_fields=title,date',
       geektime: 'https://www.geektime.co.il/wp-json/wp/v2/posts?per_page=10&_fields=title,date'
     };
 
-    const COMPOSITE_FEEDS = {
-      smart_mix: [
-        { key: 'ynet', label: 'Ynet' },
-        { key: 'mako', label: 'N12' },
-        { key: 'globes', label: 'גלובס' },
-        { key: 'walla', label: 'וואלה' },
-        { key: 'maariv', label: 'מעריב' },
-        { key: 'hayadan', label: 'מדע' },
-        { key: 'geektime', label: 'טכנולוגיה' }
-      ],
-      science_tech: [
-        { key: 'hayadan', label: 'הידען • מדע' },
-        { key: 'geektime', label: 'גיקטיים • טק' },
-        { key: 'ynet_tech', label: 'Ynet דיגיטל' }
-      ],
-      economy: [
-        { key: 'globes', label: 'גלובס' },
-        { key: 'ynet_econ', label: 'Ynet כלכלה' },
-        { key: 'geektime', label: 'הייטק' }
-      ],
-      kan_globes: [
-        { key: 'ynet', label: 'Ynet' },
-        { key: 'globes', label: 'גלובס' },
-        { key: 'mako', label: 'N12' },
-        { key: 'maariv', label: 'מעריב' },
-        { key: 'ynet_econ', label: 'כלכלה' }
-      ],
-      kan: [
-        { key: 'ynet', label: 'Ynet' },
-        { key: 'mako', label: 'N12' },
-        { key: 'globes', label: 'גלובס' },
-        { key: 'walla', label: 'וואלה' },
-        { key: 'maariv', label: 'מעריב' },
-        { key: 'hayadan', label: 'מדע' },
-        { key: 'geektime', label: 'טכנולוגיה' }
-      ],
-      calcalist: [
-        { key: 'ynet_econ', label: 'כלכלה' },
-        { key: 'globes', label: 'גלובס' }
-      ],
-      ynet: [
-        { key: 'ynet', label: 'Ynet' },
-        { key: 'ynet_mivzak', label: 'Ynet מבזקים' }
-      ],
-      walla: [
-        { key: 'walla', label: 'וואלה' },
-        { key: 'walla_main', label: 'וואלה חדשות' }
-      ],
-      mako: [
-        { key: 'mako', label: 'N12' },
-        { key: 'ynet_mivzak', label: 'מבזקים' }
-      ]
+    const PRESET_CHANNELS = {
+      smart_mix: ['ynet', 'mako', 'globes', 'hayadan', 'geektime', 'building_notices', 'local_weather'],
+      news_all: ['ynet', 'ynet_mivzak', 'mako', 'walla', 'maariv'],
+      science_tech: ['hayadan', 'geektime', 'ynet_tech'],
+      economy: ['globes', 'ynet_econ', 'geektime'],
+      kan_globes: ['ynet', 'globes', 'mako', 'maariv', 'ynet_econ'],
+      building_only: ['building_notices', 'local_weather', 'shabbat_calendar', 'daily_trivia'],
+      kan: ['ynet', 'mako', 'globes', 'walla', 'maariv', 'hayadan', 'geektime'],
+      calcalist: ['ynet_econ', 'globes'],
+      ynet: ['ynet', 'ynet_mivzak'],
+      walla: ['walla', 'walla_main'],
+      mako: ['mako', 'ynet_mivzak'],
+      globes: ['globes'],
+      maariv: ['maariv'],
+      hayadan: ['hayadan'],
+      geektime: ['geektime']
     };
 
+    // Determine active modular channel keys
+    let activeChannelKeys = [];
+    if (Array.isArray(this.settings?.display?.newsChannels) && this.settings.display.newsChannels.length > 0) {
+      activeChannelKeys = [...this.settings.display.newsChannels];
+    } else if (PRESET_CHANNELS[requestedSource]) {
+      activeChannelKeys = [...PRESET_CHANNELS[requestedSource]];
+    } else {
+      activeChannelKeys = [...PRESET_CHANNELS.smart_mix];
+    }
+
+    const configs = activeChannelKeys.map(key => ({
+      key,
+      label: CHANNEL_LABELS[key] || 'עדכון',
+      isLocal: LOCAL_CHANNEL_KEYS.has(key)
+    }));
+
+    if (customRssUrl && /^https?:\/\//i.test(customRssUrl)) {
+      configs.push({ key: 'custom_rss', url: customRssUrl, label: 'RSS מותאם', isLocal: false });
+    }
+
     const fetchFeedItems = async (feedKey, feedUrl, label) => {
+      // Local building/environmental channels resolve instantaneously
+      if (LOCAL_CHANNEL_KEYS.has(feedKey)) {
+        return this.buildLocalTickerChannelItems(feedKey);
+      }
+
       // 0. Fast Path: Direct CORS-open WordPress REST JSON API (~50-250ms)
       if (DIRECT_WP_JSON[feedKey]) {
         try {
@@ -1915,7 +1965,7 @@ class BuildingSignageApp {
               const parsed = [];
               for (const p of posts.slice(0, 10)) {
                 const rawTitle = p?.title?.rendered || '';
-                const formatted = filterClickbaitAndFormatHeadline(rawTitle, label);
+                const formatted = filterClickbaitAndFormatHeadline(rawTitle, label, enableClickbaitFilter);
                 if (formatted) parsed.push({ title: formatted });
               }
               if (parsed.length > 0) return parsed;
@@ -1938,7 +1988,7 @@ class BuildingSignageApp {
           const rawTitles = extractXmlRssTitles(rawXml);
           const parsed = [];
           for (const rawTitle of rawTitles.slice(0, 12)) {
-            const formatted = filterClickbaitAndFormatHeadline(rawTitle, label);
+            const formatted = filterClickbaitAndFormatHeadline(rawTitle, label, enableClickbaitFilter);
             if (formatted) parsed.push({ title: formatted });
           }
           if (parsed.length > 0) return parsed;
@@ -1960,7 +2010,7 @@ class BuildingSignageApp {
             }
             const parsed = [];
             for (const rawTitle of rawTitles.slice(0, 12)) {
-              const formatted = filterClickbaitAndFormatHeadline(rawTitle, label);
+              const formatted = filterClickbaitAndFormatHeadline(rawTitle, label, enableClickbaitFilter);
               if (formatted) parsed.push({ title: formatted });
             }
             if (parsed.length > 0) return parsed;
@@ -1977,7 +2027,7 @@ class BuildingSignageApp {
           if (data.status === 'ok' && Array.isArray(data.items)) {
             const items = [];
             for (const i of data.items.slice(0, 12)) {
-              const formatted = filterClickbaitAndFormatHeadline(i.title, label);
+              const formatted = filterClickbaitAndFormatHeadline(i.title, label, enableClickbaitFilter);
               if (formatted) items.push({ title: formatted });
             }
             if (items.length > 0) return items;
@@ -1988,7 +2038,7 @@ class BuildingSignageApp {
       return [];
     };
 
-    const interleaveAndDedupe = (arrays, maxItems = 26) => {
+    const interleaveAndDedupe = (arrays, maxItems = 28) => {
       const interleaved = [];
       const seenCore = new Set();
       const maxLen = Math.max(...arrays.map(a => a.length), 0);
@@ -2008,20 +2058,17 @@ class BuildingSignageApp {
     };
 
     try {
-      const configs = COMPOSITE_FEEDS[requestedSource] || [
-        { key: requestedSource, label: ({ ynet: 'Ynet', kan: 'חדשות', walla: 'וואלה', mako: 'N12', globes: 'גלובס', calcalist: 'כלכלה', hayadan: 'מדע', geektime: 'טכנולוגיה' })[requestedSource] || 'חדשות' }
-      ];
-
       const collectedByIndex = configs.map(() => []);
       let hasRenderedProgressive = false;
 
       await Promise.allSettled(
         configs.map(async (cfg, idx) => {
-          const items = await fetchFeedItems(cfg.key, RSS_FEEDS[cfg.key] || RSS_FEEDS.ynet, cfg.label);
+          const feedUrl = cfg.url || RSS_FEEDS[cfg.key] || RSS_FEEDS.ynet;
+          const items = await fetchFeedItems(cfg.key, feedUrl, cfg.label);
           if (items.length > 0) {
             collectedByIndex[idx] = items;
-            const currentMerged = interleaveAndDedupe(collectedByIndex.filter(a => a.length > 0), 26);
-            // Progressive render as soon as first wave of feeds arrives
+            const currentMerged = interleaveAndDedupe(collectedByIndex.filter(a => a.length > 0), 28);
+            // Progressive render as soon as first wave of external + local feeds arrives
             if (!hasRenderedProgressive && currentMerged.length >= 5) {
               hasRenderedProgressive = true;
               this.newsItems = currentMerged;
@@ -2032,8 +2079,18 @@ class BuildingSignageApp {
         })
       );
 
-      const finalMerged = interleaveAndDedupe(collectedByIndex.filter(a => a.length > 0), 26);
-      if (finalMerged.length >= 3) {
+      // Refresh local channels right before final merge so notices/weather/shabbat fetched in parallel are guaranteed present
+      configs.forEach((cfg, idx) => {
+        if (cfg.isLocal) {
+          const freshLocal = this.buildLocalTickerChannelItems(cfg.key);
+          if (freshLocal.length > 0) {
+            collectedByIndex[idx] = freshLocal;
+          }
+        }
+      });
+
+      const finalMerged = interleaveAndDedupe(collectedByIndex.filter(a => a.length > 0), 28);
+      if (finalMerged.length >= 1) {
         this.newsItems = finalMerged;
         this.lastNewsUpdateTime = Date.now();
         try {
@@ -2049,7 +2106,7 @@ class BuildingSignageApp {
     } catch (e) {}
 
     // If network failed completely, keep existing/cached live items if available
-    if (this.newsItems && this.newsItems.length >= 3) {
+    if (this.newsItems && this.newsItems.length >= 2) {
       this.renderNewsTicker();
       return;
     }

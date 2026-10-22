@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20261022_livenews_v261">
+  <link rel="stylesheet" href="css/style.css?v=20261022_modular_v262">
   
   <style>
     /* Reliable Pure CSS Switch (Compatible with all browsers & Tailwind v2) */
@@ -941,32 +941,145 @@
           </div>
         </div>
 
-        <!-- News Source & Custom Ticker Message -->
-        <div class="bg-gray-900 bg-opacity-70 p-3.5 sm:p-4 rounded-xl border border-gray-700 space-y-3">
-          <div class="flex items-center gap-2">
-            <span class="text-base shrink-0">📰</span>
-            <div>
-              <h3 class="font-bold text-xs sm:text-sm text-gray-200">ערוץ מבזקי חדשות והודעה אישית</h3>
-              <p class="text-[11px] text-gray-400">בחירת מקור החדשות ב-RSS וניסוח טקסט רץ קבוע של ועד הבית</p>
+        <!-- Modular News & Updates Ticker Builder -->
+        <div class="bg-gray-900 bg-opacity-70 p-3.5 sm:p-4 rounded-xl border border-gray-700 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-800 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-lg shrink-0">📰</span>
+              <div>
+                <h3 class="font-bold text-xs sm:text-sm text-gray-200">מערכת מודולרית לפס המבזקים, החדשות והעדכונים</h3>
+                <p class="text-[11px] text-gray-400">בחר תבנית מוכנה או סמן באופן מודולרי אילו מקורות חדשות וסוגי עדכונים ירוצו בטיקר בתחתית המסך</p>
+              </div>
             </div>
+            <span id="active-channels-count-badge" class="text-[11px] bg-blue-950/80 border border-blue-700/60 text-blue-300 px-2.5 py-1 rounded-lg font-bold self-start sm:self-auto">6 ערוצים פעילים</span>
           </div>
+
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs text-gray-300 font-bold mb-1">מקור מבזקי חדשות (RSS)</label>
+              <label class="block text-xs text-gray-300 font-bold mb-1">תבנית מהירה / מצב בחירה</label>
               <select id="setting-rss-source" class="input-field">
-                <option value="smart_mix">🌟 תמהיל חכם ללובי (ללא קליקבייט — חדשות, מדע, כלכלה וטכנולוגיה)</option>
-                <option value="science_tech">🔬 מדע, טבע וטכנולוגיה (הידען / גיקטיים)</option>
-                <option value="economy">📈 כלכלה, נדל"ן וצרכנות (גלובס / כלכליסט)</option>
-                <option value="kan_globes">🏛️ כאן חדשות + גלובס (ענייני ורגוע)</option>
-                <option value="kan">כאן חדשות</option>
-                <option value="ynet">Ynet ידיעות אחרונות</option>
-                <option value="walla">וואלה! חדשות</option>
-                <option value="mako">N12 חדשות (מאקו)</option>
+                <option value="custom_modular">🧩 בחירה מודולרית מותאמת אישית (סמן ערוצים למטה)</option>
+                <option value="smart_mix">🌟 תמהיל מאוזן ללובי (חדשות, כלכלה, מדע, טכנולוגיה ועדכוני בניין)</option>
+                <option value="news_all">🗞️ כל ערוצי החדשות (Ynet + N12 + וואלה + מעריב)</option>
+                <option value="science_tech">🔬 מדע, טבע וטכנולוגיה בלבד (הידען + גיקטיים + דיגיטל)</option>
+                <option value="economy">📈 כלכלה, נדל"ן ושוק ההון בלבד (גלובס + Ynet כלכלה + הייטק)</option>
+                <option value="kan_globes">🏛️ אקטואליה וכלכלה (Ynet + N12 + גלובס + מעריב)</option>
+                <option value="building_only">🏢 עדכוני בניין, מזג אוויר ולוח עברי בלבד (ללא חדשות חיצוניות)</option>
+                <option value="ynet">📰 Ynet ידיעות אחרונות בלבד</option>
+                <option value="mako">📰 N12 חדשות (מאקו) בלבד</option>
+                <option value="walla">📰 וואלה! חדשות בלבד</option>
+                <option value="globes">📈 גלובס כלכלה בלבד</option>
+                <option value="maariv">📰 מעריב חדשות בלבד</option>
+                <option value="kan">📻 מבזקי חדשות שוטפים</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs text-gray-300 font-bold mb-1">הודעה אישית קבועה בפס המבזקים</label>
+              <label class="block text-xs text-gray-300 font-bold mb-1">הודעה אישית קבועה בתחילת פס המבזקים</label>
               <input type="text" id="setting-custom-ticker" class="input-field" placeholder="ועד הבית מאחל יום נעים ובטוח לכל הדיירים והאורחים!" />
+            </div>
+          </div>
+
+          <!-- Modular Multi-Select Checkboxes Grid -->
+          <div id="modular-news-matrix" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <!-- Group 1: News & Current Affairs -->
+            <div class="bg-gray-950/60 border border-gray-800 rounded-xl p-3 space-y-2">
+              <div class="text-xs font-bold text-red-400 flex items-center justify-between">
+                <span>🗞️ חדשות ואקטואליה (RSS חי)</span>
+                <span class="text-[10px] text-gray-500">בחר מקורות</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <label class="flex items-center gap-2 cursor-pointer bg-gray-900/80 hover:bg-gray-800/80 px-2.5 py-1.5 rounded-lg border border-gray-800">
+                  <input type="checkbox" class="news-channel-cb w-4 h-4 accent-blue-500 rounded" value="ynet" checked />
+                  <span class="text-gray-200 font-medium">Ynet חדשות</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-gray-900/80 hover:bg-gray-800/80 px-2.5 py-1.5 rounded-lg border border-gray-800">
+                  <input type="checkbox" class="news-channel-cb w-4 h-4 accent-blue-500 rounded" value="ynet_mivzak" />
+                  <span class="text-gray-200 font-medium">Ynet מבזקים</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-gray-900/80 hover:bg-gray-800/80 px-2.5 py-1.5 rounded-lg border border-gray-800">
+                  <input type="checkbox" class="news-channel-cb w-4 h-4 accent-blue-500 rounded" value="mako" checked />
+                  <span class="text-gray-200 font-medium">N12 / מאקו</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-gray-900/80 hover:bg-gray-800/80 px-2.5 py-1.5 rounded-lg border border-gray-800">
+                  <input type="checkbox" class="news-channel-cb w-4 h-4 accent-blue-500 rounded" value="walla" />
+                  <span class="text-gray-200 font-medium">וואלה! חדשות</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-gray-900/80 hover:bg-gray-800/80 px-2.5 py-1.5 rounded-lg border border-gray-800 col-span-2">
+                  <input type="checkbox" class="news-channel-cb w-4 h-4 accent-blue-500 rounded" value="maariv" />
+                  <span class="text-gray-200 font-medium">מעריב — מבזקי חדשות</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Group 2: Economy, Science & Technology -->
+            <div class="bg-gray-950/60 border border-gray-800 rounded-xl p-3 space-y-2">
+              <div class="text-xs font-bold text-emerald-400 flex items-center justify-between">
+                <span>📈🔬 כלכלה, מדע וטכנולוגיה</span>
+                <span class="text-[10px] text-gray-500">בחר תחומי עניין</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <label class="flex items-center gap-2 cursor-pointer bg-gray-900/80 hover:bg-gray-800/80 px-2.5 py-1.5 rounded-lg border border-gray-800">
+                  <input type="checkbox" class="news-channel-cb w-4 h-4 accent-emerald-500 rounded" value="globes" checked />
+                  <span class="text-gray-200 font-medium">גלובס כלכלה</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-gray-900/80 hover:bg-gray-800/80 px-2.5 py-1.5 rounded-lg border border-gray-800">
+                  <input type="checkbox" class="news-channel-cb w-4 h-4 accent-emerald-500 rounded" value="ynet_econ" />
+                  <span class="text-gray-200 font-medium">Ynet כלכלה</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-gray-900/80 hover:bg-gray-800/80 px-2.5 py-1.5 rounded-lg border border-gray-800">
+                  <input type="checkbox" class="news-channel-cb w-4 h-4 accent-emerald-500 rounded" value="hayadan" checked />
+                  <span class="text-gray-200 font-medium">הידען (מדע)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-gray-900/80 hover:bg-gray-800/80 px-2.5 py-1.5 rounded-lg border border-gray-800">
+                  <input type="checkbox" class="news-channel-cb w-4 h-4 accent-emerald-500 rounded" value="geektime" checked />
+                  <span class="text-gray-200 font-medium">גיקטיים (טק)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-gray-900/80 hover:bg-gray-800/80 px-2.5 py-1.5 rounded-lg border border-gray-800 col-span-2">
+                  <input type="checkbox" class="news-channel-cb w-4 h-4 accent-emerald-500 rounded" value="ynet_tech" />
+                  <span class="text-gray-200 font-medium">Ynet דיגיטל ומחשבים</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Group 3: Local Building & Community Updates in Ticker -->
+            <div class="bg-gray-950/60 border border-gray-800 rounded-xl p-3 space-y-2 sm:col-span-2">
+              <div class="text-xs font-bold text-amber-400 flex items-center justify-between">
+                <span>🏢 עדכוני בניין, סביבה וקהילה בפס המבזקים</span>
+                <span class="text-[10px] text-gray-400">משולבים אוטומטית בין המבזקים</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+                <label class="flex items-center gap-2 cursor-pointer bg-gray-900/80 hover:bg-gray-800/80 px-2.5 py-2 rounded-lg border border-gray-800">
+                  <input type="checkbox" class="news-channel-cb w-4 h-4 accent-amber-500 rounded" value="building_notices" checked />
+                  <span class="text-gray-200 font-medium">📢 כותרות מודעות הוועד</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-gray-900/80 hover:bg-gray-800/80 px-2.5 py-2 rounded-lg border border-gray-800">
+                  <input type="checkbox" class="news-channel-cb w-4 h-4 accent-amber-500 rounded" value="local_weather" checked />
+                  <span class="text-gray-200 font-medium">🌤️ מזג אוויר וים בחדרה</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-gray-900/80 hover:bg-gray-800/80 px-2.5 py-2 rounded-lg border border-gray-800">
+                  <input type="checkbox" class="news-channel-cb w-4 h-4 accent-amber-500 rounded" value="shabbat_calendar" />
+                  <span class="text-gray-200 font-medium">🕯️ זמני שבת ולוח עברי</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer bg-gray-900/80 hover:bg-gray-800/80 px-2.5 py-2 rounded-lg border border-gray-800">
+                  <input type="checkbox" class="news-channel-cb w-4 h-4 accent-amber-500 rounded" value="daily_trivia" />
+                  <span class="text-gray-200 font-medium">💡 הידעת? וטיפ יומי</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filter & Custom RSS Row -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-gray-800">
+            <label class="flex items-center justify-between cursor-pointer bg-gray-950/50 px-3 py-2 rounded-lg border border-gray-800">
+              <div>
+                <span class="text-xs font-bold text-gray-200 block">🛡️ סינון קליקבייט ותוכן שיווקי</span>
+                <span class="text-[10px] text-gray-400">מסנן כותרות סנסציוניות ("לא תאמינו", "בשיתוף")</span>
+              </div>
+              <input type="checkbox" id="setting-filter-clickbait" class="w-4 h-4 accent-blue-500 rounded" checked />
+            </label>
+            <div>
+              <label class="block text-[11px] text-gray-300 font-bold mb-1">🔗 פיד RSS חיצוני נוסף (אופציונלי — URL)</label>
+              <input type="url" id="setting-custom-rss-url" class="input-field text-xs" dir="ltr" placeholder="https://example.com/rss.xml" />
             </div>
           </div>
         </div>
@@ -1475,7 +1588,7 @@
   <!-- Firebase Cloud Firestore SDK (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-  <script src="js/firebase-sync.js?v=20261022_livenews_v261"></script>
-  <script src="js/admin.js?v=20261022_livenews_v261"></script>
+  <script src="js/firebase-sync.js?v=20261022_modular_v262"></script>
+  <script src="js/admin.js?v=20261022_modular_v262"></script>
 </body>
 </html>

@@ -1658,6 +1658,40 @@ function updateLiteModeUI(isLite) {
   }
 }
 
+const MODULAR_NEWS_PRESETS = {
+  smart_mix: ['ynet', 'mako', 'globes', 'hayadan', 'geektime', 'building_notices', 'local_weather'],
+  news_all: ['ynet', 'ynet_mivzak', 'mako', 'walla', 'maariv'],
+  science_tech: ['hayadan', 'geektime', 'ynet_tech'],
+  economy: ['globes', 'ynet_econ', 'geektime'],
+  kan_globes: ['ynet', 'mako', 'globes', 'maariv'],
+  building_only: ['building_notices', 'local_weather', 'shabbat_calendar', 'daily_trivia'],
+  ynet: ['ynet', 'ynet_mivzak'],
+  mako: ['mako'],
+  walla: ['walla'],
+  globes: ['globes'],
+  maariv: ['maariv'],
+  kan: ['ynet', 'mako', 'globes', 'hayadan', 'geektime']
+};
+
+function updateModularChannelsCountBadge() {
+  const badge = document.getElementById('active-channels-count-badge');
+  if (!badge) return;
+  const checkedCount = document.querySelectorAll('.news-channel-cb:checked').length;
+  badge.textContent = `${checkedCount} ערוצים פעילים`;
+}
+
+function applyModularChannelsToCheckboxes(channelsArray) {
+  const set = new Set(Array.isArray(channelsArray) ? channelsArray : MODULAR_NEWS_PRESETS.smart_mix);
+  document.querySelectorAll('.news-channel-cb').forEach(cb => {
+    cb.checked = set.has(cb.value);
+  });
+  updateModularChannelsCountBadge();
+}
+
+function getCheckedModularChannels() {
+  return Array.from(document.querySelectorAll('.news-channel-cb:checked')).map(cb => cb.value);
+}
+
 function setupDisplayControls() {
   const bgOpacityInput = document.getElementById('setting-bg-opacity');
   const bgOpacityLabel = document.getElementById('bg-opacity-label');
@@ -1665,7 +1699,28 @@ function setupDisplayControls() {
   const burnCompLabel = document.getElementById('burn-comp-val-label');
   const resolutionInput = document.getElementById('setting-resolution');
   const resolutionStatus = document.getElementById('resolution-status-text');
+  const rssSourceSelect = document.getElementById('setting-rss-source');
   const saveBtn = document.getElementById('save-display-btn');
+
+  // Wire Modular News Preset Dropdown -> Checkboxes
+  if (rssSourceSelect) {
+    rssSourceSelect.addEventListener('change', () => {
+      const val = rssSourceSelect.value;
+      if (val !== 'custom_modular' && MODULAR_NEWS_PRESETS[val]) {
+        applyModularChannelsToCheckboxes(MODULAR_NEWS_PRESETS[val]);
+      }
+    });
+  }
+
+  // Wire Individual Channel Checkboxes -> Custom Modular Mode
+  document.querySelectorAll('.news-channel-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      if (rssSourceSelect) {
+        rssSourceSelect.value = 'custom_modular';
+      }
+      updateModularChannelsCountBadge();
+    });
+  });
 
   if (bgOpacityInput && bgOpacityLabel) {
     bgOpacityInput.addEventListener('input', () => {
@@ -1726,6 +1781,9 @@ function setupDisplayControls() {
           showInterestSlide: document.getElementById('setting-show-interest-slide')?.checked !== false,
           customTickerText: document.getElementById('setting-custom-ticker')?.value.trim() || '',
           newsSource: document.getElementById('setting-rss-source')?.value || settingsData?.display?.newsSource || 'smart_mix',
+          newsChannels: getCheckedModularChannels(),
+          filterClickbait: document.getElementById('setting-filter-clickbait')?.checked !== false,
+          customRssUrl: document.getElementById('setting-custom-rss-url')?.value.trim() || '',
           yomKippurMode: document.getElementById('setting-yom-kippur-mode')?.value || 'auto',
           theme: selectedThemeMode,
           customTheme
@@ -2164,7 +2222,21 @@ function populateSettingsUI() {
 
   if (bldName) bldName.value = settingsData.building?.name || 'הירדן 5';
   if (bldCity) bldCity.value = settingsData.building?.city || 'חדרה';
-  if (rssSource) rssSource.value = settingsData.display?.newsSource || 'smart_mix';
+  const hasExplicitChannels = Array.isArray(settingsData.display?.newsChannels) && settingsData.display.newsChannels.length > 0;
+  if (rssSource) {
+    rssSource.value = hasExplicitChannels ? (settingsData.display?.newsSource || 'smart_mix') : 'smart_mix';
+  }
+
+  const savedChannels = hasExplicitChannels
+    ? settingsData.display.newsChannels
+    : MODULAR_NEWS_PRESETS.smart_mix;
+  applyModularChannelsToCheckboxes(savedChannels);
+
+  const filterClickbaitCb = document.getElementById('setting-filter-clickbait');
+  if (filterClickbaitCb) filterClickbaitCb.checked = settingsData.display?.filterClickbait !== false;
+
+  const customRssInput = document.getElementById('setting-custom-rss-url');
+  if (customRssInput) customRssInput.value = settingsData.display?.customRssUrl || '';
   if (pinInput) pinInput.placeholder = settingsData.security?.adminPin ? 'מוגדר (הזן לשינוי)' : 'ברירת מחדל: 1234';
   if (editorPinInput) editorPinInput.placeholder = settingsData.security?.editorPin ? 'מוגדר (הזן לשינוי)' : 'ברירת מחדל: 1111';
 

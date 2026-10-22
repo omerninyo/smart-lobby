@@ -31,6 +31,17 @@
     "showTransitSlide": true,
     "showInterestSlide": true,
     "newsSource": "smart_mix",
+    "newsChannels": [
+      "ynet",
+      "mako",
+      "globes",
+      "hayadan",
+      "geektime",
+      "building_notices",
+      "local_weather"
+    ],
+    "filterClickbait": true,
+    "customRssUrl": "",
     "customTickerText": "ועד הבית מאחל יום נעים ובטוח לכל הדיירים והאורחים!",
     "liteMode": true,
     "emergencyAlert": {
