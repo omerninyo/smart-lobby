@@ -2861,8 +2861,8 @@ class BuildingSignageApp {
         contentHtml = `
           <div class="forecast-slide-layout">
             <div class="forecast-title-row">
-              <h2>🌤️ תחזית מזג אוויר ל-4 הימים הקרובים</h2>
-              <span style="font-size: 0.9rem; color: #38bdf8; font-weight: 700;">חדרה והסביבה</span>
+              <h2>🌤️ תחזית מזג אוויר ונתוני סביבה — 4 ימים קרובים</h2>
+              <span class="slide-header-pill">חדרה והסביבה • עדכון חי</span>
             </div>
             <div class="forecast-cards-grid">
               ${forecastCards}
@@ -2878,14 +2878,14 @@ class BuildingSignageApp {
               <div class="forecast-env-card">
                 <div class="env-card-icon">☀️</div>
                 <div class="env-card-info">
-                  <span class="env-card-title">קרינת UV</span>
-                  <span class="env-card-val" style="color: ${w.uvColor || '#eab308'};">${w.uvIndex ?? 3} • ${w.uvLabel || 'בינונית'}</span>
+                  <span class="env-card-title">קרינת UV בחוץ</span>
+                  <span class="env-card-val" style="color: ${w.uvColor || '#eab308'};">אינדקס ${w.uvIndex ?? 3} • רמה ${w.uvLabel || 'בינונית'}</span>
                 </div>
               </div>
               <div class="forecast-env-card">
                 <div class="env-card-icon">🌊</div>
                 <div class="env-card-info">
-                  <span class="env-card-title">חוף חדרה (גלים וטמפ' מים)</span>
+                  <span class="env-card-title">חוף חדרה (גובה גלים וטמפ' מים)</span>
                   <span class="env-card-val">${w.seaWaveHeightCm || '50 ס"מ • ים נוח'} • מים ${w.seaTemp || '24°'}</span>
                 </div>
               </div>
@@ -2898,8 +2898,8 @@ class BuildingSignageApp {
               </div>
             </div>
             <div class="stage-notice-footer">
-              <span>טמפרטורה נוכחית: ${w.temperature}° | עומס חום: ${w.apparentTemperature}°</span>
-              <span>Open-Meteo</span>
+              <span>טמפרטורה נוכחית בחדרה: ${w.temperature}° | מורגש כעת: ${w.apparentTemperature || w.temperature}° | לחות: ${w.humidity || 65}%</span>
+              <span>נתוני אמת • Open-Meteo</span>
             </div>
           </div>
         `;
@@ -2948,8 +2948,8 @@ class BuildingSignageApp {
         contentHtml = `
           <div class="transit-slide-layout">
             <div class="forecast-title-row">
-              <h2>🚆 יוצאים מהבניין — תחבורה, רכבת ודרכים</h2>
-              <span style="font-size: 0.9rem; color: #38bdf8; font-weight: 700;">עדכון חי • חדרה</span>
+              <h2>🚆 יוצאים מהבניין — תחבורה, רכבת ומצב תנועה</h2>
+              <span class="slide-header-pill">עדכון חי • חדרה והסביבה</span>
             </div>
             <div class="transit-grid">
               <div class="transit-card">
@@ -2957,16 +2957,21 @@ class BuildingSignageApp {
                   <span class="transit-card-icon">🚆</span>
                   <h3>רכבת ישראל — חדרה מערב</h3>
                 </div>
-                <div class="transit-train-section">
-                  <div class="train-dir-title">לכיוון תל אביב ודרום:</div>
-                  <div class="train-pills-row">
-                    ${renderTrains(t.trainsSouth, t.trainNoteSouth)}
+                <div class="transit-trains-body">
+                  <div class="transit-train-section">
+                    <div class="train-dir-title">⬇️ לכיוון תל אביב, נתב"ג ודרום:</div>
+                    <div class="train-pills-row">
+                      ${renderTrains(t.trainsSouth, t.trainNoteSouth)}
+                    </div>
                   </div>
-                </div>
-                <div class="transit-train-section" style="margin-top: 0.75rem;">
-                  <div class="train-dir-title">לכיוון חיפה וצפון:</div>
-                  <div class="train-pills-row">
-                    ${renderTrains(t.trainsNorth, t.trainNoteNorth)}
+                  <div class="transit-train-section">
+                    <div class="train-dir-title">⬆️ לכיוון חיפה, הקריות וצפון:</div>
+                    <div class="train-pills-row">
+                      ${renderTrains(t.trainsNorth, t.trainNoteNorth)}
+                    </div>
+                  </div>
+                  <div class="transit-train-footer-box">
+                    <span>📍 תחנת חדרה מערב • כ-8 דק' נסיעה מהבניין</span>
                   </div>
                 </div>
               </div>
@@ -2974,9 +2979,9 @@ class BuildingSignageApp {
               <div class="transit-card">
                 <div class="transit-card-header">
                   <span class="transit-card-icon">🚌</span>
-                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <h3>קווים מרכזיים באזור</h3>
-                    <span style="font-size: 0.75rem; color: #94a3b8;">${escapeHtml(t.busStatusDesc || 'פעילות סדירה')}</span>
+                  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 0.5rem;">
+                    <h3>קווי אוטובוס באזור</h3>
+                    <span class="transit-status-chip">${escapeHtml(t.busStatusDesc || 'פעילות סדירה')}</span>
                   </div>
                 </div>
                 <div class="transit-buses-list">
@@ -2995,8 +3000,8 @@ class BuildingSignageApp {
               </div>
             </div>
             <div class="stage-notice-footer">
-              <span>הערכות זמן ותדירויות מבוססות שעות שיא ולוחות זמנים רשמיים</span>
-              <span>נסיעה בטוחה!</span>
+              <span>הערכות זמן ותדירויות מבוססות שעות פעילות ולוחות זמנים רשמיים</span>
+              <span>נסיעה טובה ובטוחה!</span>
             </div>
           </div>
         `;
@@ -3008,7 +3013,7 @@ class BuildingSignageApp {
           <div class="interest-slide-layout" onclick="window.signageApp.refreshDailyInterestSlide(true)" style="cursor: pointer;" title="לחץ להחלפת חידת טריוויה ועובדות">
             <div class="forecast-title-row">
               <h2>🧠 רגע של עניין במעלית — מדע, טריוויה וסקרנות</h2>
-              <span style="font-size: 0.9rem; color: #c084fc; font-weight: 700;">🔄 מתחלף בכל סבב • לחץ לחידה חדשה</span>
+              <span class="slide-header-pill slide-header-pill-purple">🔄 מתחלף בכל סבב • לחץ לחידה חדשה</span>
             </div>
             <div class="interest-cards-grid">
               <div class="interest-card interest-card-history">
@@ -3019,7 +3024,12 @@ class BuildingSignageApp {
                     <h3 class="interest-history-title">${escapeHtml(d.history?.title || 'הידעת?')}</h3>
                   </div>
                 </div>
-                <p class="interest-card-text interest-history-text">${escapeHtml(d.history?.text || '')}</p>
+                <div class="interest-card-body-box">
+                  <p class="interest-card-text interest-history-text">${escapeHtml(d.history?.text || '')}</p>
+                </div>
+                <div class="interest-card-footer-pill history-pill">
+                  <span>🌍 עובדות מרתקות מעולם המדע, החלל וההיסטוריה</span>
+                </div>
               </div>
 
               <div class="interest-card interest-card-trivia">
@@ -3030,9 +3040,11 @@ class BuildingSignageApp {
                     <h3>חידת הטריוויה</h3>
                   </div>
                 </div>
-                <p class="interest-card-text trivia-question interest-trivia-question">${escapeHtml(d.trivia?.question || '')}</p>
+                <div class="interest-card-body-box">
+                  <p class="interest-card-text trivia-question interest-trivia-question">${escapeHtml(d.trivia?.question || '')}</p>
+                </div>
                 <div class="trivia-answer-box">
-                  <span class="trivia-answer-label">תשובה:</span>
+                  <span class="trivia-answer-label">💡 תשובה:</span>
                   <span class="trivia-answer-text interest-trivia-answer">${escapeHtml(d.trivia?.answer || '')}</span>
                 </div>
               </div>
@@ -3045,11 +3057,16 @@ class BuildingSignageApp {
                     <h3 class="interest-tip-title">${escapeHtml(d.tip?.title || 'עובדה מפתיעה')}</h3>
                   </div>
                 </div>
-                <p class="interest-card-text interest-tip-text">${escapeHtml(d.tip?.text || '')}</p>
+                <div class="interest-card-body-box">
+                  <p class="interest-card-text interest-tip-text">${escapeHtml(d.tip?.text || '')}</p>
+                </div>
+                <div class="interest-card-footer-pill tip-pill">
+                  <span>🔬 תופעות יומיומיות מפתיעות בגוף האדם ובטבע</span>
+                </div>
               </div>
             </div>
             <div class="stage-notice-footer">
-              <span>מתחלף אוטומטית בכל סבב מצגת (40 ערכות מדע, חלל וטריוויה) • לחץ להחלפה מיידית</span>
+              <span>מתחלף אוטומטית בכל סבב מצגת (40 ערכות מדע, חלל וטריוויה) • לחץ על המסך להחלפה מיידית</span>
               <span>ועד הבית • ${escapeHtml(this.settings?.building?.name || "הבניין")}</span>
             </div>
           </div>

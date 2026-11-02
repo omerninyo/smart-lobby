@@ -834,9 +834,10 @@ body.high-contrast-side .env-stat-box {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 0.6rem;
-  font-size: 0.8rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 0.7rem;
+  font-size: clamp(0.95rem, 1.65vh, 1.15rem);
+  font-weight: 600;
   color: var(--text-secondary);
   flex-shrink: 0;
 }
@@ -849,6 +850,7 @@ body.high-contrast-side .env-stat-box {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  gap: 0.9rem;
 }
 
 .forecast-title-row {
@@ -856,74 +858,102 @@ body.high-contrast-side .env-stat-box {
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+  gap: 1rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .forecast-title-row h2 {
   font-family: var(--font-heading);
-  font-size: 1.35rem;
-  font-weight: 800;
+  font-size: clamp(1.7rem, 3.1vh, 2.3rem);
+  font-weight: 900;
   color: #ffffff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.slide-header-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: clamp(0.95rem, 1.7vh, 1.2rem);
+  font-weight: 800;
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  padding: 0.4rem 1.05rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.slide-header-pill.slide-header-pill-purple {
+  color: #e9d5ff;
+  background: rgba(192, 132, 252, 0.16);
+  border-color: rgba(192, 132, 252, 0.42);
 }
 
 .forecast-cards-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.75rem;
-  margin: auto 0;
+  gap: 1.1rem;
+  flex: 1.15;
   width: 100%;
+  min-height: 0;
 }
 
 .forecast-day-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1rem;
-  padding: 0.85rem 0.5rem;
+  background: rgba(15, 23, 42, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1.25rem;
+  padding: clamp(1rem, 2.2vh, 1.65rem) 0.85rem;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: space-evenly;
   text-align: center;
-  gap: 0.4rem;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  gap: 0.45rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .forecast-day-card.today {
-  background: rgba(56, 189, 248, 0.12);
-  border-color: rgba(56, 189, 248, 0.35);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.22) 0%, rgba(15, 23, 42, 0.82) 100%);
+  border: 2px solid rgba(56, 189, 248, 0.55);
 }
 
 .forecast-day-name {
-  font-weight: 700;
-  font-size: 0.95rem;
+  font-weight: 900;
+  font-size: clamp(1.4rem, 2.65vh, 1.92rem);
   color: #f8fafc;
 }
 
 .forecast-icon {
-  font-size: 2.2rem;
+  font-size: clamp(3.6rem, 7vh, 5.1rem);
   line-height: 1;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45));
 }
 
 .forecast-temps {
   display: flex;
   align-items: baseline;
-  gap: 0.3rem;
+  gap: 0.6rem;
   font-family: var(--font-heading);
 }
 
 .forecast-temp-max {
-  font-size: 1.35rem;
-  font-weight: 800;
+  font-size: clamp(2.15rem, 4.1vh, 2.95rem);
+  font-weight: 900;
   color: #ffffff;
 }
 
 .forecast-temp-min {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: clamp(1.42rem, 2.6vh, 1.9rem);
+  font-weight: 700;
+  color: #94a3b8;
 }
 
 .forecast-desc {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+  font-size: clamp(1.18rem, 2.15vh, 1.52rem);
+  font-weight: 800;
+  color: #e2e8f0;
 }
 
 /* Contacts Slide */
@@ -934,32 +964,35 @@ body.high-contrast-side .env-stat-box {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  gap: 1rem;
 }
 
 .contacts-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-  margin: auto 0;
+  gap: 1.1rem;
+  flex: 1;
   width: 100%;
+  align-content: stretch;
 }
 
 .contact-pill-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0.9rem;
-  padding: 0.75rem 1rem;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1.15rem;
+  padding: clamp(1rem, 2vh, 1.45rem) 1.35rem;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1.1rem;
 }
 
 .contact-icon {
-  font-size: 1.6rem;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.6rem;
-  background: rgba(255, 255, 255, 0.08);
+  font-size: clamp(2rem, 3.6vh, 2.5rem);
+  width: clamp(3.4rem, 6vh, 4.2rem);
+  height: clamp(3.4rem, 6vh, 4.2rem);
+  border-radius: 0.9rem;
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -967,21 +1000,21 @@ body.high-contrast-side .env-stat-box {
 }
 
 .contact-details h4 {
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: clamp(1.2rem, 2.15vh, 1.52rem);
+  font-weight: 800;
   color: #ffffff;
 }
 
 .contact-phone {
   font-family: var(--font-heading);
-  font-size: 1.1rem;
-  font-weight: 800;
+  font-size: clamp(1.4rem, 2.5vh, 1.8rem);
+  font-weight: 900;
   color: #38bdf8;
   letter-spacing: 0.5px;
 }
 
 .contact-desc {
-  font-size: 0.72rem;
+  font-size: clamp(0.95rem, 1.65vh, 1.15rem);
   color: var(--text-secondary);
 }
 
@@ -1022,18 +1055,18 @@ body.high-contrast-side .env-stat-box {
 }
 
 .side-widget-header h3 {
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: clamp(1rem, 1.85vh, 1.25rem);
+  font-weight: 800;
   color: #ffffff;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
 .side-notices-container {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -1047,11 +1080,11 @@ body.high-contrast-side .env-stat-box {
 .mini-notice-item {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 0.75rem;
-  padding: 0.5rem 0.75rem;
+  border-radius: 0.85rem;
+  padding: clamp(0.6rem, 1.25vh, 0.9rem) 0.9rem;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.3rem;
   flex-shrink: 0;
   cursor: pointer;
   transition: transform 0.15s, background-color 0.15s;
@@ -1068,8 +1101,8 @@ body.high-contrast-side .env-stat-box {
 }
 
 .mini-notice-title {
-  font-size: 0.85rem;
-  font-weight: 700;
+  font-size: clamp(0.92rem, 1.65vh, 1.12rem);
+  font-weight: 800;
   color: #f8fafc;
   display: flex;
   align-items: center;
@@ -1077,9 +1110,9 @@ body.high-contrast-side .env-stat-box {
 }
 
 .mini-notice-snippet {
-  font-size: 0.75rem;
+  font-size: clamp(0.82rem, 1.45vh, 0.98rem);
   color: var(--text-secondary);
-  line-height: 1.3;
+  line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -1090,29 +1123,30 @@ body.high-contrast-side .env-stat-box {
 .env-widget-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 
 .env-stat-box {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 0.65rem;
-  padding: 0.4rem 0.3rem;
+  border-radius: 0.75rem;
+  padding: clamp(0.45rem, 1vh, 0.7rem) 0.4rem;
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.15rem;
 }
 
 .env-stat-label {
-  font-size: 0.68rem;
+  font-size: clamp(0.75rem, 1.35vh, 0.92rem);
+  font-weight: 700;
   color: var(--text-secondary);
 }
 
 .env-stat-value {
   font-family: var(--font-heading);
-  font-size: 0.95rem;
-  font-weight: 800;
+  font-size: clamp(1.05rem, 1.9vh, 1.32rem);
+  font-weight: 900;
   color: #ffffff;
 }
 
@@ -1683,33 +1717,42 @@ body.lite-mode .emergency-alert-stage-card {
    4. Special Hebrew Calendar Badges
    ========================================================= */
 
-/* 1. Forecast Environmental Grid */
+/* 1. Forecast Environmental Grid (2x2 Roomy High-Visibility Grid) */
 .forecast-env-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.85rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
   width: 100%;
-  margin-top: 0.85rem;
+  flex: 0.9;
+  min-height: 0;
 }
 
 .forecast-env-card {
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  padding: 0.75rem 0.9rem;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  padding: clamp(0.95rem, 1.9vh, 1.45rem) 1.35rem;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1.15rem;
   backdrop-filter: blur(8px);
 }
 
 .forecast-env-card.forecast-env-tip {
-  background: rgba(56, 189, 248, 0.08);
-  border-color: rgba(56, 189, 248, 0.3);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.14) 0%, rgba(15, 23, 42, 0.82) 100%);
+  border: 1.5px solid rgba(56, 189, 248, 0.42);
 }
 
 .env-card-icon {
-  font-size: 1.8rem;
+  font-size: clamp(2.5rem, 4.7vh, 3.35rem);
+  width: clamp(3.9rem, 7vh, 4.9rem);
+  height: clamp(3.9rem, 7vh, 4.9rem);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
   flex-shrink: 0;
 }
@@ -1717,36 +1760,35 @@ body.lite-mode .emergency-alert-stage-card {
 .env-card-info {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   overflow: hidden;
   text-align: right;
   width: 100%;
+  gap: 0.3rem;
 }
 
 .env-card-title {
-  font-size: 0.78rem;
+  font-size: clamp(1.08rem, 1.95vh, 1.35rem);
   color: #94a3b8;
-  font-weight: 700;
-  margin-bottom: 0.2rem;
+  font-weight: 800;
 }
 
 .env-card-val {
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #f1f5f9;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: clamp(1.42rem, 2.65vh, 1.9rem);
+  font-weight: 900;
+  color: #f8fafc;
+  line-height: 1.25;
 }
 
 .env-card-val.tip-text {
-  font-size: 0.85rem;
+  font-size: clamp(1.24rem, 2.28vh, 1.62rem);
   color: #e0f2fe;
-  font-weight: 600;
+  font-weight: 800;
   white-space: normal;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  line-height: 1.25;
+  line-height: 1.35;
 }
 
 /* 2. Transit & Commute Slide */
@@ -1756,23 +1798,24 @@ body.lite-mode .emergency-alert-stage-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem;
+  padding: 0.15rem 0;
   box-sizing: border-box;
+  gap: 0.85rem;
 }
 
 .transit-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.1rem;
+  gap: 1.25rem;
   flex: 1;
-  margin: 0.85rem 0;
+  min-height: 0;
 }
 
 .transit-card {
-  background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  padding: 1.1rem 1.25rem;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: clamp(1.15rem, 2.2vh, 1.65rem) 1.35rem;
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(10px);
@@ -1782,44 +1825,76 @@ body.lite-mode .emergency-alert-stage-card {
 .transit-card-header {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  margin-bottom: 0.85rem;
-  padding-bottom: 0.65rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
 }
 
 .transit-card-header h3 {
   font-family: var(--font-heading);
-  font-size: 1.1rem;
-  font-weight: 800;
+  font-size: clamp(1.3rem, 2.35vh, 1.68rem);
+  font-weight: 900;
   color: #ffffff;
   margin: 0;
 }
 
 .transit-card-icon {
-  font-size: 1.5rem;
+  font-size: clamp(1.85rem, 3.3vh, 2.35rem);
+  flex-shrink: 0;
+}
+
+.transit-status-chip {
+  font-size: clamp(0.85rem, 1.5vh, 1.05rem);
+  font-weight: 700;
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.transit-trains-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  gap: 0.9rem;
+}
+
+.transit-train-section {
+  background: rgba(30, 41, 59, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: clamp(0.85rem, 1.7vh, 1.25rem) 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
 }
 
 .train-dir-title {
-  font-size: 0.82rem;
-  color: #94a3b8;
-  font-weight: 700;
-  margin-bottom: 0.45rem;
+  font-size: clamp(1.15rem, 2.08vh, 1.45rem);
+  color: #bae6fd;
+  font-weight: 800;
+  margin-bottom: 0.75rem;
 }
 
 .train-pills-row {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.85rem;
   flex-wrap: wrap;
 }
 
 .train-time-pill {
   flex: 1;
-  min-width: 100px;
-  background: rgba(30, 41, 59, 0.8);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  border-radius: 10px;
-  padding: 0.45rem 0.6rem;
+  min-width: 105px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1.5px solid rgba(56, 189, 248, 0.45);
+  border-radius: 14px;
+  padding: clamp(0.9rem, 1.9vh, 1.35rem) 0.75rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1828,26 +1903,39 @@ body.lite-mode .emergency-alert-stage-card {
 
 .train-time {
   font-family: monospace;
-  font-size: 1.25rem;
+  font-size: clamp(1.75rem, 3.25vh, 2.35rem);
   font-weight: 900;
   color: #38bdf8;
   letter-spacing: 0.5px;
+  line-height: 1.1;
 }
 
 .train-diff {
-  font-size: 0.72rem;
-  color: #cbd5e1;
-  font-weight: 600;
-  margin-top: 0.15rem;
+  font-size: clamp(1.02rem, 1.85vh, 1.28rem);
+  color: #e2e8f0;
+  font-weight: 700;
+  margin-top: 0.3rem;
+}
+
+.transit-train-footer-box {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 12px;
+  padding: 0.75rem 0.9rem;
+  font-size: clamp(1rem, 1.78vh, 1.22rem);
+  font-weight: 700;
+  color: #e0f2fe;
+  text-align: center;
 }
 
 .transit-note {
-  font-size: 0.85rem;
-  color: #facc15;
-  background: rgba(250, 204, 21, 0.1);
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  border: 1px solid rgba(250, 204, 21, 0.25);
+  font-size: clamp(1.15rem, 2.1vh, 1.45rem);
+  font-weight: 700;
+  color: #fde047;
+  background: rgba(250, 204, 21, 0.12);
+  padding: 0.95rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(250, 204, 21, 0.32);
   text-align: center;
   width: 100%;
 }
@@ -1855,114 +1943,123 @@ body.lite-mode .emergency-alert-stage-card {
 .transit-buses-list {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.75rem;
   flex: 1;
-  justify-content: space-around;
+  justify-content: space-between;
 }
 
 .transit-bus-row {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  background: rgba(30, 41, 59, 0.6);
-  padding: 0.45rem 0.75rem;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  gap: 0.85rem;
+  background: rgba(30, 41, 59, 0.68);
+  padding: clamp(0.7rem, 1.5vh, 1.1rem) 0.95rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  flex: 1;
 }
 
 .transit-bus-line {
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #ffffff;
   font-family: monospace;
-  font-size: 1rem;
+  font-size: clamp(1.35rem, 2.45vh, 1.75rem);
   font-weight: 900;
-  padding: 0.2rem 0.55rem;
-  border-radius: 6px;
-  min-width: 38px;
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
+  min-width: 58px;
   text-align: center;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+  flex-shrink: 0;
 }
 
 .transit-bus-info {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  gap: 0.2rem;
+  min-width: 0;
 }
 
 .transit-bus-dest {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: clamp(1.12rem, 2.02vh, 1.42rem);
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.22;
 }
 
 .transit-bus-freq {
-  font-size: 0.72rem;
-  color: #94a3b8;
+  font-size: clamp(0.98rem, 1.72vh, 1.2rem);
+  font-weight: 700;
+  color: #cbd5e1;
 }
 
 .transit-bus-badge {
-  font-size: 0.7rem;
-  background: rgba(255, 255, 255, 0.1);
-  color: #cbd5e1;
-  padding: 0.2rem 0.45rem;
-  border-radius: 6px;
+  font-size: clamp(0.92rem, 1.6vh, 1.12rem);
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  padding: 0.38rem 0.7rem;
+  border-radius: 8px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .traffic-list {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.75rem;
   flex: 1;
-  justify-content: space-around;
+  justify-content: space-between;
 }
 
 .traffic-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(30, 41, 59, 0.6);
-  padding: 0.5rem 0.75rem;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  gap: 0.45rem;
+  background: rgba(30, 41, 59, 0.68);
+  padding: clamp(0.75rem, 1.6vh, 1.15rem) 0.85rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  flex: 1;
 }
 
 .traffic-dest {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #f1f5f9;
+  font-size: clamp(1.06rem, 1.9vh, 1.3rem);
+  font-weight: 800;
+  color: #ffffff;
   flex: 1;
+  line-height: 1.22;
 }
 
 .traffic-time {
   font-family: monospace;
-  font-size: 0.95rem;
-  font-weight: 800;
-  color: #ffffff;
-  margin: 0 0.6rem;
+  font-size: clamp(1.34rem, 2.4vh, 1.7rem);
+  font-weight: 900;
+  color: #38bdf8;
+  margin: 0 0.35rem;
+  white-space: nowrap;
 }
 
 .traffic-badge {
-  font-size: 0.72rem;
+  font-size: clamp(0.92rem, 1.65vh, 1.14rem);
   font-weight: 800;
-  padding: 0.25rem 0.6rem;
-  border-radius: 20px;
+  padding: 0.38rem 0.78rem;
+  border-radius: 999px;
   white-space: nowrap;
 }
 
 .traffic-green {
-  background: rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.22);
   color: #4ade80;
-  border: 1px solid rgba(34, 197, 94, 0.4);
+  border: 1px solid rgba(34, 197, 94, 0.45);
 }
 
 .traffic-orange {
-  background: rgba(249, 115, 22, 0.2);
+  background: rgba(249, 115, 22, 0.22);
   color: #fb923c;
-  border: 1px solid rgba(249, 115, 22, 0.4);
+  border: 1px solid rgba(249, 115, 22, 0.45);
 }
 
 .traffic-red {
@@ -1978,108 +2075,164 @@ body.lite-mode .emergency-alert-stage-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem;
+  padding: 0.15rem 0;
   box-sizing: border-box;
+  gap: 0.85rem;
 }
 
 .interest-cards-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.1rem;
+  gap: 1.25rem;
   flex: 1;
-  margin: 0.85rem 0;
+  min-height: 0;
 }
 
 .interest-card {
-  background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: clamp(1.35rem, 2.5vh, 1.95rem);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 1rem;
   backdrop-filter: blur(10px);
 }
 
 .interest-card-history {
-  border-top: 3px solid #38bdf8;
+  border-top: 5px solid #38bdf8;
 }
 
 .interest-card-trivia {
-  border-top: 3px solid #c084fc;
+  border-top: 5px solid #c084fc;
 }
 
 .interest-card-tip {
-  border-top: 3px solid #22c55e;
+  border-top: 5px solid #22c55e;
 }
 
 .interest-card-header {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  margin-bottom: 0.75rem;
+  gap: 0.9rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
 .interest-card-icon {
-  font-size: 1.7rem;
+  font-size: clamp(2.2rem, 4vh, 2.85rem);
+  width: clamp(3.5rem, 6.2vh, 4.3rem);
+  height: clamp(3.5rem, 6.2vh, 4.3rem);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
 .interest-card-titles {
   display: flex;
   flex-direction: column;
+  gap: 0.2rem;
 }
 
 .interest-card-tag {
-  font-size: 0.72rem;
-  color: #94a3b8;
-  font-weight: 700;
-  text-transform: uppercase;
+  font-size: clamp(0.92rem, 1.6vh, 1.12rem);
+  color: #7dd3fc;
+  font-weight: 800;
+}
+
+.interest-card-trivia .interest-card-tag {
+  color: #d8b4fe;
+}
+
+.interest-card-tip .interest-card-tag {
+  color: #86efac;
 }
 
 .interest-card-titles h3 {
   font-family: var(--font-heading);
-  font-size: 1.15rem;
-  font-weight: 800;
+  font-size: clamp(1.48rem, 2.75vh, 1.98rem);
+  font-weight: 900;
   color: #ffffff;
-  margin: 0.1rem 0 0 0;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.interest-card-body-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: rgba(30, 41, 59, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: clamp(1.2rem, 2.4vh, 1.85rem);
 }
 
 .interest-card-text {
-  font-size: 0.95rem;
-  line-height: 1.55;
-  color: #cbd5e1;
-  flex: 1;
-  margin: 0.4rem 0;
+  font-size: clamp(1.42rem, 2.75vh, 1.92rem);
+  line-height: 1.52;
+  font-weight: 700;
+  color: #f8fafc;
+  margin: 0;
+  width: 100%;
 }
 
 .interest-card-text.trivia-question {
-  color: #f1f5f9;
-  font-weight: 600;
+  font-size: clamp(1.6rem, 3.1vh, 2.18rem);
+  color: #ffffff;
+  font-weight: 900;
+  line-height: 1.42;
 }
 
 .trivia-answer-box {
-  background: rgba(192, 132, 252, 0.12);
-  border: 1px solid rgba(192, 132, 252, 0.35);
-  border-radius: 10px;
-  padding: 0.6rem 0.85rem;
+  background: linear-gradient(135deg, rgba(192, 132, 252, 0.22) 0%, rgba(126, 34, 206, 0.28) 100%);
+  border: 1.5px solid rgba(192, 132, 252, 0.55);
+  border-radius: 16px;
+  padding: clamp(1rem, 2vh, 1.45rem) 1.25rem;
   display: flex;
-  gap: 0.45rem;
-  align-items: baseline;
-  margin-top: 0.6rem;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex-shrink: 0;
 }
 
 .trivia-answer-label {
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: #c084fc;
+  font-size: clamp(1.05rem, 1.85vh, 1.28rem);
+  font-weight: 900;
+  color: #e9d5ff;
   white-space: nowrap;
 }
 
 .trivia-answer-text {
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: clamp(1.28rem, 2.38vh, 1.65rem);
+  font-weight: 800;
   color: #ffffff;
+  line-height: 1.38;
+}
+
+.interest-card-footer-pill {
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  font-size: clamp(1rem, 1.78vh, 1.2rem);
+  font-weight: 700;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.interest-card-footer-pill.history-pill {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  color: #bae6fd;
+}
+
+.interest-card-footer-pill.tip-pill {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  color: #bbf7d0;
 }
 
 /* 4. Special Hebrew Calendar Badges */
