@@ -422,7 +422,16 @@ class BuildingSignageApp {
 
           // Check for Remote Force Reload
           if (cloudSettings.system?.forceReloadAt && cloudSettings.system.forceReloadAt > this.bootTimestamp) {
-            console.log('🔄 [Screen] Remote reload command received from admin!');
+            this.bootTimestamp = cloudSettings.system.forceReloadAt;
+            // If audio is already unlocked on this kiosk, prefer an in-memory full data & CSS refresh
+            // so we don't wipe out the browser's user-gesture audio unlock unless forceHardReloadAt is set!
+            const hardReloadRequested = cloudSettings.system?.forceHardReloadAt && cloudSettings.system.forceHardReloadAt > (this.lastHardReloadTimestamp || 0);
+            if (this.audioUnlocked && !hardReloadRequested) {
+              console.log('🔄 [Screen] Remote reload command received — executing soft full refresh to preserve unlocked radio!');
+              this.performNightSoftMaintenanceSweep('remote_soft_reload');
+              return;
+            }
+            console.log('🔄 [Screen] Remote hard reload command received from admin!');
             try { localStorage.setItem('smart_lobby_exit_reason', 'remote_force_reload'); } catch (e) {}
             window.location.reload(true);
             return;
@@ -3361,12 +3370,65 @@ class BuildingSignageApp {
   // =========================================================
   // 6. AUDIO & RADIO CONTROLS
   // =========================================================
+  getSilentAudioUri() {
+    if (this._silentWavUri) return this._silentWavUri;
+    // Generate a 1-second 8000Hz 16-bit mono digital-zero PCM WAV in memory (0 network traffic, 0.0000 amplitude)
+    const sampleRate = 8000;
+    const numSamples = 8000;
+    const dataSize = numSamples * 2;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+    const writeStr = (offset, str) => {
+      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    };
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeStr(36, 'data');
+    view.setUint32(40, dataSize, true);
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    this._silentWavUri = 'data:audio/wav;base64,' + btoa(binary);
+    return this._silentWavUri;
+  }
+
+  ensureAudioContextUnlocked() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!this.keepAliveAudioCtx) {
+        this.keepAliveAudioCtx = new AudioCtx();
+        const osc = this.keepAliveAudioCtx.createOscillator();
+        const gain = this.keepAliveAudioCtx.createGain();
+        // Inaudible zero gain keep-alive so Android WebView never suspends the document audio session
+        gain.gain.value = 0.000001;
+        osc.connect(gain);
+        gain.connect(this.keepAliveAudioCtx.destination);
+        osc.start(0);
+      }
+      if (this.keepAliveAudioCtx.state === 'suspended') {
+        this.keepAliveAudioCtx.resume().catch(() => {});
+      }
+    } catch (e) {}
+  }
+
   attachAudioErrorListener() {
     if (!this.audioPlayer || this.audioErrorListenerAttached) return;
     this.audioErrorListenerAttached = true;
     this.audioPlayer.addEventListener('error', (e) => {
-      // Ignore errors caused during intentional buffer recycle / src clearance
-      if (this.isRecyclingAudio || !this.audioPlayer || !this.audioPlayer.getAttribute('src')) return;
+      // Ignore errors caused during intentional buffer recycle / src clearance / silent keep-alive
+      if (this.isRecyclingAudio || this.isSilentKeepAlive || !this.audioPlayer || !this.audioPlayer.getAttribute('src')) return;
       console.warn('⚠️ [Radio] Audio player error encountered:', e);
       if (this.isRadioInSchedule() && !this.isSecretMuted && !this.isYomKippurModeActive()) {
         if (this.audioErrorRetryTimer) clearTimeout(this.audioErrorRetryTimer);
@@ -3394,17 +3456,32 @@ class BuildingSignageApp {
 
     this.attachAudioErrorListener();
 
-    // Unlock audio smoothly on ANY screen touch if waiting for user gesture
-    document.addEventListener('pointerdown', () => {
+    // Unlock audio smoothly on ANY user gesture (day or night) and keep it unlocked permanently
+    const handleUserGestureUnlock = () => {
       if (this.isYomKippurModeActive()) return;
-      if (this.audioPlayer && this.audioPlayer.paused && this.isRadioInSchedule() && !this.isSecretMuted) {
-        this.startRadioStream();
+      this.audioUnlocked = true;
+      this.ensureAudioContextUnlocked();
+      const prompt = document.getElementById('audio-unmute-prompt');
+      if (prompt) prompt.style.display = 'none';
+
+      if (!this.audioPlayer || this.isSecretMuted) return;
+      if (this.isRadioInSchedule()) {
+        if (this.audioPlayer.paused || this.isSilentKeepAlive || this.audioPlayer.muted) {
+          this.startRadioStream();
+        }
+      } else if (!this.isEmergencyAlertActive() && (this.audioPlayer.paused || !this.isSilentKeepAlive)) {
+        // User touched screen during night hours — prime silent keep-alive immediately so 06:30 AM starts automatically!
+        this.startSilentNightKeepAlive();
       }
-    }, { passive: true });
+    };
+
+    ['pointerdown', 'touchstart', 'mousedown', 'keydown', 'click'].forEach(evtName => {
+      document.addEventListener(evtName, handleUserGestureUnlock, { passive: true, capture: true });
+    });
 
     // High-frequency radio schedule watchdog (every 15 seconds):
-    // - Halts audio immediately at 23:00:00 (or configured endHour)
-    // - Forcefully attempts to start audio at 06:30:00 (or configured startHour)
+    // - Switches to silent in-memory keep-alive at 23:00:00 (or configured endHour)
+    // - Forcefully switches back to live radio stream at 06:30:00 (or configured startHour)
     setInterval(() => {
       this.checkRadioSchedule();
     }, 15000);
@@ -3415,13 +3492,36 @@ class BuildingSignageApp {
     }, 30 * 60 * 1000);
   }
 
+  startSilentNightKeepAlive() {
+    if (!this.audioPlayer || this.isYomKippurModeActive() || this.isEmergencyAlertActive()) return;
+    this.isSilentKeepAlive = true;
+    this.audioPlayer.volume = 0;
+    this.audioPlayer.muted = true;
+    this.audioPlayer.loop = true;
+    const silentUri = this.getSilentAudioUri();
+    if (this.audioPlayer.getAttribute('src') !== silentUri) {
+      this.audioPlayer.src = silentUri;
+    }
+    const p = this.audioPlayer.play();
+    if (p !== undefined) {
+      p.then(() => {
+        this.audioUnlocked = true;
+      }).catch(() => {});
+    }
+  }
+
   unlockAudio() {
     if (this.isYomKippurModeActive()) return;
+    this.audioUnlocked = true;
+    this.ensureAudioContextUnlocked();
     const prompt = document.getElementById('audio-unmute-prompt');
-    if (this.audioPlayer && this.isRadioInSchedule() && !this.isSecretMuted) {
-      this.startRadioStream();
-      this.audioUnlocked = true;
-      if (prompt) prompt.style.display = 'none';
+    if (prompt) prompt.style.display = 'none';
+    if (this.audioPlayer && !this.isSecretMuted) {
+      if (this.isRadioInSchedule()) {
+        this.startRadioStream();
+      } else {
+        this.startSilentNightKeepAlive();
+      }
     }
   }
 
@@ -3488,16 +3588,29 @@ class BuildingSignageApp {
       clearTimeout(this.audioErrorRetryTimer);
       this.audioErrorRetryTimer = null;
     }
+
+    const radioWidget = document.getElementById('radio-indicator');
+    const unmutePrompt = document.getElementById('audio-unmute-prompt');
+    if (radioWidget) radioWidget.style.display = 'none';
+    if (unmutePrompt) unmutePrompt.style.display = 'none';
+
+    // During normal night hours (when not Yom Kippur or Emergency and not manually muted),
+    // if audio was already unlocked, switch to the 0-volume in-memory silent WAV loop instead of
+    // destroying the native MediaPlayer pipeline, so 06:30 AM playback resumes with 0 user touch!
+    if (this.audioUnlocked && !this.isYomKippurModeActive() && !this.isEmergencyAlertActive() && !this.isSecretMuted && this.settings?.radio?.enabled) {
+      this.startSilentNightKeepAlive();
+      this.isRecyclingAudio = false;
+      return;
+    }
+
+    this.isSilentKeepAlive = false;
+    this.audioPlayer.loop = false;
     this.audioPlayer.pause();
     if (this.audioPlayer.src) {
       this.audioPlayer.removeAttribute('src');
       this.audioPlayer.load();
     }
     this.isRecyclingAudio = false;
-    const radioWidget = document.getElementById('radio-indicator');
-    const unmutePrompt = document.getElementById('audio-unmute-prompt');
-    if (radioWidget) radioWidget.style.display = 'none';
-    if (unmutePrompt) unmutePrompt.style.display = 'none';
   }
 
   startRadioStream() {
@@ -3518,7 +3631,13 @@ class BuildingSignageApp {
     if (radioWidget) radioWidget.style.display = 'flex';
     if (stationNameElem) stationNameElem.textContent = currentSt.name.split(' ')[0];
 
-    this.audioPlayer.volume = radio?.volume !== undefined ? radio.volume : 0.4;
+    this.ensureAudioContextUnlocked();
+
+    const targetVolume = radio?.volume !== undefined ? radio.volume : 0.4;
+    this.isSilentKeepAlive = false;
+    this.audioPlayer.loop = false;
+    this.audioPlayer.muted = false;
+    this.audioPlayer.volume = targetVolume;
 
     if (this.audioPlayer.src !== currentSt.url) {
       this.audioPlayer.src = currentSt.url;
@@ -3528,12 +3647,57 @@ class BuildingSignageApp {
       const playPromise = this.audioPlayer.play();
       if (playPromise !== undefined) {
         playPromise.then(() => {
+          this.audioUnlocked = true;
+          this.audioPlayer.muted = false;
+          this.audioPlayer.volume = targetVolume;
           if (unmutePrompt) unmutePrompt.style.display = 'none';
         }).catch(err => {
-          console.log('[Radio] Autoplay policy note:', err.message);
-          // Show tap prompt only if we are in schedule and still paused
-          if (this.isRadioInSchedule() && unmutePrompt && !this.isEmergencyAlertActive()) {
-            unmutePrompt.style.display = 'flex';
+          const errName = err?.name || '';
+          console.log('[Radio] Play attempt note:', errName, err?.message);
+          // Ignore AbortError caused by overlapping load/play calls
+          if (errName === 'AbortError') return;
+
+          if (errName === 'NotAllowedError') {
+            // Attempt muted autoplay -> unmute bridge (succeeds when Chrome MEI threshold is met)
+            this.audioPlayer.muted = true;
+            const mutedPlay = this.audioPlayer.play();
+            if (mutedPlay !== undefined) {
+              mutedPlay.then(() => {
+                setTimeout(() => {
+                  if (!this.isRadioInSchedule() || this.isSecretMuted) return;
+                  this.audioPlayer.muted = false;
+                  this.audioPlayer.volume = targetVolume;
+                  setTimeout(() => {
+                    if (!this.audioPlayer.paused && !this.audioPlayer.muted) {
+                      console.log('✅ [Radio] Auto-unlocked via muted-to-unmuted MEI bridge!');
+                      this.audioUnlocked = true;
+                      if (unmutePrompt) unmutePrompt.style.display = 'none';
+                    } else {
+                      this.audioPlayer.pause();
+                      if (this.isRadioInSchedule() && unmutePrompt && !this.isEmergencyAlertActive()) {
+                        unmutePrompt.style.display = 'flex';
+                      }
+                    }
+                  }, 180);
+                }, 150);
+              }).catch(() => {
+                this.audioPlayer.muted = false;
+                if (this.isRadioInSchedule() && unmutePrompt && !this.isEmergencyAlertActive()) {
+                  unmutePrompt.style.display = 'flex';
+                }
+              });
+            } else if (this.isRadioInSchedule() && unmutePrompt && !this.isEmergencyAlertActive()) {
+              unmutePrompt.style.display = 'flex';
+            }
+          } else {
+            // Network / stream hiccup at startup — do NOT show tap prompt; schedule automatic retry!
+            if (this.audioErrorRetryTimer) clearTimeout(this.audioErrorRetryTimer);
+            this.audioErrorRetryTimer = setTimeout(() => {
+              this.audioErrorRetryTimer = null;
+              if (this.isRadioInSchedule() && !this.isSecretMuted && !this.isYomKippurModeActive()) {
+                this.startRadioStream();
+              }
+            }, 3000);
           }
         });
       }
@@ -3542,12 +3706,13 @@ class BuildingSignageApp {
 
   recycleAudioBuffer(force = false) {
     if (this.isYomKippurModeActive() || this.isEmergencyAlertActive() || !this.isRadioInSchedule() || !this.audioPlayer || this.isSecretMuted) return;
-    if (!force && this.audioPlayer.paused) return;
+    if (!force && (this.audioPlayer.paused || this.isSilentKeepAlive)) return;
     console.log(`♻️ [Radio] Recycling live audio stream buffer (force=${force}) to prevent stall / memory bloat...`);
     const currentSt = this.getCurrentRadioStation();
     if (!currentSt) return;
 
     this.isRecyclingAudio = true;
+    this.isSilentKeepAlive = false;
     this.lastAudioTime = 0;
     this.audioStallCount = 0;
     if (this.audioErrorRetryTimer) {
@@ -3555,16 +3720,13 @@ class BuildingSignageApp {
       this.audioErrorRetryTimer = null;
     }
 
-    this.audioPlayer.pause();
-    this.audioPlayer.removeAttribute('src');
+    // Reassign stream URL and reload directly without an empty-src gap so the media session stays active
+    this.audioPlayer.loop = false;
+    this.audioPlayer.muted = false;
+    this.audioPlayer.src = currentSt.url;
     this.audioPlayer.load();
-
-    setTimeout(() => {
-      this.isRecyclingAudio = false;
-      if (this.isRadioInSchedule() && !this.isSecretMuted && this.audioPlayer && !this.isYomKippurModeActive() && !this.isEmergencyAlertActive()) {
-        this.startRadioStream();
-      }
-    }, 400);
+    this.isRecyclingAudio = false;
+    this.startRadioStream();
   }
 
   checkRadioSchedule() {
@@ -3585,17 +3747,24 @@ class BuildingSignageApp {
         clearTimeout(this.audioErrorRetryTimer);
         this.audioErrorRetryTimer = null;
       }
-      // Outside permitted hours -> stop radio and ensure prompt is hidden
+      // Outside permitted hours -> ensure prompt is hidden and transition live radio to silent keep-alive
       if (unmutePrompt) unmutePrompt.style.display = 'none';
-      if (this.audioPlayer && (!this.audioPlayer.paused || this.audioPlayer.src)) {
-        console.log('🔇 [Radio] Outside permitted hours -> stopping radio immediately and freeing audio engine.');
-        this.stopRadioImmediate();
+      const radioWidget = document.getElementById('radio-indicator');
+      if (radioWidget) radioWidget.style.display = 'none';
+
+      if (this.audioPlayer) {
+        if (!this.isSilentKeepAlive && (!this.audioPlayer.paused || this.audioPlayer.getAttribute('src'))) {
+          console.log('🔇 [Radio] Outside permitted hours -> stopping live stream and engaging silent night keep-alive.');
+          this.stopRadioImmediate();
+        } else if (this.isSilentKeepAlive && this.audioUnlocked && this.audioPlayer.paused && !this.isSecretMuted) {
+          this.startSilentNightKeepAlive();
+        }
       }
     } else {
-      // Inside permitted hours -> forcefully assert stream playback if not user-muted
-      if (this.audioPlayer && this.audioPlayer.paused && !this.isSecretMuted) {
+      // Inside permitted hours -> forcefully assert stream playback if paused or still in silent night keep-alive
+      if (this.audioPlayer && (this.audioPlayer.paused || this.isSilentKeepAlive || this.audioPlayer.muted) && !this.isSecretMuted) {
         this.startRadioStream();
-      } else if (inSchedule && !this.isSecretMuted && this.audioPlayer && !this.audioPlayer.paused) {
+      } else if (inSchedule && !this.isSecretMuted && this.audioPlayer && !this.audioPlayer.paused && !this.isSilentKeepAlive) {
         // Track currentTime to detect buffer stalls (e.g. icecast stream freeze)
         const curTime = this.audioPlayer.currentTime;
         if (curTime > 0 && curTime === this.lastAudioTime) {
@@ -3688,27 +3857,26 @@ class BuildingSignageApp {
 
   setupWatchdog() {
     // Smart Maintenance Watchdog:
-    // Full hard reload (window.location.reload) at deep night:
-    // 1. 23:05 - Clean reload 5 minutes after radio shutoff at 23:00. Flushes audio engine,
-    //    DOM nodes, and GPU buffers accumulated during the day. Zero autoplay prompt risk!
-    // 2. 04:00 AM - Second deep night clean reload before morning broadcast.
-    // During daytime radio hours (10:00, 16:00), we NEVER hard-reload the page to avoid triggering
-    // the browser's Autoplay audio block ("גע במסך"). Instead, we perform an in-memory soft sweep!
+    // CRITICAL FOR MORNING RADIO AUTOPLAY:
+    // Calling window.location.reload() at night (23:05 / 04:00) destroys the browser Document
+    // and wipes out Sticky User Activation (navigator.userActivation.hasBeenActive), causing
+    // audioPlayer.play() at 06:30 AM to fail with NotAllowedError ("לחץ להפעלת רדיו")!
+    // Instead, both night maintenance (23:05, 04:00) and daytime sweeps (10:00, 16:00) perform
+    // an in-memory soft maintenance sweep, preserving the unlocked audio session 24/7!
     setInterval(() => {
       const now = new Date();
       const currentH = now.getHours();
       const currentM = now.getMinutes();
       const currentS = now.getSeconds();
 
-      // Deep night full reloads (23:05 and 04:00 AM) - radio is off, zero audio interruption
+      // Deep night soft maintenance sweeps (23:05 and 04:00 AM) - refreshes data/DOM WITHOUT reloading Document
       const isNightCleanTime = (currentH === 23 && currentM === 5) || (currentH === 4 && currentM === 0);
       if (isNightCleanTime && currentS < 12) {
         const modal = document.getElementById('interactive-modal');
         const isModalOpen = modal && !modal.classList.contains('hidden');
         if (!this.isPaused && !isModalOpen) {
-          console.log(`🔄 [Watchdog] Scheduled clean night reload at ${currentH}:${String(currentM).padStart(2, '0')} (radio is off)...`);
-          try { localStorage.setItem('smart_lobby_exit_reason', `watchdog_scheduled_${currentH}:${String(currentM).padStart(2, '0')}`); } catch (e) {}
-          window.location.reload();
+          console.log(`🧹 [Watchdog] Scheduled night in-memory maintenance at ${currentH}:${String(currentM).padStart(2, '0')} (preserving audio unlock for morning)...`);
+          this.performNightSoftMaintenanceSweep(`night_${currentH}:${String(currentM).padStart(2, '0')}`);
         }
       }
 
@@ -3717,6 +3885,41 @@ class BuildingSignageApp {
         this.performDaytimeSoftMemorySweep();
       }
     }, 10000);
+  }
+
+  async performNightSoftMaintenanceSweep(reason = 'scheduled_night') {
+    console.log(`🧹 [Watchdog] Executing full in-memory maintenance sweep (${reason}) without losing audio gesture unlock...`);
+    try {
+      // 1. Hot-refresh CSS stylesheets in-place without reloading the Document
+      const links = document.querySelectorAll('link[rel="stylesheet"]');
+      links.forEach(link => {
+        const href = link.getAttribute('href');
+        if (href && href.includes('css/style.css')) {
+          const base = href.split('?')[0];
+          link.setAttribute('href', `${base}?v=${Date.now()}`);
+        }
+      });
+
+      // 2. Refresh all cloud/local data and rebuild DOM cleanly
+      await Promise.allSettled([
+        this.fetchSettings(),
+        this.fetchNotices(),
+        this.fetchPhotos(),
+        this.fetchWallpapers(),
+        this.fetchWeather(),
+        this.fetchShabbatAndHolidays()
+      ]);
+      this.fetchNews();
+      this.renderSideColumn();
+      this.buildSlides();
+      this.checkRadioSchedule();
+
+      if (window.gc) {
+        try { window.gc(); } catch (e) {}
+      }
+    } catch (err) {
+      console.warn('⚠️ [Watchdog] Soft maintenance sweep warning:', err);
+    }
   }
 
   performDaytimeSoftMemorySweep() {
@@ -3889,7 +4092,7 @@ class BuildingSignageApp {
       }
 
       const uptimeMinutes = Math.floor((Date.now() - (this.bootTimestamp || Date.now())) / 60000);
-      const isRadioPlaying = Boolean(this.audioPlayer && !this.audioPlayer.paused && this.audioPlayer.src);
+      const isRadioPlaying = Boolean(this.audioPlayer && !this.audioPlayer.paused && this.audioPlayer.src && !this.isSilentKeepAlive && !this.audioPlayer.muted);
 
       const health = {
         lastSeen: Date.now(),

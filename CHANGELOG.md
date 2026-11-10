@@ -18,9 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Weather & Environment (`weather_forecast`):** Stretched `.forecast-cards-grid` (`flex: 1.15`) and converted `.forecast-env-grid` from a cramped 4-column strip into a spacious 2×2 grid (`grid-template-columns: repeat(2, 1fr); flex: 0.9;`) with large icons (`clamp(3.9rem, 7vh, 4.9rem)`) and bold values (`clamp(1.42rem, 2.65vh, 1.9rem)`).
   - **Transit & Commute (`transit_commute`):** Added `.transit-trains-body`, `.transit-train-section` (`flex: 1`), and `.transit-train-footer-box` so the Israel Railways column fills the full card height; enlarged train departure times (`clamp(1.75rem, 3.25vh, 2.35rem)`), bus badges (`clamp(1.35rem, 2.45vh, 1.75rem)`), and highway commute rows while removing ellipsis truncation on bus destinations.
   - **Daily Interest & Trivia (`daily_interest`):** Added `.interest-card-body-box` (`flex: 1`) and `.interest-card-footer-pill` across History & Science cards; enlarged `.interest-card-text` from `0.95rem` to `clamp(1.42rem, 2.75vh, 1.92rem)` (`~31px` on 1080p) and `.trivia-question` to `clamp(1.6rem, 3.1vh, 2.18rem)` (`~35px` on 1080p).
+- **Automatic Morning Radio Resume & Overnight Audio Unlock Preservation (`setupWatchdog`, `stopRadioImmediate`, `startSilentNightKeepAlive`):** Fixed the issue where the radio was muted every morning at `06:30` waiting for a screen touch (`NotAllowedError`):
+  - Replaced the destructive `window.location.reload()` calls at `23:05` and `04:00 AM` in `setupWatchdog()` with `performNightSoftMaintenanceSweep()`, which refreshes all data, slides, and stylesheets in-memory without destroying the browser `Document` or wiping out Sticky User Activation (`navigator.userActivation.hasBeenActive`).
+  - Added an in-memory 0-volume digital-zero PCM WAV keep-alive loop (`getSilentAudioUri()` + `startSilentNightKeepAlive()`) + WebAudio `AudioContext` keep-alive (`ensureAudioContextUnlocked()`) during night hours (`23:00`–`06:30`) so Android WebView / Chromium never releases `AudioFocus` or revokes playback authorization overnight while consuming zero network bandwidth and producing zero speaker output.
+  - Added a muted-to-unmuted Media Engagement Index (MEI) bridge in `startRadioStream()` and separated transient network/stream errors from `NotAllowedError` so temporary stream hiccups automatically retry instead of displaying the tap prompt.
 
 ### Changed
-- **Cachebuster Bump:** Updated cachebuster across `index.html` and `admin.html` to `v=20261102_1080p_scale_v265`.
+- **Cachebuster Bump:** Updated cachebuster across `index.html` and `admin.html` to `v=20261110_radio_morning_fix_v266`.
 - **1:1 Binary Synchronization:** Completely synchronized all frontend assets, configuration, and scripts between root and `public/` directory.
 
 ## [2.5.0] - 2026-10-18
