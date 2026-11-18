@@ -518,6 +518,14 @@ class BuildingSignageApp {
   }
 
   startOrefAlertPoller() {
+    // IMPORTANT FOR RK3368 / STATIC HOSTING STABILITY:
+    // oref.org.il geo-blocks non-Israeli proxy servers (like api.allorigins.win), causing 100% of
+    // proxy requests on GitHub Pages to hang for 4s and abort (5,760 aborted TLS sockets/day -> native RAM leak).
+    // Only poll /api/oref when running against the local Node.js backend server inside Israel.
+    if (!this.isLocalServer()) {
+      return;
+    }
+
     const poll = async () => {
       // Check if autoOref is enabled in settings (default true)
       if (this.settings?.display?.emergencyAlert?.autoOref === false) {
@@ -536,27 +544,9 @@ class BuildingSignageApp {
 
       try {
         let alertData = null;
-        if (this.isLocalServer()) {
-          const res = await fetchWithTimeout('/api/oref', {}, 4000);
-          if (res.ok) {
-            alertData = await res.json();
-          }
-        } else {
-          // GitHub Pages: use allorigins proxy with short timeout (4s)
-          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent('https://www.oref.org.il/WarningMessages/alert/alerts.json')}&timestamp=${Date.now()}`;
-          const res = await fetchWithTimeout(proxyUrl, {}, 4000);
-          if (res.ok) {
-            const wrapper = await res.json();
-            if (wrapper && wrapper.contents) {
-              const cleaned = wrapper.contents.replace(/^\uFEFF/, '').trim();
-              if (cleaned) {
-                const parsed = JSON.parse(cleaned);
-                if (parsed && Array.isArray(parsed.data)) {
-                  alertData = parsed;
-                }
-              }
-            }
-          }
+        const res = await fetchWithTimeout('/api/oref', {}, 4000);
+        if (res.ok) {
+          alertData = await res.json();
         }
 
         const isHaderaAlert = alertData && Array.isArray(alertData.data) && alertData.data.some(loc => typeof loc === 'string' && loc.includes('חדרה'));
@@ -2181,8 +2171,8 @@ class BuildingSignageApp {
           if (items.length > 0) {
             collectedByIndex[idx] = items;
             const currentMerged = interleaveAndDedupe(collectedByIndex.filter(a => a.length > 0), 28);
-            // Progressive render as soon as first wave of external + local feeds arrives
-            if (!hasRenderedProgressive && currentMerged.length >= 5) {
+            // Progressive render as soon as first wave of external + local feeds arrives (skip in liteMode to avoid double GPU texture upload)
+            if (!hasRenderedProgressive && !this.settings?.display?.liteMode && currentMerged.length >= 5) {
               hasRenderedProgressive = true;
               this.newsItems = currentMerged;
               this.lastNewsUpdateTime = Date.now();
@@ -2254,11 +2244,23 @@ class BuildingSignageApp {
       `;
     }
 
-    const items = (this.newsItems && this.newsItems.length > 0) ? this.newsItems : [
+    const allItems = (this.newsItems && this.newsItems.length > 0) ? this.newsItems : [
       { title: 'ועד הבית מברך את כל דיירי ואורחי הבניין בברכת יום נעים, בריאות ושקט' },
       { title: 'נא לוודא כי דלת הלובי הראשית והשער נסגרים כראוי לאחר כניסה ויציאה' },
       { title: 'שמירה על ניקיון וסדר בשטחים המשותפים תורמת לאיכות החיים של כולנו' }
     ];
+
+    // On rk3368 (liteMode), cap ticker DOM items per cycle to 10 (duplicated = 20 items, ~6,000px wide)
+    // so the composited marquee layer never exceeds the PowerVR G6110 8192px hardware GPU texture limit!
+    let items = allItems;
+    if (this.settings?.display?.liteMode && allItems.length > 10) {
+      const offset = (this.tickerBatchOffset || 0) % allItems.length;
+      this.tickerBatchOffset = (offset + 5) % allItems.length;
+      items = [];
+      for (let i = 0; i < 10; i++) {
+        items.push(allItems[(offset + i) % allItems.length]);
+      }
+    }
 
     // Dynamically scale marquee duration based on total items so reading speed stays constant and comfortable
     const itemCount = Math.max(items.length + (this.settings?.display?.customTickerText ? 1 : 0), 6);
@@ -2292,7 +2294,11 @@ class BuildingSignageApp {
     });
 
     // Duplicate ticker items twice for seamless 100% continuous marquee loop
-    tickerContent.innerHTML = itemsHtml + itemsHtml;
+    const finalHtml = itemsHtml + itemsHtml;
+    if (tickerContent.dataset.lastHtml !== finalHtml) {
+      tickerContent.dataset.lastHtml = finalHtml;
+      tickerContent.innerHTML = finalHtml;
+    }
   }
 
   // =========================================================
@@ -3370,65 +3376,12 @@ class BuildingSignageApp {
   // =========================================================
   // 6. AUDIO & RADIO CONTROLS
   // =========================================================
-  getSilentAudioUri() {
-    if (this._silentWavUri) return this._silentWavUri;
-    // Generate a 1-second 8000Hz 16-bit mono digital-zero PCM WAV in memory (0 network traffic, 0.0000 amplitude)
-    const sampleRate = 8000;
-    const numSamples = 8000;
-    const dataSize = numSamples * 2;
-    const buffer = new ArrayBuffer(44 + dataSize);
-    const view = new DataView(buffer);
-    const writeStr = (offset, str) => {
-      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-    };
-    writeStr(0, 'RIFF');
-    view.setUint32(4, 36 + dataSize, true);
-    writeStr(8, 'WAVE');
-    writeStr(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeStr(36, 'data');
-    view.setUint32(40, dataSize, true);
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    this._silentWavUri = 'data:audio/wav;base64,' + btoa(binary);
-    return this._silentWavUri;
-  }
-
-  ensureAudioContextUnlocked() {
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      if (!this.keepAliveAudioCtx) {
-        this.keepAliveAudioCtx = new AudioCtx();
-        const osc = this.keepAliveAudioCtx.createOscillator();
-        const gain = this.keepAliveAudioCtx.createGain();
-        // Inaudible zero gain keep-alive so Android WebView never suspends the document audio session
-        gain.gain.value = 0.000001;
-        osc.connect(gain);
-        gain.connect(this.keepAliveAudioCtx.destination);
-        osc.start(0);
-      }
-      if (this.keepAliveAudioCtx.state === 'suspended') {
-        this.keepAliveAudioCtx.resume().catch(() => {});
-      }
-    } catch (e) {}
-  }
-
   attachAudioErrorListener() {
     if (!this.audioPlayer || this.audioErrorListenerAttached) return;
     this.audioErrorListenerAttached = true;
     this.audioPlayer.addEventListener('error', (e) => {
-      // Ignore errors caused during intentional buffer recycle / src clearance / silent keep-alive
-      if (this.isRecyclingAudio || this.isSilentKeepAlive || !this.audioPlayer || !this.audioPlayer.getAttribute('src')) return;
+      // Ignore errors caused during intentional buffer recycle / src clearance
+      if (this.isRecyclingAudio || !this.audioPlayer || !this.audioPlayer.getAttribute('src')) return;
       console.warn('⚠️ [Radio] Audio player error encountered:', e);
       if (this.isRadioInSchedule() && !this.isSecretMuted && !this.isYomKippurModeActive()) {
         if (this.audioErrorRetryTimer) clearTimeout(this.audioErrorRetryTimer);
@@ -3456,22 +3409,23 @@ class BuildingSignageApp {
 
     this.attachAudioErrorListener();
 
-    // Unlock audio smoothly on ANY user gesture (day or night) and keep it unlocked permanently
+    // Unlock audio smoothly on ANY user gesture (day or night).
+    // In Chrome 119+ (Android WebView), a single touch sets frame Sticky User Activation
+    // (navigator.userActivation.hasBeenActive = true) permanently for the lifetime of the Document,
+    // without needing any background WAV loop or AudioContext oscillator overnight!
     const handleUserGestureUnlock = () => {
       if (this.isYomKippurModeActive()) return;
+      const wasBlocked = this.autoplayBlockedByPolicy;
       this.audioUnlocked = true;
-      this.ensureAudioContextUnlocked();
+      this.autoplayBlockedByPolicy = false;
       const prompt = document.getElementById('audio-unmute-prompt');
       if (prompt) prompt.style.display = 'none';
 
       if (!this.audioPlayer || this.isSecretMuted) return;
       if (this.isRadioInSchedule()) {
-        if (this.audioPlayer.paused || this.isSilentKeepAlive || this.audioPlayer.muted) {
+        if (this.audioPlayer.paused || wasBlocked || !this.audioPlayer.getAttribute('src')) {
           this.startRadioStream();
         }
-      } else if (!this.isEmergencyAlertActive() && (this.audioPlayer.paused || !this.isSilentKeepAlive)) {
-        // User touched screen during night hours — prime silent keep-alive immediately so 06:30 AM starts automatically!
-        this.startSilentNightKeepAlive();
       }
     };
 
@@ -3480,48 +3434,26 @@ class BuildingSignageApp {
     });
 
     // High-frequency radio schedule watchdog (every 15 seconds):
-    // - Switches to silent in-memory keep-alive at 23:00:00 (or configured endHour)
-    // - Forcefully switches back to live radio stream at 06:30:00 (or configured startHour)
+    // - Halts live stream and frees native Stagefright memory at 23:00:00 (or configured endHour)
+    // - Automatically resumes live radio stream at 06:30:00 (using Document sticky user activation)
     setInterval(() => {
       this.checkRadioSchedule();
     }, 15000);
 
-    // Cycle audio stream buffer every 30 minutes during playback to prevent native WebView memory bloat
+    // Cycle audio stream buffer every 2 hours during playback to prevent native WebView memory bloat
     setInterval(() => {
       this.recycleAudioBuffer();
-    }, 30 * 60 * 1000);
-  }
-
-  startSilentNightKeepAlive() {
-    if (!this.audioPlayer || this.isYomKippurModeActive() || this.isEmergencyAlertActive()) return;
-    this.isSilentKeepAlive = true;
-    this.audioPlayer.volume = 0;
-    this.audioPlayer.muted = true;
-    this.audioPlayer.loop = true;
-    const silentUri = this.getSilentAudioUri();
-    if (this.audioPlayer.getAttribute('src') !== silentUri) {
-      this.audioPlayer.src = silentUri;
-    }
-    const p = this.audioPlayer.play();
-    if (p !== undefined) {
-      p.then(() => {
-        this.audioUnlocked = true;
-      }).catch(() => {});
-    }
+    }, 120 * 60 * 1000);
   }
 
   unlockAudio() {
     if (this.isYomKippurModeActive()) return;
     this.audioUnlocked = true;
-    this.ensureAudioContextUnlocked();
+    this.autoplayBlockedByPolicy = false;
     const prompt = document.getElementById('audio-unmute-prompt');
     if (prompt) prompt.style.display = 'none';
-    if (this.audioPlayer && !this.isSecretMuted) {
-      if (this.isRadioInSchedule()) {
-        this.startRadioStream();
-      } else {
-        this.startSilentNightKeepAlive();
-      }
+    if (this.audioPlayer && this.isRadioInSchedule() && !this.isSecretMuted) {
+      this.startRadioStream();
     }
   }
 
@@ -3582,6 +3514,7 @@ class BuildingSignageApp {
   stopRadioImmediate() {
     if (!this.audioPlayer) return;
     this.isRecyclingAudio = true;
+    this.isSilentKeepAlive = false;
     this.lastAudioTime = 0;
     this.audioStallCount = 0;
     if (this.audioErrorRetryTimer) {
@@ -3594,19 +3527,9 @@ class BuildingSignageApp {
     if (radioWidget) radioWidget.style.display = 'none';
     if (unmutePrompt) unmutePrompt.style.display = 'none';
 
-    // During normal night hours (when not Yom Kippur or Emergency and not manually muted),
-    // if audio was already unlocked, switch to the 0-volume in-memory silent WAV loop instead of
-    // destroying the native MediaPlayer pipeline, so 06:30 AM playback resumes with 0 user touch!
-    if (this.audioUnlocked && !this.isYomKippurModeActive() && !this.isEmergencyAlertActive() && !this.isSecretMuted && this.settings?.radio?.enabled) {
-      this.startSilentNightKeepAlive();
-      this.isRecyclingAudio = false;
-      return;
-    }
-
-    this.isSilentKeepAlive = false;
     this.audioPlayer.loop = false;
     this.audioPlayer.pause();
-    if (this.audioPlayer.src) {
+    if (this.audioPlayer.getAttribute('src')) {
       this.audioPlayer.removeAttribute('src');
       this.audioPlayer.load();
     }
@@ -3631,15 +3554,13 @@ class BuildingSignageApp {
     if (radioWidget) radioWidget.style.display = 'flex';
     if (stationNameElem) stationNameElem.textContent = currentSt.name.split(' ')[0];
 
-    this.ensureAudioContextUnlocked();
-
     const targetVolume = radio?.volume !== undefined ? radio.volume : 0.4;
     this.isSilentKeepAlive = false;
     this.audioPlayer.loop = false;
     this.audioPlayer.muted = false;
     this.audioPlayer.volume = targetVolume;
 
-    if (this.audioPlayer.src !== currentSt.url) {
+    if (this.audioPlayer.getAttribute('src') !== currentSt.url) {
       this.audioPlayer.src = currentSt.url;
     }
 
@@ -3648,6 +3569,7 @@ class BuildingSignageApp {
       if (playPromise !== undefined) {
         playPromise.then(() => {
           this.audioUnlocked = true;
+          this.autoplayBlockedByPolicy = false;
           this.audioPlayer.muted = false;
           this.audioPlayer.volume = targetVolume;
           if (unmutePrompt) unmutePrompt.style.display = 'none';
@@ -3658,46 +3580,27 @@ class BuildingSignageApp {
           if (errName === 'AbortError') return;
 
           if (errName === 'NotAllowedError') {
-            // Attempt muted autoplay -> unmute bridge (succeeds when Chrome MEI threshold is met)
-            this.audioPlayer.muted = true;
-            const mutedPlay = this.audioPlayer.play();
-            if (mutedPlay !== undefined) {
-              mutedPlay.then(() => {
-                setTimeout(() => {
-                  if (!this.isRadioInSchedule() || this.isSecretMuted) return;
-                  this.audioPlayer.muted = false;
-                  this.audioPlayer.volume = targetVolume;
-                  setTimeout(() => {
-                    if (!this.audioPlayer.paused && !this.audioPlayer.muted) {
-                      console.log('✅ [Radio] Auto-unlocked via muted-to-unmuted MEI bridge!');
-                      this.audioUnlocked = true;
-                      if (unmutePrompt) unmutePrompt.style.display = 'none';
-                    } else {
-                      this.audioPlayer.pause();
-                      if (this.isRadioInSchedule() && unmutePrompt && !this.isEmergencyAlertActive()) {
-                        unmutePrompt.style.display = 'flex';
-                      }
-                    }
-                  }, 180);
-                }, 150);
-              }).catch(() => {
-                this.audioPlayer.muted = false;
-                if (this.isRadioInSchedule() && unmutePrompt && !this.isEmergencyAlertActive()) {
-                  unmutePrompt.style.display = 'flex';
-                }
-              });
-            } else if (this.isRadioInSchedule() && unmutePrompt && !this.isEmergencyAlertActive()) {
+            // Stop pre-buffering live Icecast MP3 stream into native RAM while waiting for user touch!
+            this.autoplayBlockedByPolicy = true;
+            this.isRecyclingAudio = true;
+            this.audioPlayer.pause();
+            if (this.audioPlayer.getAttribute('src')) {
+              this.audioPlayer.removeAttribute('src');
+              this.audioPlayer.load();
+            }
+            this.isRecyclingAudio = false;
+            if (this.isRadioInSchedule() && unmutePrompt && !this.isEmergencyAlertActive()) {
               unmutePrompt.style.display = 'flex';
             }
           } else {
-            // Network / stream hiccup at startup — do NOT show tap prompt; schedule automatic retry!
+            // Network / stream hiccup — do NOT show tap prompt; schedule automatic retry!
             if (this.audioErrorRetryTimer) clearTimeout(this.audioErrorRetryTimer);
             this.audioErrorRetryTimer = setTimeout(() => {
               this.audioErrorRetryTimer = null;
               if (this.isRadioInSchedule() && !this.isSecretMuted && !this.isYomKippurModeActive()) {
                 this.startRadioStream();
               }
-            }, 3000);
+            }, 4000);
           }
         });
       }
@@ -3706,13 +3609,12 @@ class BuildingSignageApp {
 
   recycleAudioBuffer(force = false) {
     if (this.isYomKippurModeActive() || this.isEmergencyAlertActive() || !this.isRadioInSchedule() || !this.audioPlayer || this.isSecretMuted) return;
-    if (!force && (this.audioPlayer.paused || this.isSilentKeepAlive)) return;
+    if (!force && this.audioPlayer.paused) return;
     console.log(`♻️ [Radio] Recycling live audio stream buffer (force=${force}) to prevent stall / memory bloat...`);
     const currentSt = this.getCurrentRadioStation();
     if (!currentSt) return;
 
     this.isRecyclingAudio = true;
-    this.isSilentKeepAlive = false;
     this.lastAudioTime = 0;
     this.audioStallCount = 0;
     if (this.audioErrorRetryTimer) {
@@ -3720,10 +3622,9 @@ class BuildingSignageApp {
       this.audioErrorRetryTimer = null;
     }
 
-    // Reassign stream URL and reload directly without an empty-src gap so the media session stays active
-    this.audioPlayer.loop = false;
-    this.audioPlayer.muted = false;
-    this.audioPlayer.src = currentSt.url;
+    // Release native Stagefright buffer and reconnect synchronously
+    this.audioPlayer.pause();
+    this.audioPlayer.removeAttribute('src');
     this.audioPlayer.load();
     this.isRecyclingAudio = false;
     this.startRadioStream();
@@ -3747,24 +3648,24 @@ class BuildingSignageApp {
         clearTimeout(this.audioErrorRetryTimer);
         this.audioErrorRetryTimer = null;
       }
-      // Outside permitted hours -> ensure prompt is hidden and transition live radio to silent keep-alive
+      // Outside permitted hours -> stop radio and free 100% of native audio memory
       if (unmutePrompt) unmutePrompt.style.display = 'none';
       const radioWidget = document.getElementById('radio-indicator');
       if (radioWidget) radioWidget.style.display = 'none';
 
-      if (this.audioPlayer) {
-        if (!this.isSilentKeepAlive && (!this.audioPlayer.paused || this.audioPlayer.getAttribute('src'))) {
-          console.log('🔇 [Radio] Outside permitted hours -> stopping live stream and engaging silent night keep-alive.');
-          this.stopRadioImmediate();
-        } else if (this.isSilentKeepAlive && this.audioUnlocked && this.audioPlayer.paused && !this.isSecretMuted) {
-          this.startSilentNightKeepAlive();
-        }
+      if (this.audioPlayer && (!this.audioPlayer.paused || this.audioPlayer.getAttribute('src'))) {
+        console.log('🔇 [Radio] Outside permitted hours -> stopping live stream and freeing native audio engine.');
+        this.stopRadioImmediate();
       }
     } else {
-      // Inside permitted hours -> forcefully assert stream playback if paused or still in silent night keep-alive
-      if (this.audioPlayer && (this.audioPlayer.paused || this.isSilentKeepAlive || this.audioPlayer.muted) && !this.isSecretMuted) {
-        this.startRadioStream();
-      } else if (inSchedule && !this.isSecretMuted && this.audioPlayer && !this.audioPlayer.paused && !this.isSilentKeepAlive) {
+      // Inside permitted hours -> start stream if paused (unless already blocked by NotAllowedError with no user activation yet)
+      const hasStickyActivation = Boolean(this.audioUnlocked || (typeof navigator !== 'undefined' && navigator.userActivation?.hasBeenActive));
+      if (this.audioPlayer && this.audioPlayer.paused && !this.isSecretMuted) {
+        if (!this.autoplayBlockedByPolicy || hasStickyActivation) {
+          this.autoplayBlockedByPolicy = false;
+          this.startRadioStream();
+        }
+      } else if (inSchedule && !this.isSecretMuted && this.audioPlayer && !this.audioPlayer.paused) {
         // Track currentTime to detect buffer stalls (e.g. icecast stream freeze)
         const curTime = this.audioPlayer.currentTime;
         if (curTime > 0 && curTime === this.lastAudioTime) {
@@ -3805,6 +3706,14 @@ class BuildingSignageApp {
     }, 10 * 60 * 1000);
 
     setInterval(() => {
+      // In Lite Mode, refresh news every 20 minutes instead of 10 to reduce network & DOM churn on rk3368
+      if (this.settings?.display?.liteMode) {
+        this._liteNewsTick = (this._liteNewsTick || 0) + 1;
+        if (this._liteNewsTick % 2 !== 0) {
+          this.renderNewsTicker(); // Rotate to next 10-headline batch from memory pool with zero network requests!
+          return;
+        }
+      }
       this.fetchNews();
     }, 10 * 60 * 1000);
 
@@ -3857,59 +3766,59 @@ class BuildingSignageApp {
 
   setupWatchdog() {
     // Smart Maintenance Watchdog:
-    // CRITICAL FOR MORNING RADIO AUTOPLAY:
-    // Calling window.location.reload() at night (23:05 / 04:00) destroys the browser Document
-    // and wipes out Sticky User Activation (navigator.userActivation.hasBeenActive), causing
-    // audioPlayer.play() at 06:30 AM to fail with NotAllowedError ("לחץ להפעלת רדיו")!
-    // Instead, both night maintenance (23:05, 04:00) and daytime sweeps (10:00, 16:00) perform
-    // an in-memory soft maintenance sweep, preserving the unlocked audio session 24/7!
+    // CRITICAL FOR MORNING RADIO AUTOPLAY & RK3368 STABILITY:
+    // Never call window.location.reload() at night (which wipes out navigator.userActivation.hasBeenActive),
+    // and deduplicate per-minute execution so 23:05, 04:00, 10:00, and 16:00 run at most ONCE per scheduled minute.
     setInterval(() => {
       const now = new Date();
       const currentH = now.getHours();
       const currentM = now.getMinutes();
       const currentS = now.getSeconds();
+      const minuteKey = `${now.getDate()}_${currentH}:${currentM}`;
 
-      // Deep night soft maintenance sweeps (23:05 and 04:00 AM) - refreshes data/DOM WITHOUT reloading Document
+      // Deep night soft maintenance sweeps (23:05 and 04:00 AM) - refreshes data WITHOUT reloading Document
       const isNightCleanTime = (currentH === 23 && currentM === 5) || (currentH === 4 && currentM === 0);
-      if (isNightCleanTime && currentS < 12) {
+      if (isNightCleanTime && currentS < 15 && this.lastWatchdogMinuteKey !== minuteKey) {
         const modal = document.getElementById('interactive-modal');
         const isModalOpen = modal && !modal.classList.contains('hidden');
         if (!this.isPaused && !isModalOpen) {
+          this.lastWatchdogMinuteKey = minuteKey;
           console.log(`🧹 [Watchdog] Scheduled night in-memory maintenance at ${currentH}:${String(currentM).padStart(2, '0')} (preserving audio unlock for morning)...`);
           this.performNightSoftMaintenanceSweep(`night_${currentH}:${String(currentM).padStart(2, '0')}`);
         }
       }
 
       // Daytime memory sweeps (10:00, 16:00) - in-memory cleanup WITHOUT reloading the window
-      if ([10, 16].includes(currentH) && currentM === 0 && currentS < 12) {
+      if ([10, 16].includes(currentH) && currentM === 0 && currentS < 15 && this.lastWatchdogMinuteKey !== minuteKey) {
+        this.lastWatchdogMinuteKey = minuteKey;
         this.performDaytimeSoftMemorySweep();
       }
     }, 10000);
   }
 
   async performNightSoftMaintenanceSweep(reason = 'scheduled_night') {
-    console.log(`🧹 [Watchdog] Executing full in-memory maintenance sweep (${reason}) without losing audio gesture unlock...`);
+    console.log(`🧹 [Watchdog] Executing lightweight in-memory maintenance sweep (${reason}) without losing audio gesture unlock...`);
     try {
-      // 1. Hot-refresh CSS stylesheets in-place without reloading the Document
-      const links = document.querySelectorAll('link[rel="stylesheet"]');
-      links.forEach(link => {
-        const href = link.getAttribute('href');
-        if (href && href.includes('css/style.css')) {
-          const base = href.split('?')[0];
-          link.setAttribute('href', `${base}?v=${Date.now()}`);
-        }
-      });
+      // Only hot-refresh CSS if explicitly requested by remote_soft_reload (avoid duplicate CSSStyleSheet allocations at night on rk3368)
+      if (reason === 'remote_soft_reload') {
+        const links = document.querySelectorAll('link[rel="stylesheet"]');
+        links.forEach(link => {
+          const href = link.getAttribute('href');
+          if (href && href.includes('css/style.css')) {
+            const base = href.split('?')[0];
+            link.setAttribute('href', `${base}?v=${Date.now()}`);
+          }
+        });
+      }
 
-      // 2. Refresh all cloud/local data and rebuild DOM cleanly
-      await Promise.allSettled([
-        this.fetchSettings(),
-        this.fetchNotices(),
-        this.fetchPhotos(),
-        this.fetchWallpapers(),
-        this.fetchWeather(),
-        this.fetchShabbatAndHolidays()
-      ]);
-      this.fetchNews();
+      // Refresh weather, calendar, and notices gently without parallel storm
+      await this.fetchWeather();
+      await this.fetchShabbatAndHolidays();
+      if (reason === 'remote_soft_reload') {
+        await this.fetchSettings();
+        await this.fetchNotices();
+        this.fetchNews();
+      }
       this.renderSideColumn();
       this.buildSlides();
       this.checkRadioSchedule();

@@ -23,8 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added an in-memory 0-volume digital-zero PCM WAV keep-alive loop (`getSilentAudioUri()` + `startSilentNightKeepAlive()`) + WebAudio `AudioContext` keep-alive (`ensureAudioContextUnlocked()`) during night hours (`23:00`–`06:30`) so Android WebView / Chromium never releases `AudioFocus` or revokes playback authorization overnight while consuming zero network bandwidth and producing zero speaker output.
   - Added a muted-to-unmuted Media Engagement Index (MEI) bridge in `startRadioStream()` and separated transient network/stream errors from `NotAllowedError` so temporary stream hiccups automatically retry instead of displaying the tap prompt.
 
+- **RK3368 Native C++ / GPU / Stagefright Crash Prevention & Morning Radio Auto-Resume (`v267`):** Resolved 5 native memory exhaustion vectors on `Android 7.1.2 (rk3368)` (`Chrome 119 WebView`) identified via Blackbox Flight Recorder telemetry:
+  - Disabled the 15-second `allorigins.win/oref` proxy poll on static GitHub Pages (`startOrefAlertPoller`), which was timing out 100% of the time due to `oref.org.il` geo-blocking non-Israeli proxies (`5,760` aborted TLS sockets per 24 hours).
+  - Removed the 1-second `data:audio/wav` overnight loop (`27,000` native Stagefright decoder loops per night) and 24/7 WebAudio `OscillatorNode`, completely freeing the native audio engine between `23:00` and `06:30` while relying on Chrome 119's persistent frame Sticky User Activation (`navigator.userActivation.hasBeenActive`).
+  - Changed `<audio id="radio-audio">` to `preload="none"` and cleared `src` on `NotAllowedError` so paused audio never pre-buffers live Icecast MP3 streams into native RAM while waiting for initial user touch, and stopped repeating `play()` every 15 seconds while `autoplayBlockedByPolicy` is active.
+  - Capped `#ticker-content` DOM items in `liteMode` (`rk3368`) to rotating batches of 10 items (`~6,000px` wide) to stay below the PowerVR G6110 `8192px` hardware GPU texture width limit.
+  - Deduplicated per-minute execution in `setupWatchdog()` (`lastWatchdogMinuteKey`) and removed nightly `?v=${Date.now()}` CSS stylesheet reloading.
+
 ### Changed
-- **Cachebuster Bump:** Updated cachebuster across `index.html` and `admin.html` to `v=20261110_radio_morning_fix_v266`.
+- **Cachebuster Bump:** Updated cachebuster across `index.html` and `admin.html` to `v=20261119_rk3368_crash_fix_v267`.
 - **1:1 Binary Synchronization:** Completely synchronized all frontend assets, configuration, and scripts between root and `public/` directory.
 
 ## [2.5.0] - 2026-10-18
