@@ -4,10 +4,10 @@
   <b><a href="CHANGELOG.md">📋 Full Changelog</a></b>
 </p>
 
-# 🏢 Smart Building Digital Signage (לוח שילוט דיגיטלי חכם לבניין) — v2.6.0
+# 🏢 Smart Building Digital Signage (לוח שילוט דיגיטלי חכם לבניין) — v2.7.0
 > A modern, autonomous, touchscreen-enabled `1920×1080` Digital Signage Kiosk & Dual-Mode Building Committee Management Platform (Simplified Committee Mode + Full Master Admin) for iPhone, Android, and Desktop.
 
-[![Version](https://img.shields.io/badge/Version-2.6.0-2563eb.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-2.7.0-2563eb.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT%20with%20Attribution-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Web%20%7C%20Android%207%2B%20Kiosk-brightgreen.svg)]()
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-brightgreen.svg)](https://omerninyo.github.io/smart-lobby)
@@ -24,9 +24,9 @@
 
 ---
 
-## 🔄 Before vs. After — System Evolution to v2.6.0
+## 🔄 Before vs. After — System Evolution to v2.7.0
 
-| Subsystem | ⬅️ Before (`v1.0–v2.3`) | ➡️ Now (`v2.6.0 / v272`) |
+| Subsystem | ⬅️ Before (`v1.0–v2.3`) | ➡️ Now (`v2.7.0`) |
 | :--- | :--- | :--- |
 | **📱 Dual-Mode Admin UX: Simplified Committee Mode vs. Full Master Admin** | Dense single-flow admin layout with horizontally clipped mobile tabs requiring deep scrolling; confusing for older or non-technical committee members. | **Two Tailored Experiences in One App:** 1) **Simplified Committee Mode (`simple-committee-mode`):** Zero-scroll iPhone home screen with Hero **`➕ Publish Notice`**, **Home Quick Music Card & 4 Instant-Save Volume Buttons**, Active-only notice list, and collapsible Cleaning & Emergency drawers. 2) **Full Master Admin:** Visible **`3×2` Mobile Tab Grid**, **`👤 Committee View` live preview toggle**, all 6 tabs, **`SHA-256` Hashed PINs**, and **Partial-Patch Cloud Merge** preventing multi-device overwrites. |
 | **📢 Notice Scheduling, Permanent Cleaning Days & Storage Hygiene** | Immediate manual publishing only with basic expiration; unbounded Base64 image accumulation in Firestore. | **1-Tap Duration Pills (`Unlimited` / `Tomorrow Eve` / `3 Days` / `1 Week` / `1 Month`)**, future scheduling (`startsAt`), weekly recurring days (`recurringDays`), **Permanent Cleaning Schedule Configurator (`#cleaning-schedule-panel`)** auto-highlighting **previous-evening** hallway item clearing (rugs, strollers, bikes, shoes, bags), **Active vs. Archived Notices Drawer**, and **Automated Base64 Image Pruning (`Auto-Prune`)**. |
@@ -40,7 +40,7 @@
 
 ---
 
-## 📸 Comprehensive Live Visual Showcase (`v2.6.0 / v272`)
+## 📸 Comprehensive Live Visual Showcase (`v2.7.0`)
 
 ### 📱 1. Dual-Mode Admin Panel: Simplified Committee Mode vs. Full Master Admin (iPhone & Desktop)
 
@@ -94,7 +94,7 @@
 
 ---
 
-## ✨ Key Features & Capabilities (`v2.6.0 / v272`)
+## ✨ Key Features & Capabilities (`v2.7.0`)
 
 ### 📱 1. Dual-Mode Mobile Admin UX: Simplified Committee Mode vs. Full Master Admin
 * **Simplified Committee Mode (`simple-committee-mode` — Built for iPhone & Non-Technical Committee Members):**
@@ -171,7 +171,9 @@ graph TD
 
 | Version | Date | Highlights |
 | :--- | :---: | :--- |
-| **`v2.6.0` (`v272`)** | `2026-11-19` | **Dual-Mode Mobile Admin (Simplified Committee + Full Master), Complete Year-Round Israel Calendar, Live Wikipedia On-This-Day, Full-Stage 1080p Scaling, `rk3368` Stability & `SHA-256` Security:** Redesigned mobile Admin for non-technical committee members (zero-scroll Home with Quick Music & 4 instant volume buttons, 1-tap notice duration pills, Active/Archived separation, `3×2` admin tab grid, partial-merge cloud sync); permanent Cleaning Schedule configurator with previous-evening alerts; full rolling Israel Hebcal (`i=on`) + automatic Israel DST + 30+ special days + **live daily Hebrew Wikipedia "On This Day"** + 14 contextual holiday/memorial/Shabbat pools; full-stage `1920×1080` panel scaling & `46fr/54fr` split-notice clipping fix; overnight audio-gesture preservation & 10 verified streams; **`SHA-256` hashed PINs**, fork isolation, and refreshed visual showcase. |
+| **`v2.7.0`** | `2026-11-19` | **Dual-Mode Mobile Admin (Simplified Committee + Full Master), Complete Year-Round Israel Calendar, Live Wikipedia On-This-Day, Backend Hardening & `SHA-256` Security:** Redesigned mobile Admin for non-technical committee members (zero-scroll Home with Quick Music & 4 instant volume buttons, 1-tap notice duration pills, Active/Archived separation, `3×2` admin tab grid, partial-merge cloud sync); full rolling Israel Hebcal (`i=on`) + automatic Israel DST + 30+ special days + **live daily Hebrew Wikipedia "On This Day"** + 14 contextual holiday/memorial/Shabbat pools; 10 modernized radio streams; **`SHA-256` hashed PINs**, fork isolation, `46fr/54fr` split-notice clipping fix, and 26 refreshed live screenshots. |
+| **`v2.6.1–2.6.2`** | `2026-11-05` | **14-Channel Modular News Builder, Cleaning Schedule, Full-Stage `1080p` Scaling & `rk3368` Crash Prevention:** Granular 14-channel news matrix (`#modular-news-matrix`), permanent Cleaning Schedule configurator with previous-evening alerts, full-stage `1920×1080` panel scaling, overnight audio-gesture preservation for morning radio auto-resume, and `rk3368` native Stagefright/GPU/TLS leak fixes. |
+| **`v2.6.0`** | `2026-10-21` | **Air Quality & Marine Station, Transit Slide, Live Hebrew Date & Enriched 14-Image Notice Pools:** Open-Meteo AQI/UV/Marine integration, `transit_commute` & `daily_interest` slides, live Hebrew calendar header, automated Pikud HaOref poller, and 14 lightweight dog & building notice images. |
 | **`v2.5.0`** | `2026-10-18` | **Smart Admin Innovations:** Notice start scheduling (`startsAt`) & weekly recurring days (`recurringDays`); **Full-Screen Emergency Alert Mode** with 1-click presets and automatic radio mute; **Smart Committee Notice Assistant (`✨ Auto-Polish`)**; and automatic Base64 image pruning (`Auto-Prune`). |
 | **`v2.4.6`** | `2026-10-18` | **24/7 Network & Kiosk Resilience:** Automatic Wi-Fi reconnect & dynamic Firebase SDK recovery; lazy subscriptions for `device_health` and `device_logs`; 30s live radio stall recovery; 45s modal auto-close watchdog; zombie notice prevention. |
 | **`v2.4.3–2.4.5`** | `2026-10-13` | **Blackbox Flight Recorder, Resolution Selector & GPU Optimization:** Cloud crash/event diagnostics (`smart_lobby/device_logs`), screen resolution scaling (`auto` / `1080p` / `720p`), HTML5 Canvas upload compression (`720px`), and `Lite Mode` GPU optimizations. |

@@ -1,4 +1,4 @@
-# 🕯️ Year-Round Israel Calendar, Live Wikipedia, 1080p Panels & Modular News (v2.6.0)
+# 🕯️ Year-Round Israel Calendar, Live Wikipedia, 1080p Panels & Modular News (v2.7.0)
 
 The lobby display (`index.html`) combines a full year-round Israeli & Hebrew calendar engine with live Hebrew Wikipedia history, `1920×1080` full-stage scaled environmental/transit/trivia panels, and a 14-channel modular news ticker.
 

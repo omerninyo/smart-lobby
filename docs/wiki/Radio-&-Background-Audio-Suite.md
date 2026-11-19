@@ -1,4 +1,4 @@
-# 📻 Radio & Background Audio Suite (v2.6.0)
+# 📻 Radio & Background Audio Suite (v2.7.0)
 
 An integrated Israeli radio streaming engine engineered for 24/7 residential lobby operation.
 

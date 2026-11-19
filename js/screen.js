@@ -3017,7 +3017,7 @@ class BuildingSignageApp {
       }
     }
 
-    // B. Buses in Hayarden / Hadera Area
+    // B. Local & Intercity Bus Routes
     let busStatusDesc = 'פעילות סדירה';
     if ((isEarlyCutoffDay && hours >= 16) || ((day === 6 || isYomTov) && hours < 19)) {
       busStatusDesc = isYomTov && day !== 6 ? 'לוח חג מופחת' : 'לוח שבת מופחת';

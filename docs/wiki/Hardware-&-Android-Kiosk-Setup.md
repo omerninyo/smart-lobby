@@ -1,4 +1,4 @@
-# 📺 Hardware & Android Kiosk Setup Guide (v2.6.0)
+# 📺 Hardware & Android Kiosk Setup Guide (v2.7.0)
 
 ## 📱 Recommended Devices & Display Profiles
 * **Android Kiosks & Media Boxes:** 10.1" to 21.5" Android touchscreens or commercial displays powered by Android TV / Kiosk boxes (Android 7.1.2+, including legacy SoCs like `Rockchip rk3368`).

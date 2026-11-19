@@ -1,4 +1,4 @@
-# Master Design Specification (Smart Lobby — v2.6.0)
+# Master Design Specification (Smart Lobby — v2.7.0)
 
 ## 1. Architectural Philosophy
 Smart Lobby enforces a strict two-tier visual and operational standard separating mobile/desktop administrative controls (`admin.html`) from the 24/7 autonomous public lobby display (`index.html`).
