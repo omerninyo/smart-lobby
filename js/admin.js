@@ -376,29 +376,46 @@ async function hashPinSha256(pin) {
 }
 
 async function upgradePlaintextCloudPinsIfNeeded() {
-  const sec = settingsData?.security;
-  if (!sec || (!sec.adminPin && !sec.editorPin)) return;
+  if (!settingsData) return;
+  const sec = settingsData.security || {};
+  const hasLegacyPlain = Boolean(sec.adminPin || sec.editorPin || settingsData.authPin || settingsData.newPin);
+  if (!hasLegacyPlain) return;
   if (!window.FirebaseSync || typeof firebase === 'undefined' || !firebase.firestore?.FieldValue) return;
   try {
     const securityPatch = {};
-    if (sec.adminPin) {
-      securityPatch.adminPinHash = await hashPinSha256(sec.adminPin);
+    const rawAdminPin = sec.adminPin || (!sec.adminPinHash ? (settingsData.newPin || settingsData.authPin) : null);
+    if (rawAdminPin) {
+      securityPatch.adminPinHash = await hashPinSha256(rawAdminPin);
       securityPatch.hasAdminPin = true;
-      securityPatch.adminPin = firebase.firestore.FieldValue.delete();
+      settingsData.security = settingsData.security || {};
       settingsData.security.adminPinHash = securityPatch.adminPinHash;
       settingsData.security.hasAdminPin = true;
+    }
+    if (sec.adminPin) {
+      securityPatch.adminPin = firebase.firestore.FieldValue.delete();
       delete settingsData.security.adminPin;
     }
     if (sec.editorPin) {
       securityPatch.editorPinHash = await hashPinSha256(sec.editorPin);
       securityPatch.hasEditorPin = true;
       securityPatch.editorPin = firebase.firestore.FieldValue.delete();
+      settingsData.security = settingsData.security || {};
       settingsData.security.editorPinHash = securityPatch.editorPinHash;
       settingsData.security.hasEditorPin = true;
       delete settingsData.security.editorPin;
     }
+    const rootPatch = {};
+    if (Object.keys(securityPatch).length > 0) rootPatch.security = securityPatch;
+    if (settingsData.authPin !== undefined) {
+      rootPatch.authPin = firebase.firestore.FieldValue.delete();
+      delete settingsData.authPin;
+    }
+    if (settingsData.newPin !== undefined) {
+      rootPatch.newPin = firebase.firestore.FieldValue.delete();
+      delete settingsData.newPin;
+    }
     localStorage.setItem('smart_lobby_settings', JSON.stringify(settingsData));
-    await window.FirebaseSync.saveSettings({ security: securityPatch });
+    await window.FirebaseSync.saveSettings(rootPatch);
     console.log('🔐 [Security] Automatically upgraded cloud PINs from plaintext to SHA-256 hashes.');
   } catch (e) {}
 }
@@ -2993,6 +3010,8 @@ async function saveSettingsToServer(newSettings, successMessage) {
     security: { ...(settingsData?.security || {}), ...(newSettings.security || {}) },
     contacts: newSettings.contacts || settingsData?.contacts || []
   };
+  delete settingsData.newPin;
+  delete settingsData.authPin;
 
   localStorage.setItem('smart_lobby_settings', JSON.stringify(settingsData));
   populateSettingsUI();
@@ -3006,6 +3025,7 @@ async function saveSettingsToServer(newSettings, successMessage) {
       }
     : { ...newSettings };
   delete cloudPatch.newPin;
+  delete cloudPatch.authPin;
 
   let cloudSuccess = true;
   if (window.FirebaseSync) {

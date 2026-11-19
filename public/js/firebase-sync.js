@@ -180,7 +180,7 @@
         this.db.collection("smart_lobby").doc("settings").onSnapshot((doc) => {
           if (doc.exists) {
             const data = doc.data();
-            console.log("[FirebaseSync] ⚡ Live Settings update received from cloud:", data);
+            console.log("[FirebaseSync] ⚡ Live Settings update received from cloud");
             
             // Save to LocalStorage cache
             try {
