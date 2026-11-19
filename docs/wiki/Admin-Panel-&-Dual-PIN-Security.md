@@ -1,38 +1,34 @@
-# 🔐 Admin Panel, Smart AI Composer & Emergency Mode (v2.6.0)
+# 🔐 Dual-Mode Admin Panel, Smart Composer, Cleaning Days & SHA-256 Security (v2.6.0)
 
-The admin dashboard (`admin.html`) is mobile-optimized and features role-based access control, smart notice authoring, scheduling, and instant emergency broadcasting.
+The admin dashboard (`admin.html`) provides two tailored interfaces in one app — a **Simplified Single-Page Committee Mode** built for non-technical/elderly committee members on iPhone, and a **Full 6-Tab Master Admin** with a `3×2` mobile grid, `SHA-256` PIN security, and partial-merge cloud sync.
 
 ---
 
-## 👥 Access Roles & PIN Codes
+## 👥 Dual-Mode Roles & `SHA-256` PIN Security
 
-| Role | Default Template PIN | Visible View | Description |
+| Role | Default Template PIN | Active Experience | Capabilities |
 | :--- | :---: | :---: | :--- |
-| **👤 Committee Member** | `1111` *(Hashed via SHA-256 once customized)* | **Unified Single-Screen Home** | Streamlined iPhone-first view (`simple-committee-mode`) with Hero Publish button, 1-tap notice duration pills, Home-Screen Quick Music & 4 instant-save volume buttons, Active vs. Archived notices drawer, and collapsible Cleaning & Emergency drawers. |
-| **🔑 Master Admin** | `1234` *(Hashed via SHA-256 once customized)* | **All 6 Tabs (`3×2` Mobile Grid) + `👤 תצוגת ועד` Toggle** | Full control over display calibration, `Lite Mode`, `1080p`/`720p` scaling, 14-channel modular news matrix, contacts, Blackbox Flight Recorder logs, and SHA-256 hashed PINs. |
+| **👤 Committee Member** | `1111` *(Salted `SHA-256` once customized)* | **Simplified Single-Screen Home (`simple-committee-mode`)** | Zero-scroll iPhone Home screen (`55%` shorter vertical height): Hero **`➕ Publish Notice`** button, **Home Quick Music Card & 4 instant-save volume buttons (`🔇 / 🔉 / 🔊 / 📢`)**, Active-only notice list, archived notices drawer (`📁 Old / Hidden`), and collapsible **`🧼 Cleaning Days`** & **`🚨 Emergency`** drawers. |
+| **🔑 Master Admin** | `1234` *(Salted `SHA-256` once customized)* | **All 6 Tabs (`3×2` Mobile Grid) + `👤 Committee View` Switcher** | Full control over display calibration, `Lite Mode`, `1080p`/`720p` scaling, **14-channel modular news matrix**, contacts, **Device Health & Blackbox Flight Recorder**, and **`SHA-256` hashed PINs**, plus a 1-tap `👤 תצוגת ועד` toggle to preview the Committee view live. |
+
+* **Salted `SHA-256` Hashing & Backdoor Closure (`v270–v271`):** Custom PINs are hashed via Web Crypto (`SHA-256` + pure-JS fallback) and stored as `security.adminPinHash` / `security.editorPinHash` (automatically deleting legacy plaintext fields via `FieldValue.delete()`). Template defaults (`1234` / `1111`) are strictly rejected once custom PINs exist.
+* **Race-Safe Partial-Patch Cloud Merge (`v268`):** `saveSettingsToServer()` sends surgical field-level patches (`{ merge: true }`) rather than overwriting the full `settings` document, paired with `getFreshNoticesForMutation()` before notice mutations.
 
 ---
 
-## 🚨 Full-Screen Emergency Alert Mode & Auto Pikud HaOref
-Located at the top of **Tab 1**, accessible to both Master Admin and Committee Editors:
-* **1-Click Emergency Presets:** Instant activation buttons for:
-  * `🚀 הנחיות פיקוד העורף (מרחב מוגן - 90 שניות)`
-  * `🛗 השבתת מעלית דחופה / חילוץ`
-  * `💧 הפסקת מים דחופה בבניין`
-  * `⚡ תקלת חשמל בבניין`
-* **Automatic Pikud HaOref Integration (`#emergency-auto-oref`):** When enabled (default `true`), the lobby screen silently polls Home Front Command alerts every 15 seconds. Upon detecting an active alert for the building's city, it immediately displays high-contrast crimson shelter instructions, mutes background radio (`stopRadioImmediate()`), and automatically restores routine operation 10 minutes after the alert ends.
+## 🧼 Permanent Cleaning Schedule & Previous-Evening Reminder (`#cleaning-schedule-panel`)
+* Select weekly cleaning days in 1 tap (e.g., Sunday & Thursday `[0, 4]`).
+* Automatically generates and updates `notice-cleaning-schedule`, computing the **previous-evening** clearing schedule (`במוצאי שבת וביום רביעי בערב`) reminding residents to clear rugs, strollers, bicycles, shoes, and bags from hallways and the lobby before early-morning washing, and highlights the notice on preparation evenings.
 
 ---
 
-## ✨ Smart Committee Notice Assistant (`#ai-polish-notice-btn`)
-Inside the Notice creation/editing form (`#notice-form-container`):
-* **One-Click Polish (`✨ שפר ונסח אוטומטית`):** Transforms brief keywords or rough notes (e.g., `"מחר הפסקת מים בין 9 ל-12"`) into a polite, formal Hebrew building notice across 11 supported topics (water, elevator, electricity, cleaning, pest control, parking, pruning, tenant meeting, committee dues, holiday greetings, renovation noise). Automatically selects a matching curated image if none was picked, flags urgent notices, and calculates recommended expiration dates for `"היום"` / `"מחר"`.
-* **Optional Google Gemini 1.5 Flash API:** Works 100% offline with zero configuration via its built-in Hebrew heuristic composer, or connects to Gemini 1.5 Flash if an API key is stored in `localStorage.getItem('smart_lobby_gemini_key')`.
-* **7 Quick Templates (`SMART_DRAFTS`):** Instant 1-click full drafts for the most common committee announcements.
+## 🚨 Collapsible Emergency Alert Mode & Auto Pikud HaOref
+* Stays tucked inside a clean `<details>` drawer at the bottom during routine, and **automatically jumps to the top of the screen (`order: -10`) and opens** whenever an alert is active.
+* **4 Instant Emergency Presets:** `🚀 הנחיות פיקוד העורף (90 שניות)`, `🛗 תקלה/חילוץ מעלית`, `💧 פיצוץ צנרת / הפסקת מים`, `⚡ הפסקת חשמל`.
+* **Automated Pikud HaOref Polling (`startOrefAlertPoller`):** Polls `/api/oref` on local Node deployments every 15s (automatically bypassed on static GitHub Pages to prevent geo-blocked proxy socket exhaustion on `rk3368` kiosks), mutes live radio immediately upon alert, and restores routine 10 minutes after alert end.
 
 ---
 
-## ⏳ Scheduled, Recurring & Auto-Pruned Notices
-* **Scheduled Publication (`#notice-starts` / `startsAt`):** Schedule notices in advance to appear automatically at a future date and time.
-* **Weekly Recurring Days (`recurringDays: [0..6]`):** Select specific days of the week (`א'–ש'`) so recurring reminders (e.g., pruning or hallway cleaning) appear only on relevant days.
-* **Client-Side Image Compression & Auto-Prune:** Mobile camera uploads are compressed automatically via HTML5 Canvas (`720px`, quality `0.78`). Heavy Base64 images attached to notices that expired >24 hours ago are automatically pruned (`pruneExpiredNoticeImages`) on load and save, with storage savings badges displayed in Tab 1 and Tab 5.
+## ✨ Smart Committee Notice Assistant & 1-Tap Duration Pills
+* **1-Tap Duration Pills:** `ללא הגבלה` (Unlimited), `עד מחר בערב` (Tomorrow Eve), `3 ימים`, `שבוע`, `חודש`, plus collapsible `startsAt` & `recurringDays` scheduling.
+* **One-Click Polish (`✨ שפר ניסוח אוטומטית`):** Offline zero-key Hebrew heuristic composer across 11 building topics + optional Gemini 1.5 Flash API + **7 Quick Drafts (`SMART_DRAFTS`)** + **14 lightweight `3:4` notice images** + HTML5 Canvas compression (`720px`) & 24h `Auto-Prune`.
