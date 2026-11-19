@@ -81,6 +81,10 @@
 
           this.db = firebase.firestore();
 
+          try {
+            this.db.settings({ ignoreUndefinedProperties: true, merge: true });
+          } catch (settingsErr) {}
+
           // Try enabling offline persistence where supported
           try {
             await this.db.enablePersistence({ synchronizeTabs: true });

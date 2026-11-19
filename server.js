@@ -72,13 +72,74 @@ function readJsonFile(filePath, defaultValue) {
 }
 
 function writeJsonFile(filePath, data) {
+  const jsonStr = JSON.stringify(data, null, 2);
+  const tmpPath = `${filePath}.tmp.${process.pid}.${Date.now()}`;
   try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    fs.writeFileSync(tmpPath, jsonStr, 'utf-8');
+    try {
+      fs.renameSync(tmpPath, filePath);
+    } catch (renameErr) {
+      // Fallback for cloud-synced / FUSE filesystems (e.g. Google Drive) if rename is locked
+      fs.writeFileSync(filePath, jsonStr, 'utf-8');
+      try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch (e) {}
+    }
     return true;
   } catch (err) {
+    try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch (e) {}
     console.error(`Error writing ${filePath}:`, err.message);
     return false;
   }
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timer);
+    return res;
+  } catch (err) {
+    clearTimeout(timer);
+    throw err;
+  }
+}
+
+function getPinAuthRole(pin) {
+  if (!pin) return null;
+  const current = readJsonFile(SETTINGS_FILE, {});
+  const adminPin = current.security?.adminPin || '9681';
+  const editorPin = current.security?.editorPin || '9090';
+  const MASTER_PINS = ['9681', '1234'];
+  const EDITOR_PINS = ['9090', '1111'];
+  if (pin === adminPin || MASTER_PINS.includes(pin)) return 'admin';
+  if (pin === editorPin || EDITOR_PINS.includes(pin)) return 'editor';
+  return null;
+}
+
+function sanitizeSettingsForClient(settings) {
+  const safe = { ...(settings || {}) };
+  if (safe.security) {
+    safe.security = {
+      hasAdminPin: Boolean(settings.security.adminPin),
+      hasEditorPin: Boolean(settings.security.editorPin)
+    };
+  }
+  return safe;
+}
+
+function pruneExpiredNoticeImages(notices) {
+  if (!Array.isArray(notices)) return [];
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+  return notices.map(n => {
+    if (n && n.expiresAt) {
+      const expTime = new Date(n.expiresAt).getTime();
+      if (!isNaN(expTime) && (now - expTime > dayMs) && typeof n.imageUrl === 'string' && n.imageUrl.startsWith('data:image/')) {
+        return { ...n, imageUrl: null };
+      }
+    }
+    return n;
+  });
 }
 
 // In-Memory Caches for External APIs (prevents spamming & works offline)
@@ -110,16 +171,24 @@ const WEATHER_CODE_MAP = {
 };
 
 // ==========================================
-// 1. SETTINGS API
+// 1. SETTINGS & HEALTH API
 // ==========================================
+app.get('/api/health', (req, res) => {
+  const mem = process.memoryUsage();
+  res.json({
+    success: true,
+    uptimeSeconds: Math.round(process.uptime()),
+    memoryMB: Math.round((mem.rss / 1048576) * 10) / 10,
+    caches: {
+      weatherAgeSec: weatherCache.timestamp ? Math.round((Date.now() - weatherCache.timestamp) / 1000) : null,
+      shabbatAgeSec: shabbatCache.timestamp ? Math.round((Date.now() - shabbatCache.timestamp) / 1000) : null
+    }
+  });
+});
+
 app.get('/api/settings', (req, res) => {
   const settings = readJsonFile(SETTINGS_FILE, {});
-  // Do not expose admin PIN to public
-  const safeSettings = { ...settings };
-  if (safeSettings.security) {
-    delete safeSettings.security.adminPin;
-  }
-  res.json({ success: true, settings: safeSettings });
+  res.json({ success: true, settings: sanitizeSettingsForClient(settings) });
 });
 
 function isNoticeActive(n, now = new Date()) {
@@ -159,19 +228,22 @@ function isNoticeActive(n, now = new Date()) {
 }
 
 app.post('/api/settings', (req, res) => {
-  const { pin, newSettings } = req.body;
-  const current = readJsonFile(SETTINGS_FILE, {});
-  const adminPin = current.security?.adminPin || '9681';
-  const editorPin = current.security?.editorPin || '9090';
-  
-  const MASTER_PINS = ['9681', '1234'];
-  const EDITOR_PINS = ['9090', '1111'];
-  const isMasterAdmin = (pin === adminPin || MASTER_PINS.includes(pin));
-  const isEditor = (pin === editorPin || EDITOR_PINS.includes(pin));
+  const { pin, newSettings } = req.body || {};
+  const role = getPinAuthRole(pin);
 
-  if (!isMasterAdmin && !isEditor) {
+  if (!role) {
     return res.status(401).json({ success: false, error: 'קוד PIN שגוי' });
   }
+
+  const isMasterAdmin = role === 'admin';
+  const isEditor = role === 'editor';
+
+  // Pure authentication check ping (empty newSettings) — return role without unnecessary disk write
+  if (!newSettings || Object.keys(newSettings).length === 0) {
+    return res.json({ success: true, role, message: 'אימות הצליח' });
+  }
+
+  const current = readJsonFile(SETTINGS_FILE, {});
 
   // If editor, only allow radio and emergencyAlert updates; preserve all other fields securely
   if (isEditor && !isMasterAdmin) {
@@ -187,29 +259,37 @@ app.post('/api/settings', (req, res) => {
       }
     };
     writeJsonFile(SETTINGS_FILE, updated);
-    return res.json({ success: true, settings: updated });
+    return res.json({ success: true, role: 'editor', settings: sanitizeSettingsForClient(updated) });
   }
+
+  const cleanNewSettings = { ...newSettings };
+  delete cleanNewSettings.newPin;
 
   const updated = {
     ...current,
-    ...newSettings,
+    ...cleanNewSettings,
+    building: {
+      ...(current.building || {}),
+      ...(cleanNewSettings?.building || {})
+    },
     display: {
       ...(current.display || {}),
-      ...(newSettings?.display || {})
+      ...(cleanNewSettings?.display || {})
     },
     radio: {
       ...(current.radio || {}),
-      ...(newSettings?.radio || {})
+      ...(cleanNewSettings?.radio || {})
     },
     security: {
-      ...current.security,
+      ...(current.security || {}),
       ...(isMasterAdmin && newSettings?.newPin ? { adminPin: newSettings.newPin } : {}),
+      ...(isMasterAdmin && newSettings?.security?.adminPin ? { adminPin: newSettings.security.adminPin } : {}),
       ...(isMasterAdmin && newSettings?.security?.editorPin ? { editorPin: newSettings.security.editorPin } : {})
     }
   };
 
   writeJsonFile(SETTINGS_FILE, updated);
-  res.json({ success: true, message: 'ההגדרות עודכנו בהצלחה' });
+  res.json({ success: true, role: 'admin', message: 'ההגדרות עודכנו בהצלחה' });
 });
 
 // ==========================================
@@ -217,6 +297,10 @@ app.post('/api/settings', (req, res) => {
 // ==========================================
 app.get('/api/notices', (req, res) => {
   const notices = readJsonFile(NOTICES_FILE, []);
+  // Allow authenticated admin/editor to fetch all notices (including scheduled/hidden/expired) via ?all=1
+  if (req.query.all === '1' && getPinAuthRole(req.headers['x-admin-pin'] || req.query.pin)) {
+    return res.json({ success: true, notices });
+  }
   const now = new Date();
 
   // Filter out inactive notices (hidden, future startsAt, expired, or wrong recurring day)
@@ -233,33 +317,30 @@ app.get('/api/notices', (req, res) => {
 });
 
 app.post('/api/notices', (req, res) => {
-  const { pin, notice } = req.body;
-  const current = readJsonFile(SETTINGS_FILE, {});
-  const adminPin = current.security?.adminPin || '9681';
-  const editorPin = current.security?.editorPin || '9090';
-  
-  if (pin !== adminPin && pin !== editorPin && pin !== '9681' && pin !== '9090' && pin !== '1234' && pin !== '1111') {
+  const { pin, notice } = req.body || {};
+  if (!getPinAuthRole(pin)) {
     return res.status(401).json({ success: false, error: 'קוד PIN שגוי' });
   }
 
-  if (!notice.title && !notice.content && !notice.imageUrl) {
+  if (!notice || (!notice.title && !notice.content && !notice.imageUrl)) {
     return res.status(400).json({ success: false, error: 'יש להזין כותרת או תוכן' });
   }
 
-  const notices = readJsonFile(NOTICES_FILE, []);
+  let notices = readJsonFile(NOTICES_FILE, []);
   const newNotice = {
     id: notice.id || `notice_${Date.now()}`,
     type: notice.type || 'announcement',
-    title: notice.title || '',
-    content: notice.content || '',
-    author: notice.author || 'ועד הבית',
+    title: String(notice.title || '').slice(0, 300),
+    content: String(notice.content || '').slice(0, 4000),
+    author: String(notice.author || 'ועד הבית').slice(0, 100),
     isUrgent: Boolean(notice.isUrgent),
     imageUrl: notice.imageUrl || null,
     bgColor: notice.bgColor || 'from-slate-900/80 to-slate-950/90',
     createdAt: notice.createdAt || new Date().toISOString(),
     startsAt: notice.startsAt || null,
     expiresAt: notice.expiresAt || null,
-    recurringDays: Array.isArray(notice.recurringDays) ? notice.recurringDays.map(Number) : [],
+    recurringDays: Array.isArray(notice.recurringDays) ? notice.recurringDays.map(Number).filter(d => d >= 0 && d <= 6) : [],
+    ...(Array.isArray(notice.cleaningDays) ? { cleaningDays: notice.cleaningDays.map(Number).filter(d => d >= 0 && d <= 6) } : {}),
     hidden: Boolean(notice.hidden)
   };
 
@@ -270,6 +351,7 @@ app.post('/api/notices', (req, res) => {
     notices.unshift(newNotice);
   }
 
+  notices = pruneExpiredNoticeImages(notices);
   writeJsonFile(NOTICES_FILE, notices);
   res.json({ success: true, notice: newNotice });
 });
@@ -277,11 +359,8 @@ app.post('/api/notices', (req, res) => {
 app.delete('/api/notices/:id', (req, res) => {
   const { id } = req.params;
   const pin = req.headers['x-admin-pin'] || req.query.pin;
-  const current = readJsonFile(SETTINGS_FILE, {});
-  const adminPin = current.security?.adminPin || '9681';
-  const editorPin = current.security?.editorPin || '9090';
 
-  if (pin !== adminPin && pin !== editorPin && pin !== '9681' && pin !== '9090' && pin !== '1234' && pin !== '1111') {
+  if (!getPinAuthRole(pin)) {
     return res.status(401).json({ success: false, error: 'קוד PIN שגוי' });
   }
 
@@ -315,25 +394,41 @@ app.get('/api/photos', (req, res) => {
   }
 });
 
-app.post('/api/photos/upload', upload.single('photo'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ success: false, error: 'לא נבחר קובץ' });
+app.post('/api/photos/upload', (req, res) => {
+  const prePin = req.headers['x-admin-pin'] || req.query.pin;
+  if (prePin !== undefined && !getPinAuthRole(prePin)) {
+    return res.status(401).json({ success: false, error: 'קוד PIN שגוי' });
   }
-  res.json({
-    success: true,
-    file: {
-      filename: req.file.filename,
-      url: `/uploads/${req.file.filename}`
+
+  upload.single('photo')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, error: err.message || 'שגיאה בהעלאת הקובץ' });
     }
+    const finalPin = prePin || req.body?.pin;
+    if (!getPinAuthRole(finalPin)) {
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        try { fs.unlinkSync(req.file.path); } catch (e) {}
+      }
+      return res.status(401).json({ success: false, error: 'נדרש קוד PIN תקין להעלאת תמונה' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'לא נבחר קובץ' });
+    }
+    res.json({
+      success: true,
+      file: {
+        filename: req.file.filename,
+        url: `/uploads/${req.file.filename}`
+      }
+    });
   });
 });
 
 app.delete('/api/photos/:filename', (req, res) => {
   const { filename } = req.params;
   const pin = req.headers['x-admin-pin'] || req.query.pin;
-  const current = readJsonFile(SETTINGS_FILE, {});
 
-  if (pin !== current.security?.adminPin && pin !== '9681' && pin !== '1234') {
+  if (getPinAuthRole(pin) !== 'admin') {
     return res.status(401).json({ success: false, error: 'קוד PIN שגוי' });
   }
 
@@ -364,9 +459,9 @@ app.get('/api/weather', async (req, res) => {
     const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=32.4400&longitude=34.8800&current=wave_height,sea_surface_temperature&timezone=Asia%2FJerusalem`;
 
     const [wRes, aqRes, marineRes] = await Promise.allSettled([
-      fetch(weatherUrl, { headers: { 'User-Agent': 'BuildingSignage/1.0' } }).then(r => r.ok ? r.json() : null),
-      fetch(aqUrl, { headers: { 'User-Agent': 'BuildingSignage/1.0' } }).then(r => r.ok ? r.json() : null),
-      fetch(marineUrl, { headers: { 'User-Agent': 'BuildingSignage/1.0' } }).then(r => r.ok ? r.json() : null)
+      fetchWithTimeout(weatherUrl, { headers: { 'User-Agent': 'BuildingSignage/1.0' } }, 7000).then(r => r.ok ? r.json() : null),
+      fetchWithTimeout(aqUrl, { headers: { 'User-Agent': 'BuildingSignage/1.0' } }, 7000).then(r => r.ok ? r.json() : null),
+      fetchWithTimeout(marineUrl, { headers: { 'User-Agent': 'BuildingSignage/1.0' } }, 7000).then(r => r.ok ? r.json() : null)
     ]);
 
     const data = wRes.status === 'fulfilled' && wRes.value ? wRes.value : null;
@@ -545,7 +640,7 @@ app.get('/api/shabbat-holidays', async (req, res) => {
 
   try {
     const url = `https://www.hebcal.com/shabbat?cfg=json&latitude=${lat}&longitude=${lon}&tzid=Asia/Jerusalem&M=on&lg=he`;
-    const response = await fetch(url);
+    const response = await fetchWithTimeout(url, {}, 7000);
     if (!response.ok) throw new Error(`Hebcal fetch failed: ${response.status}`);
     
     const data = await response.json();
@@ -604,14 +699,15 @@ app.get('/api/shabbat-holidays', async (req, res) => {
     }
 
     const THEME_IMAGES = {
-      'shabbat': 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1920&q=80',
-      'rosh-hashanah': 'https://images.unsplash.com/photo-1601614749297-c8317765103a?auto=format&fit=crop&w=1920&q=80',
-      'sukkot': 'https://images.unsplash.com/photo-1571115764595-644a1f56a55c?auto=format&fit=crop&w=1920&q=80',
-      'hanukkah': 'https://images.unsplash.com/photo-1543789521-72996d997d91?auto=format&fit=crop&w=1920&q=80',
-      'purim': 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1920&q=80',
-      'pesach': 'https://images.unsplash.com/photo-1522748906645-95d8adfd52c7?auto=format&fit=crop&w=1920&q=80',
-      'israel': 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1920&q=80',
-      'shavuot': 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1920&q=80'
+      'default': 'images/wallpapers/landscapes/mediterranean_sunset_arch.jpg',
+      'shabbat': 'images/wallpapers/shabbat/shabbat_candles_luxury.jpg',
+      'rosh-hashanah': 'images/wallpapers/holidays/rosh_hashanah.jpg',
+      'sukkot': 'images/wallpapers/holidays/sukkot.jpg',
+      'hanukkah': 'images/wallpapers/holidays/hanukkah.jpg',
+      'purim': 'images/wallpapers/holidays/purim.jpg',
+      'pesach': 'images/wallpapers/holidays/pesach.jpg',
+      'israel': 'images/wallpapers/holidays/independence_day.jpg',
+      'shavuot': 'images/wallpapers/holidays/shavuot.jpg'
     };
 
     const result = {
@@ -661,13 +757,13 @@ app.get('/api/oref', async (req, res) => {
 
   try {
     const url = 'https://www.oref.org.il/WarningMessages/alert/alerts.json';
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Referer': 'https://www.oref.org.il/',
         'X-Requested-With': 'XMLHttpRequest'
       }
-    });
+    }, 4000);
 
     if (!response.ok) {
       return res.json({ success: true, active: false, data: [] });
@@ -742,31 +838,40 @@ const COMPOSITE_FEEDS = {
   ]
 };
 
-function filterClickbaitAndFormatHeadline(title, categoryLabel = '') {
+function filterClickbaitAndFormatHeadline(title, categoryLabel = '', enableClickbaitFilter = true) {
   if (!title || typeof title !== 'string') return null;
   let clean = title
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1')
     .replace(/<[^>]*>?/gm, '')
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/&#39;|&apos;|&#039;/g, "'")
+    .replace(/&ndash;|&#8211;/g, '–')
+    .replace(/&mdash;|&#8212;/g, '—')
     .replace(/&amp;/g, '&')
     .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  clean = clean
+    .replace(/\s*\|\s*(תיעוד|צפו|וידאו|שידור חי|שידור ישיר|בלעדי|כל הפרטים).*$/i, '')
+    .replace(/\s*-\s*(וואלה!?\s*חדשות|ynet|גלובס|מעריב|N12)$/i, '')
+    .replace(/^(מבזק:|דיווח:|פרסום ראשון:|הותר לפרסום:|עדכון:|צפו:|תיעוד:)\s*/i, '')
     .trim();
 
   // Length check: filter out titles shorter than 15 chars
   if (clean.length < 15) return null;
 
   // Anti-clickbait and marketing filter
-  const clickbaitPatterns = [
-    'לא תאמינו', 'לא תאמין', 'צפו:', 'תיעוד:', 'הלם',
-    'שבר את הרשת', 'סערה ברשת', 'בשיתוף', 'ממומן',
-    'תוכן שיווקי', 'הדרמה של'
-  ];
-  for (const pattern of clickbaitPatterns) {
-    if (clean.includes(pattern)) return null;
+  if (enableClickbaitFilter !== false) {
+    const clickbaitPatterns = [
+      'לא תאמינו', 'לא תאמין',
+      'שבר את הרשת', 'סערה ברשת', 'בשיתוף', 'ממומן',
+      'תוכן שיווקי', 'הדרמה של'
+    ];
+    for (const pattern of clickbaitPatterns) {
+      if (clean.includes(pattern)) return null;
+    }
   }
-
-  // Remove noisy broadcast prefixes
-  clean = clean.replace(/^(מבזק:|דיווח:|פרסום ראשון:|הותר לפרסום:|עדכון:)\s*/, '');
 
   if (categoryLabel && !clean.startsWith('[')) {
     clean = `[${categoryLabel}] ${clean}`;
@@ -783,18 +888,46 @@ const FALLBACK_NEWS_ITEMS = [
   { title: '[בטיחות] נא לוודא כי דלת הלובי הראשית והשער נסגרים כראוי לאחר כניסה ויציאה' }
 ];
 
+const RSS_CHANNEL_LABELS = {
+  ynet: 'Ynet',
+  ynet_mivzak: 'Ynet מבזקים',
+  ynet_econ: 'Ynet כלכלה',
+  ynet_tech: 'Ynet דיגיטל',
+  mako: 'N12',
+  walla: 'וואלה',
+  walla_main: 'וואלה חדשות',
+  maariv: 'מעריב',
+  globes: 'גלובס',
+  calcalist: 'כלכלה',
+  kan: 'מבזקים',
+  hayadan: 'מדע',
+  geektime: 'טכנולוגיה'
+};
+
 app.get('/api/news', async (req, res) => {
   const source = req.query.source || 'smart_mix';
+  const channelsParam = typeof req.query.channels === 'string' ? req.query.channels.trim() : '';
+  const enableClickbaitFilter = req.query.filterClickbait !== 'false';
+  const cacheKey = channelsParam ? `ch:${channelsParam}:f:${enableClickbaitFilter}` : `src:${source}:f:${enableClickbaitFilter}`;
 
   const CACHE_TTL_MS = 6 * 60 * 1000; // 6 mins
-  if (newsCache[source]?.data && (Date.now() - newsCache[source].timestamp < CACHE_TTL_MS)) {
-    return res.json({ success: true, cached: true, items: newsCache[source].data });
+  if (newsCache[cacheKey]?.data && (Date.now() - newsCache[cacheKey].timestamp < CACHE_TTL_MS)) {
+    return res.json({ success: true, cached: true, items: newsCache[cacheKey].data });
   }
 
   try {
-    // A. Handle Composite Feeds (smart_mix, science_tech, economy, kan_globes)
-    if (COMPOSITE_FEEDS[source]) {
-      const feedConfigs = COMPOSITE_FEEDS[source];
+    // Support explicit modular ?channels=ynet,mako,globes OR composite presets
+    let feedConfigs = null;
+    if (channelsParam) {
+      const requestedKeys = channelsParam.split(',').map(k => k.trim()).filter(k => RSS_FEEDS[k]);
+      if (requestedKeys.length > 0) {
+        feedConfigs = requestedKeys.map(key => ({ key, label: RSS_CHANNEL_LABELS[key] || 'עדכון' }));
+      }
+    } else if (COMPOSITE_FEEDS[source]) {
+      feedConfigs = COMPOSITE_FEEDS[source];
+    }
+
+    if (feedConfigs) {
       const feedResults = await Promise.allSettled(
         feedConfigs.map(async cfg => {
           const feedUrl = RSS_FEEDS[cfg.key];
@@ -803,7 +936,7 @@ app.get('/api/news', async (req, res) => {
           const rawItems = (feed.items || []).slice(0, 10);
           const cleaned = [];
           for (const item of rawItems) {
-            const formatted = filterClickbaitAndFormatHeadline(item.title, cfg.label);
+            const formatted = filterClickbaitAndFormatHeadline(item.title, cfg.label, enableClickbaitFilter);
             if (formatted) {
               cleaned.push({
                 title: formatted,
@@ -820,18 +953,25 @@ app.get('/api/news', async (req, res) => {
         .filter(r => r.status === 'fulfilled' && Array.isArray(r.value))
         .map(r => r.value);
 
-      // Interleave items from composite feeds
+      // Interleave & dedupe items across feeds
       const interleaved = [];
+      const seenCore = new Set();
       const maxLen = Math.max(...arrays.map(a => a.length), 0);
       for (let i = 0; i < maxLen; i++) {
         for (const arr of arrays) {
-          if (arr[i]) interleaved.push(arr[i]);
+          if (arr[i] && arr[i].title) {
+            const core = arr[i].title.replace(/^\[[^\]]+\]\s*/, '').slice(0, 32);
+            if (!seenCore.has(core)) {
+              seenCore.add(core);
+              interleaved.push(arr[i]);
+            }
+          }
         }
       }
 
-      if (interleaved.length >= 3) {
-        const finalItems = interleaved.slice(0, 26);
-        newsCache[source] = { data: finalItems, timestamp: Date.now() };
+      if (interleaved.length >= 2) {
+        const finalItems = interleaved.slice(0, 28);
+        newsCache[cacheKey] = { data: finalItems, timestamp: Date.now() };
         return res.json({ success: true, items: finalItems });
       }
     }
@@ -839,12 +979,11 @@ app.get('/api/news', async (req, res) => {
     // B. Handle Single Feeds
     const feedUrl = RSS_FEEDS[source] || RSS_FEEDS.ynet;
     const feed = await rssParser.parseURL(feedUrl);
-    const labelMap = { ynet: 'Ynet', kan: 'חדשות', walla: 'וואלה', mako: 'N12', globes: 'גלובס', calcalist: 'כלכלה', hayadan: 'מדע', geektime: 'טכנולוגיה' };
-    const label = labelMap[source] || '';
+    const label = RSS_CHANNEL_LABELS[source] || '';
 
     const items = [];
     for (const item of (feed.items || []).slice(0, 20)) {
-      const formatted = filterClickbaitAndFormatHeadline(item.title, label);
+      const formatted = filterClickbaitAndFormatHeadline(item.title, label, enableClickbaitFilter);
       if (formatted) {
         items.push({
           title: formatted,
@@ -854,16 +993,16 @@ app.get('/api/news', async (req, res) => {
       }
     }
 
-    if (items.length >= 3) {
-      newsCache[source] = { data: items, timestamp: Date.now() };
+    if (items.length >= 2) {
+      newsCache[cacheKey] = { data: items, timestamp: Date.now() };
       return res.json({ success: true, items });
     }
 
     throw new Error(`Insufficient clean headlines for source ${source}`);
   } catch (err) {
-    console.error(`RSS error (${source}):`, err.message);
-    if (newsCache[source]?.data) {
-      return res.json({ success: true, cached: true, fallback: true, items: newsCache[source].data });
+    console.error(`RSS error (${cacheKey}):`, err.message);
+    if (newsCache[cacheKey]?.data) {
+      return res.json({ success: true, cached: true, fallback: true, items: newsCache[cacheKey].data });
     }
     res.json({
       success: true,
@@ -874,42 +1013,21 @@ app.get('/api/news', async (req, res) => {
 });
 
 // ==========================================
-// 7. CURATED FALLBACK WALLPAPERS
+// 7. CURATED LOCAL WALLPAPERS
 // ==========================================
 const CURATED_WALLPAPERS = [
-  {
-    id: 'wall-1',
-    title: 'Modern Architecture',
-    url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1920&q=80',
-    category: 'architecture'
-  },
-  {
-    id: 'wall-2',
-    title: 'Serene Nature & Forest',
-    url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80',
-    category: 'nature'
-  },
-  {
-    id: 'wall-3',
-    title: 'Modern Luxury Interior',
-    url: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1920&q=80',
-    category: 'interior'
-  },
-  {
-    id: 'wall-4',
-    title: 'Sunset Coastline',
-    url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80',
-    category: 'landscape'
-  },
-  {
-    id: 'wall-5',
-    title: 'Mediterranean Serenity',
-    url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1920&q=80',
-    category: 'architecture'
-  }
+  { id: 'wall-1', title: 'אדריכלות ים תיכונית בשקיעה', url: 'images/wallpapers/landscapes/mediterranean_sunset_arch.jpg', category: 'architecture' },
+  { id: 'wall-2', title: 'לובי מודרני יוקרתי', url: 'images/wallpapers/landscapes/modern_luxury_lobby.jpg', category: 'interior' },
+  { id: 'wall-3', title: 'חוף הים התיכון בשקיעה', url: 'images/wallpapers/landscapes/coastal_promenade_sunset.jpg', category: 'landscape' },
+  { id: 'wall-4', title: 'ירושלים של זהב', url: 'images/wallpapers/landscapes/jerusalem_sunset.jpg', category: 'architecture' },
+  { id: 'wall-5', title: 'אבסטרקט ספיר וזהב', url: 'images/wallpapers/abstract/luxury_fluid_gold.jpg', category: 'abstract' }
 ];
 
 app.get('/api/wallpapers', (req, res) => {
+  const wpJson = readJsonFile(path.join(DATA_DIR, 'wallpapers.json'), null);
+  if (wpJson && Array.isArray(wpJson.default) && wpJson.default.length > 0) {
+    return res.json({ success: true, wallpapers: wpJson.default });
+  }
   res.json({ success: true, wallpapers: CURATED_WALLPAPERS });
 });
 

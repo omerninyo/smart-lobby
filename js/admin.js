@@ -20,14 +20,15 @@ function isLocalServer() {
 function pruneExpiredNoticeImages(notices, nowInput = new Date()) {
   if (!Array.isArray(notices)) return notices;
   const now = nowInput instanceof Date ? nowInput.getTime() : (typeof nowInput === 'number' ? nowInput : Date.now());
+  const graceMs = 24 * 60 * 60 * 1000; // Wait 24h after expiry so recently expired notices keep their image if extended
   let prunedCount = 0;
   let bytesSaved = 0;
 
   const cleaned = notices.map(n => {
     if (n && n.expiresAt) {
       const expTime = new Date(n.expiresAt).getTime();
-      // If notice has expired and contains heavy base64 data image
-      if (!isNaN(expTime) && (now >= expTime) && typeof n.imageUrl === 'string' && (n.imageUrl.startsWith('data:image/') || n.imageUrl.length > 1000)) {
+      // If notice expired >24h ago and contains heavy base64 data image
+      if (!isNaN(expTime) && (now - expTime > graceMs) && typeof n.imageUrl === 'string' && n.imageUrl.startsWith('data:image/')) {
         prunedCount++;
         bytesSaved += n.imageUrl.length;
         console.log(`🧹 [Admin] Auto-pruned heavy base64 image from expired notice: ${n.id} (${n.title}), saved ~${Math.round(n.imageUrl.length / 1024)}KB`);
@@ -180,9 +181,31 @@ const SMART_DRAFTS = {
 
 let currentPin = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('admin_pin') || '' : '';
 let currentRole = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('admin_role') || 'admin' : 'admin';
+let adminSimplePreview = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('admin_simple_preview') === '1' : false;
 let settingsData = null;
 let selectedNoticeFile = null;
 let testAudio = null;
+
+async function getFreshNoticesForMutation() {
+  if (window.FirebaseSync && navigator.onLine !== false) {
+    try {
+      const cloudPromise = (async () => {
+        if (!window.FirebaseSync.isInitialized) await window.FirebaseSync.init();
+        return await window.FirebaseSync.getNotices();
+      })();
+      const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 3500));
+      const fresh = await Promise.race([cloudPromise, timeoutPromise]);
+      if (Array.isArray(fresh)) return fresh;
+    } catch (e) {}
+  }
+  const inMem = Object.values(window._adminNoticesMap || {});
+  if (inMem.length > 0) return inMem;
+  try {
+    const local = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
+    if (Array.isArray(local)) return local;
+  } catch (e) {}
+  return [];
+}
 
 function getStationById(id) {
   const fromSettings = settingsData?.radio?.stations?.find(s => s.id === id);
@@ -197,21 +220,22 @@ if (typeof document !== 'undefined') {
     setupAuth();
     setupTabs();
     setupHeaderQuickActions();
+    setupQuickMusicCard();
     setupDeviceHealthMonitoring();
     setupNoticesForm();
     setupEmergencyAlertUI();
     setupCleaningScheduleUI();
     setupSmartNoticeAssistant();
-  setupGalleryPicker();
-  setupDisplayControls();
-  setupContactsManager();
-  setupRadioControls();
-  setupGeneralSettings();
-  setupFirebaseCloudSync();
-  
-  if (currentPin) {
-    unlockAdmin();
-  }
+    setupGalleryPicker();
+    setupDisplayControls();
+    setupContactsManager();
+    setupRadioControls();
+    setupGeneralSettings();
+    setupFirebaseCloudSync();
+
+    if (currentPin) {
+      unlockAdmin();
+    }
   });
 }
 
@@ -225,9 +249,9 @@ async function setupFirebaseCloudSync() {
     const ok = await window.FirebaseSync.init();
     if (ok) {
       if (badge) {
-        badge.className = 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-600/50 shadow-sm';
+        badge.className = 'flex items-center gap-1.5 text-[11px] sm:text-xs text-emerald-300 font-semibold leading-tight';
       }
-      if (badgeText) badgeText.textContent = 'סנכרון ענן פעיל';
+      if (badgeText) badgeText.textContent = 'מחובר למסך הלובי';
 
       // Listen for remote real-time updates while admin is open
       window.FirebaseSync.onSettingsChanged((cloudSettings) => {
@@ -237,8 +261,14 @@ async function setupFirebaseCloudSync() {
       });
 
       window.FirebaseSync.onNoticesChanged((cloudNotices) => {
-        if (!cloudNotices) return;
-        loadNotices();
+        if (!Array.isArray(cloudNotices)) return;
+        let filtered = cloudNotices;
+        try {
+          const deletedIds = new Set(JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]'));
+          filtered = filtered.filter(n => !deletedIds.has(n.id));
+        } catch (e) {}
+        syncCleaningSchedulePanelFromNotices(filtered);
+        renderNoticesList(filtered);
       });
 
       // Seed if empty
@@ -280,24 +310,58 @@ function showAdminToast(msg, icon = '✅') {
 // 1. AUTHENTICATION (DUAL PIN: Master Admin & Committee Member)
 // ==========================================
 function setupAuth() {
-  const pinModal = document.getElementById('pin-modal');
   const pinInput = document.getElementById('pin-input');
   const pinBtn = document.getElementById('pin-submit-btn');
+  const pinForm = document.getElementById('pin-login-form');
   const pinError = document.getElementById('pin-error');
   const logoutBtn = document.getElementById('logout-btn');
+  const togglePinVisBtn = document.getElementById('toggle-pin-visibility-btn');
+
+  if (togglePinVisBtn && pinInput) {
+    togglePinVisBtn.addEventListener('click', () => {
+      const isHidden = pinInput.type === 'password';
+      pinInput.type = isHidden ? 'text' : 'password';
+      togglePinVisBtn.setAttribute('aria-pressed', String(isHidden));
+      togglePinVisBtn.textContent = isHidden ? '🙈' : '👁️';
+      pinInput.focus();
+    });
+  }
 
   const checkPin = async () => {
-    const pin = pinInput.value.trim();
+    const pin = pinInput ? pinInput.value.trim() : '';
     if (!pin) return;
+
+    // On local Node.js server, verify PIN directly against server (since GET /api/settings strips raw PINs)
+    if (isLocalServer()) {
+      try {
+        const testRes = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin, newSettings: {} })
+        });
+        if (testRes.ok) {
+          const testData = await testRes.json();
+          if (testData.success) {
+            currentRole = testData.role || 'admin';
+            currentPin = pin;
+            sessionStorage.setItem('admin_pin', pin);
+            sessionStorage.setItem('admin_role', currentRole);
+            if (pinError) pinError.classList.add('hidden');
+            unlockAdmin();
+            return;
+          }
+        }
+      } catch (err) {}
+    }
 
     // Always ensure fresh settings from Cloud Firestore before checking PIN
     await loadSettings();
 
-    const adminPin = settingsData?.security?.adminPin || '1234';
-    const editorPin = settingsData?.security?.editorPin || '1111';
+    const adminPin = settingsData?.security?.adminPin || '9681';
+    const editorPin = settingsData?.security?.editorPin || '9090';
 
-    // 1. Check Committee Member / Editor PIN (Simplified notices + radio only)
-    if (pin === editorPin || pin === '9090' || (editorPin === '1111' && pin === '1111')) {
+    // 1. Check Committee Member / Editor PIN (Simplified view)
+    if (pin === editorPin || pin === '9090' || pin === '1111') {
       currentRole = 'editor';
       currentPin = pin;
       sessionStorage.setItem('admin_pin', pin);
@@ -308,7 +372,7 @@ function setupAuth() {
     }
 
     // 2. Check Master Admin PIN (Full access to all tabs & display controls)
-    if (pin === adminPin || pin === '9681' || (adminPin === '1234' && pin === '1234')) {
+    if (pin === adminPin || pin === '9681' || pin === '1234') {
       currentRole = 'admin';
       currentPin = pin;
       sessionStorage.setItem('admin_pin', pin);
@@ -318,41 +382,27 @@ function setupAuth() {
       return;
     }
 
-    // 3. Fallback check with API (local server only, skipping 404s on GitHub Pages)
-    if (isLocalServer()) {
-      try {
-        const testRes = await fetch('/api/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin, newSettings: {} })
-        });
-
-        if (testRes.ok) {
-          const testData = await testRes.json();
-          if (testData.success) {
-            currentRole = 'admin';
-            currentPin = pin;
-            sessionStorage.setItem('admin_pin', pin);
-            sessionStorage.setItem('admin_role', 'admin');
-            if (pinError) pinError.classList.add('hidden');
-            unlockAdmin();
-            return;
-          }
-        }
-      } catch (err) {}
-    }
-
     if (pinError) pinError.classList.remove('hidden');
   };
 
-  if (pinBtn) pinBtn.addEventListener('click', checkPin);
-  if (pinInput) pinInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') checkPin();
-  });
+  if (pinForm) {
+    pinForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      checkPin();
+    });
+  } else if (pinBtn) {
+    pinBtn.addEventListener('click', checkPin);
+  }
+  if (pinInput) {
+    pinInput.addEventListener('input', () => {
+      if (pinError) pinError.classList.add('hidden');
+    });
+  }
 
   if (logoutBtn) logoutBtn.addEventListener('click', () => {
     sessionStorage.removeItem('admin_pin');
     sessionStorage.removeItem('admin_role');
+    sessionStorage.removeItem('admin_simple_preview');
     window.location.reload();
   });
 }
@@ -368,37 +418,44 @@ function unlockAdmin() {
 
 function applyRolePermissions() {
   const roleBanner = document.getElementById('role-badge-banner');
+  const toggleViewBtn = document.getElementById('toggle-view-mode-btn');
+  const toggleViewIcon = document.getElementById('toggle-view-mode-icon');
+  const toggleViewText = document.getElementById('toggle-view-mode-text');
   const refreshBtn = document.getElementById('header-refresh-screen-btn');
   const tabBtns = document.querySelectorAll('.tab-btn');
-  
-  if (currentRole === 'editor') {
+
+  const isSimpleView = (currentRole === 'editor') || (currentRole === 'admin' && adminSimplePreview);
+
+  if (isSimpleView) {
+    document.body.classList.add('simple-committee-mode');
     if (roleBanner) roleBanner.classList.remove('hidden');
-    if (refreshBtn) refreshBtn.classList.add('hidden');
-    const liteBtn = document.getElementById('header-litemode-btn');
-    if (liteBtn) liteBtn.classList.add('hidden');
+    if (refreshBtn && currentRole === 'editor') refreshBtn.classList.add('hidden');
 
-    // Hide tabs: display, contacts, settings, help
-    tabBtns.forEach(btn => {
-      const tab = btn.getAttribute('data-tab');
-      if (tab === 'notices' || tab === 'radio') {
-        btn.classList.remove('hidden');
-      } else {
-        btn.classList.add('hidden');
-      }
-    });
-
-    // Make sure we start on notices tab
+    // Always show the unified Home / Notices tab in Simple Committee Mode
     const noticesTabBtn = document.querySelector('.tab-btn[data-tab="notices"]');
     if (noticesTabBtn && !noticesTabBtn.classList.contains('active')) {
       noticesTabBtn.click();
     }
   } else {
-    // Admin mode - full access
+    document.body.classList.remove('simple-committee-mode');
     if (roleBanner) roleBanner.classList.add('hidden');
     if (refreshBtn) refreshBtn.classList.remove('hidden');
-    const liteBtn = document.getElementById('header-litemode-btn');
-    if (liteBtn) liteBtn.classList.remove('hidden');
     tabBtns.forEach(btn => btn.classList.remove('hidden'));
+  }
+
+  if (toggleViewBtn) {
+    if (currentRole === 'admin') {
+      toggleViewBtn.classList.remove('hidden');
+      if (adminSimplePreview) {
+        if (toggleViewIcon) toggleViewIcon.textContent = '⚙️';
+        if (toggleViewText) toggleViewText.textContent = 'מצב מנהל';
+      } else {
+        if (toggleViewIcon) toggleViewIcon.textContent = '👤';
+        if (toggleViewText) toggleViewText.textContent = 'תצוגת ועד';
+      }
+    } else {
+      toggleViewBtn.classList.add('hidden');
+    }
   }
 }
 
@@ -490,6 +547,95 @@ function setupNoticesForm() {
   }
   window.setSelectedRecurringDays = setSelectedRecurringDays;
 
+  const closeTopBtn = document.getElementById('close-notice-form-top-btn');
+  const durationGroup = document.getElementById('notice-duration-pills');
+  const expiryHint = document.getElementById('notice-expiry-human-hint');
+  const expiresInputEl = document.getElementById('notice-expires');
+  const advScheduling = document.getElementById('notice-advanced-scheduling');
+  const purgeExpiredBtn = document.getElementById('purge-expired-notices-btn');
+
+  function updateDurationHintFromInput(activeDaysAttr = null) {
+    if (!expiryHint) return;
+    const val = expiresInputEl ? expiresInputEl.value : '';
+    if (!val) {
+      expiryHint.textContent = 'ללא הגבלת זמן';
+      if (durationGroup) {
+        durationGroup.querySelectorAll('.duration-pill-btn').forEach(b => {
+          b.classList.toggle('active', b.getAttribute('data-days') === '0');
+        });
+      }
+      return;
+    }
+    const expDate = new Date(val);
+    if (!isNaN(expDate.getTime())) {
+      const dateStr = expDate.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' });
+      const timeStr = expDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+      expiryHint.textContent = `יוסר אוטומטית ב-${dateStr} (${timeStr})`;
+    }
+    if (durationGroup && activeDaysAttr !== null) {
+      durationGroup.querySelectorAll('.duration-pill-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-days') === String(activeDaysAttr));
+      });
+    }
+  }
+  window.updateDurationHintFromInput = updateDurationHintFromInput;
+
+  if (durationGroup && expiresInputEl) {
+    durationGroup.addEventListener('click', (e) => {
+      const btn = e.target.closest('.duration-pill-btn');
+      if (!btn) return;
+      const days = parseInt(btn.getAttribute('data-days') || '0', 10);
+      if (days <= 0) {
+        expiresInputEl.value = '';
+        updateDurationHintFromInput('0');
+      } else {
+        const d = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+        d.setHours(22, 0, 0, 0);
+        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+        expiresInputEl.value = d.toISOString().slice(0, 16);
+        updateDurationHintFromInput(String(days));
+      }
+    });
+    expiresInputEl.addEventListener('change', () => updateDurationHintFromInput(null));
+  }
+
+  if (purgeExpiredBtn) {
+    purgeExpiredBtn.addEventListener('click', async () => {
+      if (!confirm('למחוק את כל ההודעות הישנות שפג תוקפן?')) return;
+      const currentNotices = await getFreshNoticesForMutation();
+      const now = Date.now();
+      const expiredIds = [];
+      const kept = currentNotices.filter(n => {
+        const isExp = Boolean(n?.expiresAt && !isNaN(new Date(n.expiresAt).getTime()) && new Date(n.expiresAt).getTime() <= now);
+        if (isExp && n.id !== 'notice-cleaning-schedule') {
+          expiredIds.push(n.id);
+          return false;
+        }
+        return true;
+      });
+      if (expiredIds.length === 0) {
+        showAdminToast('אין כרגע הודעות שפג תוקפן למחיקה.', 'ℹ️');
+        return;
+      }
+      try {
+        const deletedIds = JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]');
+        expiredIds.forEach(eid => { if (!deletedIds.includes(eid)) deletedIds.push(eid); });
+        localStorage.setItem('smart_lobby_deleted_notices', JSON.stringify(deletedIds));
+      } catch (e) {}
+
+      localStorage.setItem('smart_lobby_notices', JSON.stringify(kept));
+      let cloudOk = true;
+      if (window.FirebaseSync) cloudOk = await window.FirebaseSync.saveNotices(kept);
+      if (isLocalServer()) {
+        for (const eid of expiredIds) {
+          try { await fetch(`/api/notices/${eid}`, { method: 'DELETE', headers: { 'x-admin-pin': currentPin } }); } catch (e) {}
+        }
+      }
+      await loadNotices();
+      showAdminToast(cloudOk ? `נוקו ${expiredIds.length} הודעות ישנות בהצלחה!` : 'נוקו מקומית, אך הסנכרון לענן נכשל.', '🧹');
+    });
+  }
+
   if (addBtn) {
     addBtn.addEventListener('click', () => {
       form.reset();
@@ -500,15 +646,23 @@ function setupNoticesForm() {
       if (previewBox) previewBox.classList.add('hidden');
       const startsInput = document.getElementById('notice-starts');
       if (startsInput) startsInput.value = '';
+      if (expiresInputEl) expiresInputEl.value = '';
+      if (advScheduling) advScheduling.open = false;
       setSelectedRecurringDays([]);
-      document.getElementById('form-title').textContent = 'יצירת הודעה חדשה לוועד';
+      updateDurationHintFromInput('0');
+      document.getElementById('form-title').textContent = '✍️ כתיבת הודעה חדשה';
       formBox.classList.remove('hidden');
-      formBox.scrollIntoView({ behavior: 'smooth' });
+      formBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
 
   if (cancelBtn) {
     cancelBtn.addEventListener('click', () => {
+      formBox.classList.add('hidden');
+    });
+  }
+  if (closeTopBtn) {
+    closeTopBtn.addEventListener('click', () => {
       formBox.classList.add('hidden');
     });
   }
@@ -596,114 +750,120 @@ function setupNoticesForm() {
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const submitBtn = document.getElementById('submit-notice-btn');
+      const prevBtnText = submitBtn ? submitBtn.textContent : '';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ מפרסם...';
+      }
 
-      const id = document.getElementById('notice-id').value;
-      const title = document.getElementById('notice-title').value.trim();
-      const content = document.getElementById('notice-content').value.trim();
-      const author = document.getElementById('notice-author').value.trim() || 'ועד הבית';
-      const startsInput = document.getElementById('notice-starts');
-      const startsVal = startsInput ? startsInput.value : '';
-      const expiresVal = document.getElementById('notice-expires').value;
-      const recurringDays = getSelectedRecurringDays();
-      const isUrgent = document.getElementById('notice-urgent').checked;
-      const isHidden = document.getElementById('notice-hidden') ? document.getElementById('notice-hidden').checked : false;
-      let imageUrl = imgUrlHidden.value || null;
+      try {
+        const id = document.getElementById('notice-id').value;
+        const title = document.getElementById('notice-title').value.trim();
+        const content = document.getElementById('notice-content').value.trim();
+        const author = document.getElementById('notice-author').value.trim() || 'ועד הבית';
+        const startsInput = document.getElementById('notice-starts');
+        const startsVal = startsInput ? startsInput.value : '';
+        const expiresVal = document.getElementById('notice-expires').value;
+        const recurringDays = getSelectedRecurringDays();
+        const isUrgent = document.getElementById('notice-urgent').checked;
+        const isHidden = document.getElementById('notice-hidden') ? document.getElementById('notice-hidden').checked : false;
+        let imageUrl = imgUrlHidden.value || null;
 
-      // Upload image if newly selected
-      if (selectedNoticeFile) {
-        if (isLocalServer()) {
-          const formData = new FormData();
-          formData.append('photo', selectedNoticeFile);
-          try {
-            const uploadRes = await fetch('/api/photos/upload', {
-              method: 'POST',
-              headers: { 'x-admin-pin': currentPin },
-              body: formData
-            });
-            const uploadData = await uploadRes.json();
-            if (uploadData.success && uploadData.file) {
-              imageUrl = uploadData.file.url;
+        // Upload image if newly selected
+        if (selectedNoticeFile) {
+          if (isLocalServer()) {
+            const formData = new FormData();
+            formData.append('photo', selectedNoticeFile);
+            try {
+              const uploadRes = await fetch('/api/photos/upload', {
+                method: 'POST',
+                headers: { 'x-admin-pin': currentPin },
+                body: formData
+              });
+              const uploadData = await uploadRes.json();
+              if (uploadData.success && uploadData.file) {
+                imageUrl = uploadData.file.url;
+              }
+            } catch (uploadErr) {
+              if (previewImg && previewImg.src) {
+                imageUrl = previewImg.src;
+              }
             }
-          } catch (uploadErr) {
-            if (previewImg && previewImg.src) {
-              imageUrl = previewImg.src;
-            }
-          }
-        } else {
-          // On GitHub Pages / static host, directly use client-compressed data URL
-          if (previewImg && previewImg.src) {
+          } else if (previewImg && previewImg.src) {
             imageUrl = previewImg.src;
           }
         }
-      }
 
-      const noticeData = {
-        id: id || ('notice_' + Date.now()),
-        title,
-        content,
-        author,
-        isUrgent,
-        hidden: isHidden,
-        imageUrl,
-        startsAt: startsVal ? new Date(startsVal).toISOString() : null,
-        expiresAt: expiresVal ? new Date(expiresVal).toISOString() : null,
-        recurringDays: recurringDays.length > 0 ? recurringDays : []
-      };
+        // Fetch freshest cloud notices first so a stale iPhone Safari tab never clobbers another member's notice
+        let currentNotices = await getFreshNoticesForMutation();
+        const prevNotice = id ? currentNotices.find(n => n.id === id) : null;
 
-      // Save to local memory map & localStorage
-      let currentNotices = Object.values(window._adminNoticesMap || {});
-      if (currentNotices.length === 0) {
-        currentNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
-      }
+        const noticeData = {
+          ...(prevNotice || {}),
+          id: id || ('notice_' + Date.now()),
+          title,
+          content,
+          author,
+          isUrgent,
+          hidden: isHidden,
+          imageUrl,
+          createdAt: prevNotice?.createdAt || new Date().toISOString(),
+          startsAt: startsVal ? new Date(startsVal).toISOString() : null,
+          expiresAt: expiresVal ? new Date(expiresVal).toISOString() : null,
+          recurringDays: recurringDays.length > 0 ? recurringDays : []
+        };
 
-      const existingIdx = currentNotices.findIndex(n => n.id === noticeData.id);
-      if (existingIdx !== -1) {
-        currentNotices[existingIdx] = noticeData;
-      } else {
-        currentNotices.unshift(noticeData);
-      }
-
-      // Auto-prune heavy base64 images from expired notices to protect Firestore document quota (< 1MB)
-      currentNotices = pruneExpiredNoticeImages(currentNotices);
-      localStorage.setItem('smart_lobby_notices', JSON.stringify(currentNotices));
-
-      // Remove from smart_lobby_deleted_notices if previously marked deleted
-      try {
-        const deletedIds = JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]');
-        if (deletedIds.includes(noticeData.id)) {
-          const updatedDeleted = deletedIds.filter(did => did !== noticeData.id);
-          localStorage.setItem('smart_lobby_deleted_notices', JSON.stringify(updatedDeleted));
+        const existingIdx = currentNotices.findIndex(n => n.id === noticeData.id);
+        if (existingIdx !== -1) {
+          currentNotices[existingIdx] = noticeData;
+        } else {
+          currentNotices.unshift(noticeData);
         }
-      } catch (e) {}
 
-      // Sync to Firebase Cloud for all devices worldwide
-      let cloudSuccess = true;
-      if (window.FirebaseSync) {
-        cloudSuccess = await window.FirebaseSync.saveNotices(currentNotices);
-      }
+        currentNotices = pruneExpiredNoticeImages(currentNotices);
+        localStorage.setItem('smart_lobby_notices', JSON.stringify(currentNotices));
 
-      // Optional local Node.js API sync if running locally
-      if (isLocalServer()) {
         try {
-          await fetch('/api/notices', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pin: currentPin, notice: noticeData })
-          });
-        } catch (apiErr) {}
-      }
+          const deletedIds = JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]');
+          if (deletedIds.includes(noticeData.id)) {
+            const updatedDeleted = deletedIds.filter(did => did !== noticeData.id);
+            localStorage.setItem('smart_lobby_deleted_notices', JSON.stringify(updatedDeleted));
+          }
+        } catch (e) {}
 
-      try { window.dispatchEvent(new Event('storage')); } catch (e) {}
-      formBox.classList.add('hidden');
-      form.reset();
-      selectedNoticeFile = null;
-      if (fileInput) fileInput.value = '';
-      await loadNotices();
+        let cloudSuccess = true;
+        if (window.FirebaseSync) {
+          cloudSuccess = await window.FirebaseSync.saveNotices(currentNotices);
+        }
 
-      if (cloudSuccess) {
-        showAdminToast('ההודעה נשמרה וסונכרנה לכל המכשירים בהצלחה!', '📢');
-      } else {
-        showAdminToast('ההודעה נשמרה מקומית, אך הסנכרון לענן נכשל (בדוק חיבור אינטרנט).', '⚠️');
+        if (isLocalServer()) {
+          try {
+            await fetch('/api/notices', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ pin: currentPin, notice: noticeData })
+            });
+          } catch (apiErr) {}
+        }
+
+        try { window.dispatchEvent(new Event('storage')); } catch (e) {}
+        formBox.classList.add('hidden');
+        form.reset();
+        selectedNoticeFile = null;
+        if (fileInput) fileInput.value = '';
+        await loadNotices();
+
+        if (cloudSuccess) {
+          showAdminToast('ההודעה פורסמה במסך הלובי בהצלחה!', '📢');
+        } else {
+          showAdminToast('ההודעה נשמרה מקומית, אך הסנכרון לענן נכשל (בדוק חיבור אינטרנט).', '⚠️');
+        }
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = prevBtnText || '📢 פרסם הודעה במסך הלובי';
+        }
       }
     });
   }
@@ -802,82 +962,137 @@ async function loadNotices() {
   }
 }
 
-function renderNoticesList(notices) {
-  const list = document.getElementById('notices-list');
-  if (!list) return;
+function formatFriendlyExpiry(expiresAt, isExpired) {
+  if (!expiresAt) return '<span class="text-xs text-gray-400">ללא הגבלת זמן</span>';
+  const expMs = new Date(expiresAt).getTime();
+  if (isNaN(expMs)) return '';
+  if (isExpired) {
+    return `<span class="text-xs text-rose-400 font-semibold">פג ב-${new Date(expMs).toLocaleDateString('he-IL')}</span>`;
+  }
+  const diffHours = Math.round((expMs - Date.now()) / 3600000);
+  if (diffHours < 24) {
+    return `<span class="text-xs text-amber-300 font-semibold">בתוקף עוד כ-${Math.max(1, diffHours)} שעות</span>`;
+  }
+  const diffDays = Math.ceil(diffHours / 24);
+  return `<span class="text-xs text-cyan-300">בתוקף עוד ${diffDays} ימים</span>`;
+}
 
-  if (!Array.isArray(notices) || notices.length === 0) {
-    list.innerHTML = `
-      <div class="admin-card p-6 text-center text-gray-400">
-        <p class="text-base mb-1">אין כרגע הודעות פעילות במסך</p>
-        <p class="text-xs">המסך מציג צילומי שבת וחגים, מזג אוויר ועדכוני חדשות אוטומטית</p>
-      </div>
-    `;
-    return;
+function renderSingleNoticeCard(n) {
+  const nowMs = Date.now();
+  const isExpired = Boolean(n.expiresAt && !isNaN(new Date(n.expiresAt).getTime()) && (new Date(n.expiresAt).getTime() <= nowMs));
+  const isFutureScheduled = Boolean(n.startsAt && !isNaN(new Date(n.startsAt).getTime()) && (new Date(n.startsAt).getTime() > nowMs));
+  const isRecurring = Array.isArray(n.recurringDays) && n.recurringDays.length > 0;
+
+  const urgentBadge = n.isUrgent ? `<span class="bg-red-600 text-white text-xs px-2 py-0.5 rounded-lg font-bold">⚠️ דחוף</span>` : '';
+  const imgBadge = n.imageUrl ? `<span class="bg-blue-950 text-blue-200 border border-blue-700 text-xs px-2 py-0.5 rounded-lg">🖼️ תמונה</span>` : '';
+
+  let statusBadge = '';
+  if (n.hidden) {
+    statusBadge = `<span class="bg-gray-800 text-amber-300 text-xs px-2 py-0.5 rounded-lg font-semibold border border-gray-600">🙈 מוסתרת</span>`;
+  } else if (isExpired) {
+    statusBadge = `<span class="bg-amber-950 text-amber-300 text-xs px-2 py-0.5 rounded-lg font-semibold border border-amber-800">⌛ פג תוקף</span>`;
+  } else if (isFutureScheduled) {
+    statusBadge = `<span class="bg-indigo-950 text-indigo-200 text-xs px-2 py-0.5 rounded-lg font-semibold border border-indigo-800">⏳ מתוזמן ל-${new Date(n.startsAt).toLocaleDateString('he-IL')}</span>`;
+  } else {
+    statusBadge = `<span class="bg-emerald-950 text-emerald-300 text-xs px-2 py-0.5 rounded-lg font-bold border border-emerald-700">✅ מוצג כעת</span>`;
   }
 
-  window._adminNoticesMap = {};
-  notices.forEach(n => { window._adminNoticesMap[n.id] = n; });
+  let recurringBadge = '';
+  if (isRecurring) {
+    const dayNames = ['א\'', 'ב\'', 'ג\'', 'ד\'', 'ה\'', 'ו\'', 'ש\''];
+    const daysStr = n.recurringDays.map(Number).sort((a, b) => a - b).map(d => dayNames[d] || d).join(', ');
+    recurringBadge = `<span class="bg-purple-950 text-purple-200 text-xs px-2 py-0.5 rounded-lg border border-purple-800">🔄 ימים: ${daysStr}</span>`;
+  }
 
-  list.innerHTML = notices.map(n => {
-    const urgentBadge = n.isUrgent ? `<span class="bg-red-600 text-white text-xs px-2 py-0.5 rounded-md font-bold">⚠️ דחוף</span>` : '';
-    const imgBadge = n.imageUrl ? `<span class="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-md">🖼️ תמונה</span>` : '';
-    const isExpired = Boolean(n.expiresAt && !isNaN(new Date(n.expiresAt).getTime()) && (new Date(n.expiresAt).getTime() <= Date.now()));
-    const isFutureScheduled = Boolean(n.startsAt && !isNaN(new Date(n.startsAt).getTime()) && (new Date(n.startsAt).getTime() > Date.now()));
-    const isRecurring = Array.isArray(n.recurringDays) && n.recurringDays.length > 0;
+  const expText = formatFriendlyExpiry(n.expiresAt, isExpired);
+  const mutedStyle = (n.hidden || isExpired) ? 'opacity-80 bg-gray-950/70' : '';
 
-    let statusBadge = '';
-    if (n.hidden) {
-      statusBadge = `<span class="bg-gray-700 text-amber-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-gray-600">👁️‍🗨️ מוסתרת ידנית</span>`;
-    } else if (isExpired) {
-      statusBadge = `<span class="bg-amber-950 text-amber-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-amber-800">⌛ פג תוקף (לא מוצגת במסך)</span>`;
-    } else if (isFutureScheduled) {
-      statusBadge = `<span class="bg-indigo-950 text-indigo-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-indigo-800">⏳ מתוזמן ל-${new Date(n.startsAt).toLocaleDateString('he-IL')} ${new Date(n.startsAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span>`;
-    } else {
-      statusBadge = `<span class="bg-emerald-950 text-emerald-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-emerald-800">✅ מוצגת במסך</span>`;
-    }
-
-    let recurringBadge = '';
-    if (isRecurring) {
-      const dayNames = ['א\'', 'ב\'', 'ג\'', 'ד\'', 'ה\'', 'ו\'', 'ש\''];
-      const daysStr = n.recurringDays.map(Number).sort((a,b)=>a-b).map(d => dayNames[d] || d).join(', ');
-      const isToday = n.recurringDays.map(Number).includes(new Date().getDay());
-      recurringBadge = `<span class="bg-purple-950 text-purple-300 text-[11px] px-2 py-0.5 rounded-md font-medium border border-purple-800">🔄 כל יום ${daysStr}${isToday ? ' (פעיל היום)' : ' (היום אינו יום פרסום)'}</span>`;
-    }
-
-    const expDate = n.expiresAt 
-      ? `<span class="text-xs ${isExpired ? 'text-rose-400 font-semibold' : 'text-amber-400'}">תפוגה: ${new Date(n.expiresAt).toLocaleDateString('he-IL')} ${new Date(n.expiresAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span>` 
-      : '<span class="text-xs text-gray-500">ללא תפוגה</span>';
-    const cardBg = (n.hidden || isExpired || isFutureScheduled) ? 'opacity-65 bg-gray-950/70 border-dashed border-gray-700' : 'hover:border-gray-600';
-
-    return `
-      <div class="admin-card p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3 transition ${cardBg}">
-        <div class="space-y-1 flex-1 min-w-0">
-          <div class="flex items-center gap-2 flex-wrap">
-            ${urgentBadge}
-            ${imgBadge}
-            ${statusBadge}
-            ${recurringBadge}
-            <h3 class="font-bold text-sm sm:text-base text-white truncate">${escapeHtml(n.title)}</h3>
-          </div>
-          <p class="text-xs sm:text-sm text-gray-300 line-clamp-2">${escapeHtml(n.content)}</p>
-          <div class="flex items-center gap-2 sm:gap-3 pt-1 text-[11px] sm:text-xs text-gray-400 flex-wrap">
-            <span>נכתב ע"י: ${escapeHtml(n.author || 'ועד הבית')}</span>
-            ${n.startsAt ? `<span>•</span><span class="${isFutureScheduled ? 'text-indigo-400 font-semibold' : 'text-gray-400'}">התחלה: ${new Date(n.startsAt).toLocaleDateString('he-IL')} ${new Date(n.startsAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span>` : ''}
-            <span>•</span>
-            ${expDate}
-          </div>
+  return `
+    <div class="admin-card p-3.5 sm:p-4 flex flex-col gap-2.5 ${mutedStyle}">
+      <div class="space-y-1.5">
+        <div class="flex items-center gap-1.5 flex-wrap">
+          ${statusBadge}
+          ${urgentBadge}
+          ${imgBadge}
+          ${recurringBadge}
         </div>
-        <div class="flex gap-2 self-end sm:self-center shrink-0 w-full sm:w-auto justify-end flex-wrap">
-          <button onclick="toggleNoticeHidden('${n.id}')" class="px-3 py-1.5 ${n.hidden ? 'bg-emerald-800 hover:bg-emerald-700 text-emerald-100' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'} active:scale-95 rounded-lg text-xs font-bold transition" title="${n.hidden ? 'הצג הודעה זו במסך הלובי' : 'הסתר הודעה זו מהמסך'}">
-            ${n.hidden ? '👁️ הצג במסך' : '👁️‍🗨️ הסתר'}
+        <h3 class="font-extrabold text-base text-white leading-snug">${escapeHtml(n.title)}</h3>
+        <p class="text-xs sm:text-sm text-gray-300 leading-relaxed" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(n.content)}</p>
+      </div>
+
+      <div class="flex items-center justify-between gap-2 pt-2 border-t border-gray-800 flex-wrap">
+        <div class="flex items-center gap-2 text-xs text-gray-400">
+          <span>${escapeHtml(n.author || 'ועד הבית')}</span>
+          <span>•</span>
+          ${expText}
+        </div>
+
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button type="button" onclick="editNotice('${n.id}')" class="px-3 py-2 bg-blue-950 hover:bg-blue-900 border border-blue-700 text-blue-200 rounded-xl text-xs font-bold">
+            ✏️ ערוך
           </button>
-          <button onclick="editNotice('${n.id}')" class="px-3.5 py-1.5 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-xs font-semibold">✏️ ערוך</button>
-          <button onclick="deleteNotice('${n.id}')" class="px-3.5 py-1.5 bg-red-900 bg-opacity-40 hover:bg-opacity-80 active:scale-95 text-red-300 rounded-lg text-xs font-semibold">🗑️ מחק</button>
+          <button type="button" onclick="toggleNoticeHidden('${n.id}')" class="px-3 py-2 ${n.hidden ? 'bg-emerald-600 text-white' : 'bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700'} rounded-xl text-xs font-bold">
+            ${n.hidden ? '👁️ החזר למסך' : '🙈 הסתר'}
+          </button>
+          <button type="button" onclick="deleteNotice('${n.id}')" class="px-3 py-2 bg-red-950 hover:bg-red-900 border border-red-800 text-red-300 rounded-xl text-xs font-bold">
+            🗑️ מחק
+          </button>
         </div>
       </div>
+    </div>
+  `;
+}
+
+function renderNoticesList(notices) {
+  const list = document.getElementById('notices-list');
+  const activeCountPill = document.getElementById('active-notices-count-pill');
+  const archivedDisclosure = document.getElementById('archived-notices-disclosure');
+  const archivedCountBadge = document.getElementById('archived-notices-count');
+  const archivedList = document.getElementById('archived-notices-list');
+  if (!list) return;
+
+  const all = Array.isArray(notices) ? notices : [];
+  window._adminNoticesMap = {};
+  all.forEach(n => { if (n && n.id) window._adminNoticesMap[n.id] = n; });
+
+  const nowMs = Date.now();
+  const activeOrScheduled = [];
+  const archivedOrHidden = [];
+
+  all.forEach(n => {
+    const isExpired = Boolean(n.expiresAt && !isNaN(new Date(n.expiresAt).getTime()) && (new Date(n.expiresAt).getTime() <= nowMs));
+    if (n.hidden || isExpired) {
+      archivedOrHidden.push(n);
+    } else {
+      activeOrScheduled.push(n);
+    }
+  });
+
+  if (activeCountPill) {
+    activeCountPill.textContent = `${activeOrScheduled.length} פעילות`;
+  }
+
+  if (activeOrScheduled.length === 0) {
+    list.innerHTML = `
+      <div class="admin-card p-5 text-center text-gray-300">
+        <p class="text-sm sm:text-base font-bold text-white mb-1">אין כרגע הודעות ועד פעילות במסך</p>
+        <p class="text-xs text-gray-400">לחץ למעלה על "פרסום הודעה חדשה בלובי" כדי להוסיף הודעה</p>
+      </div>
     `;
-  }).join('');
+  } else {
+    list.innerHTML = activeOrScheduled.map(renderSingleNoticeCard).join('');
+  }
+
+  if (archivedDisclosure && archivedList) {
+    if (archivedOrHidden.length > 0) {
+      archivedDisclosure.classList.remove('hidden');
+      if (archivedCountBadge) archivedCountBadge.textContent = String(archivedOrHidden.length);
+      archivedList.innerHTML = archivedOrHidden.map(renderSingleNoticeCard).join('');
+    } else {
+      archivedDisclosure.classList.add('hidden');
+      archivedList.innerHTML = '';
+    }
+  }
 }
 window.renderNoticesList = renderNoticesList;
 
@@ -895,6 +1110,7 @@ window.editNotice = function(id, encodedNotice) {
   const previewBox = document.getElementById('notice-img-preview-box');
   const previewImg = document.getElementById('notice-img-preview');
   const fileInput = document.getElementById('notice-file-input');
+  const advScheduling = document.getElementById('notice-advanced-scheduling');
   if (fileInput) fileInput.value = '';
 
   if (n.imageUrl) {
@@ -904,32 +1120,41 @@ window.editNotice = function(id, encodedNotice) {
     previewBox.classList.add('hidden');
   }
 
-  if (n.startsAt) {
+  const startsInput = document.getElementById('notice-starts');
+  if (n.startsAt && startsInput) {
     const d = new Date(n.startsAt);
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    const startsInput = document.getElementById('notice-starts');
-    if (startsInput) startsInput.value = d.toISOString().slice(0, 16);
-  } else {
-    const startsInput = document.getElementById('notice-starts');
-    if (startsInput) startsInput.value = '';
+    startsInput.value = d.toISOString().slice(0, 16);
+  } else if (startsInput) {
+    startsInput.value = '';
   }
 
+  const hasRecurring = Array.isArray(n.recurringDays) && n.recurringDays.length > 0;
   if (window.setSelectedRecurringDays) {
-    window.setSelectedRecurringDays(Array.isArray(n.recurringDays) ? n.recurringDays : []);
+    window.setSelectedRecurringDays(hasRecurring ? n.recurringDays : []);
   }
 
-  if (n.expiresAt) {
+  const expInput = document.getElementById('notice-expires');
+  if (n.expiresAt && expInput) {
     const d = new Date(n.expiresAt);
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    document.getElementById('notice-expires').value = d.toISOString().slice(0, 16);
-  } else {
-    document.getElementById('notice-expires').value = '';
+    expInput.value = d.toISOString().slice(0, 16);
+  } else if (expInput) {
+    expInput.value = '';
   }
 
-  document.getElementById('form-title').textContent = 'עריכת הודעת ועד';
+  if (window.updateDurationHintFromInput) {
+    window.updateDurationHintFromInput(n.expiresAt ? null : '0');
+  }
+
+  if (advScheduling) {
+    advScheduling.open = Boolean(n.startsAt || hasRecurring || n.hidden || (n.author && n.author !== 'ועד הבית'));
+  }
+
+  document.getElementById('form-title').textContent = '✏️ עריכת הודעת ועד';
   const formBox = document.getElementById('notice-form-box') || document.getElementById('notice-form-container');
   formBox.classList.remove('hidden');
-  formBox.scrollIntoView({ behavior: 'smooth' });
+  formBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 window.deleteNotice = async function(id) {
@@ -944,7 +1169,6 @@ window.deleteNotice = async function(id) {
     } catch (err) {}
   }
 
-  // Track deleted notice ID in localStorage to prevent zombies from default notices.json
   try {
     const deletedIds = JSON.parse(localStorage.getItem('smart_lobby_deleted_notices') || '[]');
     if (!deletedIds.includes(id)) {
@@ -953,16 +1177,11 @@ window.deleteNotice = async function(id) {
     }
   } catch (e) {}
 
-  // Single Source of Truth deletion from memory & cloud
-  let currentNotices = Object.values(window._adminNoticesMap || {});
-  if (currentNotices.length === 0) {
-    currentNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
-  }
+  let currentNotices = await getFreshNoticesForMutation();
   let updated = currentNotices.filter(n => n.id !== id);
   updated = pruneExpiredNoticeImages(updated);
   localStorage.setItem('smart_lobby_notices', JSON.stringify(updated));
 
-  // Sync deletion directly to Firebase Cloud for all devices
   let cloudSuccess = true;
   if (window.FirebaseSync) {
     cloudSuccess = await window.FirebaseSync.saveNotices(updated);
@@ -972,7 +1191,7 @@ window.deleteNotice = async function(id) {
 
   await loadNotices();
   if (cloudSuccess) {
-    showAdminToast('ההודעה נמחקה וסונכרנה מכל המכשירים בהצלחה!', '🗑️');
+    showAdminToast('ההודעה נמחקה מהמסך בהצלחה!', '🗑️');
   } else {
     showAdminToast('ההודעה נמחקה מקומית, אך הסנכרון לענן נכשל.', '⚠️');
   }
@@ -986,7 +1205,7 @@ function updateEmergencyAlertUI(alertData) {
   const badge = document.getElementById('emergency-alert-status-badge');
   const cancelBtn = document.getElementById('emergency-alert-cancel-btn');
   const liveBanner = document.getElementById('emergency-active-banner');
-  const panel = document.getElementById('emergency-alert-panel');
+  const disclosure = document.getElementById('emergency-disclosure');
   const saveBtnText = document.getElementById('emergency-alert-save-btn-text');
   const activeChk = document.getElementById('emergency-alert-active');
   const autoOrefChk = document.getElementById('emergency-auto-oref');
@@ -1001,41 +1220,43 @@ function updateEmergencyAlertUI(alertData) {
 
   if (isActive) {
     if (badge) {
-      badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-black bg-red-600 text-white animate-pulse shadow-md border border-red-400';
+      badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-red-600 text-white animate-pulse shadow border border-red-400 shrink-0';
       badge.textContent = '🔴 פעיל כעת במסך!';
     }
     if (cancelBtn) cancelBtn.classList.remove('hidden');
     if (liveBanner) liveBanner.classList.remove('hidden');
-    if (panel) {
-      panel.classList.add('ring-2', 'ring-red-500', 'shadow-red-900/50');
+    if (disclosure) {
+      disclosure.style.order = '-10';
+      disclosure.open = true;
+      disclosure.classList.add('is-live-emergency');
     }
     if (saveBtnText) saveBtnText.textContent = 'עדכן התרעת חירום במסך';
     if (updatedAtText && alert.updatedAt) {
       try {
         const timeStr = new Date(alert.updatedAt).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
-        updatedAtText.textContent = `עודכן לאחרונה: ${timeStr}`;
+        updatedAtText.textContent = `עודכן: ${timeStr}`;
       } catch (e) {
         updatedAtText.textContent = 'פעיל';
       }
     }
   } else {
     if (badge) {
-      badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700';
+      badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700 shrink-0';
       badge.textContent = '⚪ כבוי (שגרה)';
     }
     if (cancelBtn) cancelBtn.classList.add('hidden');
     if (liveBanner) liveBanner.classList.add('hidden');
-    if (panel) {
-      panel.classList.remove('ring-2', 'ring-red-500', 'shadow-red-900/50');
+    if (disclosure) {
+      disclosure.style.order = '20';
+      disclosure.classList.remove('is-live-emergency');
     }
-    if (saveBtnText) saveBtnText.textContent = 'שמור והפעל התרעת חירום במסך';
+    if (saveBtnText) saveBtnText.textContent = '🚨 הפעל התרעת חירום במסך';
   }
 
-  // Populate inputs if blank or if alert values exist
-  if (titleInput && !titleInput.value.trim() && alert.title) {
+  if (titleInput && document.activeElement !== titleInput && (!titleInput.value.trim() || isActive) && alert.title) {
     titleInput.value = alert.title;
   }
-  if (contentInput && !contentInput.value.trim() && alert.content) {
+  if (contentInput && document.activeElement !== contentInput && (!contentInput.value.trim() || isActive) && alert.content) {
     contentInput.value = alert.content;
   }
 }
@@ -1060,7 +1281,7 @@ function setupEmergencyAlertUI() {
       if (titleInput) titleInput.value = data.title;
       if (contentInput) contentInput.value = data.content;
       if (activeChk) activeChk.checked = true;
-      showAdminToast(`נטענה תבנית חירום: ${data.title.substring(0, 30)}...`, '🚨');
+      showAdminToast(`נטענה תבנית חירום — לחץ על הכפתור האדום להפעלה`, '🚨');
     });
   });
 
@@ -1072,15 +1293,8 @@ function setupEmergencyAlertUI() {
         ...currentAlert,
         autoOref
       };
-      const updatedSettings = {
-        ...settingsData,
-        display: {
-          ...settingsData?.display,
-          emergencyAlert: updatedAlert
-        }
-      };
       await saveSettingsToServer(
-        updatedSettings,
+        { display: { emergencyAlert: updatedAlert } },
         autoOref ? 'החיבור האוטומטי לפיקוד העורף הופעל' : 'החיבור האוטומטי לפיקוד העורף הושבת'
       );
     });
@@ -1094,7 +1308,7 @@ function setupEmergencyAlertUI() {
       const autoOref = Boolean(autoOrefChk ? autoOrefChk.checked : true);
 
       if (isActive && (!title || !content)) {
-        showAdminToast('נא להזין כותרת ותוכן להתרעת החירום לפני ההפעלה!', '⚠️');
+        showAdminToast('נא להזין כותרת והנחיות לפני הפעלת מצב חירום!', '⚠️');
         return;
       }
 
@@ -1106,16 +1320,8 @@ function setupEmergencyAlertUI() {
         updatedAt: new Date().toISOString()
       };
 
-      const updatedSettings = {
-        ...settingsData,
-        display: {
-          ...settingsData?.display,
-          emergencyAlert: alertData
-        }
-      };
-
       const ok = await saveSettingsToServer(
-        updatedSettings,
+        { display: { emergencyAlert: alertData } },
         isActive ? 'התרעת החירום הופעלה במסך בהצלחה!' : 'התרעת החירום עודכנה (כבוי)'
       );
       if (ok) {
@@ -1136,16 +1342,13 @@ function setupEmergencyAlertUI() {
         updatedAt: new Date().toISOString()
       };
 
-      const updatedSettings = {
-        ...settingsData,
-        display: {
-          ...settingsData?.display,
-          emergencyAlert: alertData
-        }
-      };
-
-      const ok = await saveSettingsToServer(updatedSettings, 'מצב החירום בוטל והמסך חזר לשגרה!');
+      const ok = await saveSettingsToServer(
+        { display: { emergencyAlert: alertData } },
+        'מצב החירום בוטל והמסך חזר לשגרה!'
+      );
       if (ok) {
+        const disclosure = document.getElementById('emergency-disclosure');
+        if (disclosure) disclosure.open = false;
         updateEmergencyAlertUI(alertData);
       }
     });
@@ -1230,6 +1433,10 @@ function renderCleaningSchedulePanelState(daysArray, enabled = true, displayMode
   if (summaryDays) {
     summaryDays.textContent = `📅 לקראת ניקיון הבוקר המוקדם: ${info.cleaningDaysPhrase}${enabled === false ? ' (מוסתר כעת מהמסך)' : ''}`;
   }
+  const summaryChip = document.getElementById('cleaning-summary-chip');
+  if (summaryChip) {
+    summaryChip.textContent = enabled === false ? 'מוסתר' : info.cleaningDaysShort.replace(/^ימי\s+|^יום\s+/, '');
+  }
 }
 
 function getSelectedCleaningDaysFromUI() {
@@ -1312,10 +1519,7 @@ function setupCleaningScheduleUI() {
       const displayMode = modeSelect ? modeSelect.value : 'always';
       const info = buildCleaningScheduleStrings(selectedDays);
 
-      let currentNotices = Object.values(window._adminNoticesMap || {});
-      if (currentNotices.length === 0) {
-        currentNotices = JSON.parse(localStorage.getItem('smart_lobby_notices') || '[]');
-      }
+      let currentNotices = await getFreshNoticesForMutation();
 
       const existingIdx = currentNotices.findIndex(n => n && n.id === 'notice-cleaning-schedule');
       const existingNotice = existingIdx !== -1 ? currentNotices[existingIdx] : null;
@@ -1639,11 +1843,13 @@ function setupSmartNoticeAssistant() {
 
       // Recommended expiration timing
       const expiresInput = document.getElementById('notice-expires');
-      if (expiresInput && draft.recommendedDays) {
-        const d = new Date(Date.now() + draft.recommendedDays * 24 * 60 * 60 * 1000);
-        d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-        expiresInput.value = d.toISOString().slice(0, 16);
-      }
+        if (expiresInput && draft.recommendedDays) {
+          const d = new Date(Date.now() + draft.recommendedDays * 24 * 60 * 60 * 1000);
+          d.setHours(22, 0, 0, 0);
+          d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+          expiresInput.value = d.toISOString().slice(0, 16);
+          if (window.updateDurationHintFromInput) window.updateDurationHintFromInput(String(draft.recommendedDays));
+        }
 
       // Urgent toggle
       const urgentCheckbox = document.getElementById('notice-urgent');
@@ -1726,6 +1932,7 @@ function setupSmartNoticeAssistant() {
         const finalExpiry = result.suggestedExpiry || heuristicData.suggestedExpiry;
         if (expiresInput && (!expiresInput.value || /היום|מחר/.test(`${rawTitle} ${rawContent}`)) && finalExpiry) {
           expiresInput.value = finalExpiry;
+          if (window.updateDurationHintFromInput) window.updateDurationHintFromInput(null);
         }
       }
 
@@ -1881,14 +2088,11 @@ function updateLiteModeUI(isLite) {
   const headerText = document.getElementById('header-litemode-text');
   if (headerBtn && headerText) {
     if (isLite) {
-      headerBtn.className = 'bg-amber-950 bg-opacity-70 hover:bg-amber-900 border border-amber-700 text-amber-300 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm';
+      headerBtn.className = 'admin-only-block hidden md:flex bg-amber-950 hover:bg-amber-900 border border-amber-700 text-amber-300 text-xs font-bold px-2.5 py-2 rounded-xl items-center gap-1 transition';
       headerText.textContent = 'Lite: פעיל';
     } else {
-      headerBtn.className = 'bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm';
+      headerBtn.className = 'admin-only-block hidden md:flex bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 text-xs font-bold px-2.5 py-2 rounded-xl items-center gap-1 transition';
       headerText.textContent = 'Lite: כבוי';
-    }
-    if (currentRole === 'editor') {
-      headerBtn.classList.add('hidden');
     }
   }
 }
@@ -1999,7 +2203,6 @@ function setupDisplayControls() {
 
       const updatedSettings = {
         display: {
-          ...settingsData?.display,
           bgOpacity: parseInt(bgOpacityInput?.value || '85', 10),
           leftBurnCompensation: parseInt(burnCompInput?.value || '0', 10),
           highContrastSideCards: document.getElementById('setting-high-contrast-side')?.checked || false,
@@ -2061,7 +2264,6 @@ function setupContactsManager() {
 
       const updatedSettings = {
         display: {
-          ...settingsData?.display,
           showElevatorBar,
           showContactsSlide
         },
@@ -2112,11 +2314,11 @@ function setupRadioControls() {
 
     testAudio.onplaying = () => {
       const st = getStationById(stationSelect ? stationSelect.value : 'galgalatz');
-      if (testStatus) testStatus.innerHTML = `<span class="text-green-400 font-bold">🔊 משמיע: ${st.name}</span>`;
+      if (testStatus) testStatus.innerHTML = `<span class="text-emerald-300 font-bold">🔊 משמיע: ${st.name}</span>`;
       if (testIcon) testIcon.innerHTML = '🎵';
       if (testBtn) {
-        testBtn.innerHTML = '<span>⏹️</span><span>עצור השמעה</span>';
-        testBtn.classList.remove('bg-green-700', 'hover:bg-green-600');
+        testBtn.innerHTML = '<span>⏹️</span><span>עצור בדיקה</span>';
+        testBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-500');
         testBtn.classList.add('bg-red-700', 'hover:bg-red-600');
       }
     };
@@ -2127,9 +2329,9 @@ function setupRadioControls() {
       }
       if (testIcon) testIcon.innerHTML = '📻';
       if (testBtn) {
-        testBtn.innerHTML = '<span>▶️</span><span>השמע בדיקה עכשיו</span>';
+        testBtn.innerHTML = '<span>▶️</span><span>נגן בדיקה</span>';
         testBtn.classList.remove('bg-red-700', 'hover:bg-red-600');
-        testBtn.classList.add('bg-green-700', 'hover:bg-green-600');
+        testBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
       }
     };
 
@@ -2139,9 +2341,9 @@ function setupRadioControls() {
         testStatus.innerHTML = '<span class="text-amber-300 font-bold">⚠️ השידור מתחבר או חסום בדפדפן</span>';
       }
       if (testBtn) {
-        testBtn.innerHTML = '<span>▶️</span><span>השמע בדיקה עכשיו</span>';
+        testBtn.innerHTML = '<span>▶️</span><span>נגן בדיקה</span>';
         testBtn.classList.remove('bg-red-700', 'hover:bg-red-600');
-        testBtn.classList.add('bg-green-700', 'hover:bg-green-600');
+        testBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
       }
     };
   }
@@ -2197,7 +2399,6 @@ function setupRadioControls() {
 
       const updatedSettings = {
         radio: {
-          ...settingsData?.radio,
           enabled: document.getElementById('radio-enabled')?.checked || false,
           currentStation: document.getElementById('radio-station-select')?.value || 'galgalatz',
           startHour: startH,
@@ -2223,15 +2424,17 @@ function setupGeneralSettings() {
 
       const updatedSettings = {
         building: {
-          ...settingsData?.building,
           name: document.getElementById('setting-bld-name')?.value.trim() || 'הירדן 5',
           city: document.getElementById('setting-bld-city')?.value.trim() || 'חדרה'
         },
-        security: {
-          ...settingsData?.security,
-          ...(newPin ? { adminPin: newPin } : {}),
-          ...(newEditorPin ? { editorPin: newEditorPin } : {})
-        },
+        ...((newPin || newEditorPin)
+          ? {
+              security: {
+                ...(newPin ? { adminPin: newPin } : {}),
+                ...(newEditorPin ? { editorPin: newEditorPin } : {})
+              }
+            }
+          : {}),
         ...(newPin ? { newPin } : {})
       };
 
@@ -2303,6 +2506,12 @@ async function loadSettings() {
   }
 }
 
+function setValIfUnfocused(el, val) {
+  if (el && document.activeElement !== el) {
+    el.value = val;
+  }
+}
+
 function populateSettingsUI() {
   if (!settingsData) return;
 
@@ -2316,13 +2525,13 @@ function populateSettingsUI() {
   const bgOpacity = settingsData.display?.bgOpacity !== undefined ? settingsData.display.bgOpacity : 85;
   const bgOpInput = document.getElementById('setting-bg-opacity');
   const bgOpLabel = document.getElementById('bg-opacity-label');
-  if (bgOpInput) bgOpInput.value = bgOpacity;
+  setValIfUnfocused(bgOpInput, bgOpacity);
   if (bgOpLabel) bgOpLabel.textContent = `${bgOpacity}%`;
 
   const leftBurn = settingsData.display?.leftBurnCompensation !== undefined ? settingsData.display.leftBurnCompensation : 0;
   const burnInput = document.getElementById('setting-left-burn-comp');
   const burnLabel = document.getElementById('burn-comp-val-label');
-  if (burnInput) burnInput.value = leftBurn;
+  setValIfUnfocused(burnInput, leftBurn);
   if (burnLabel) burnLabel.textContent = `${leftBurn}%`;
 
   const highContrast = document.getElementById('setting-high-contrast-side');
@@ -2338,38 +2547,27 @@ function populateSettingsUI() {
   const resolutionStatus = document.getElementById('resolution-status-text');
   if (resolutionInput) {
     const resVal = settingsData.display?.resolution || 'auto';
-    resolutionInput.value = resVal;
+    setValIfUnfocused(resolutionInput, resVal);
     if (resolutionStatus) {
       if (resVal === '1080p') {
-        resolutionStatus.textContent = 'Full HD (1080p) - גופנים מלאים';
-        resolutionStatus.className = 'text-blue-400 font-bold';
+        resolutionStatus.textContent = '1080p Full HD';
+        resolutionStatus.className = 'text-[11px] text-blue-300 font-bold';
       } else if (resVal === '720p') {
-        resolutionStatus.textContent = 'HD Ready (720p) - גופנים קומפקטיים';
-        resolutionStatus.className = 'text-purple-400 font-bold';
+        resolutionStatus.textContent = '720p HD';
+        resolutionStatus.className = 'text-[11px] text-purple-300 font-bold';
       } else {
-        resolutionStatus.textContent = 'התאמה רספונסיבית אוטומטית (מומלץ)';
-        resolutionStatus.className = 'text-cyan-400 font-bold';
+        resolutionStatus.textContent = 'אוטומטי';
+        resolutionStatus.className = 'text-[11px] text-cyan-300 font-bold';
       }
     }
   }
 
-  const ykModeInput = document.getElementById('setting-yom-kippur-mode');
-  if (ykModeInput) ykModeInput.value = settingsData.display?.yomKippurMode || 'auto';
-
-  const layoutSide = document.getElementById('setting-layout-side');
-  if (layoutSide) layoutSide.value = settingsData.display?.layoutSide || 'left';
-
-  const posClock = document.getElementById('setting-pos-clock');
-  if (posClock) posClock.value = settingsData.display?.headerClockPosition || 'left';
-
-  const posBrand = document.getElementById('setting-pos-brand');
-  if (posBrand) posBrand.value = settingsData.display?.headerBrandPosition || 'right';
-
-  const posShabbat = document.getElementById('setting-pos-shabbat');
-  if (posShabbat) posShabbat.value = settingsData.display?.headerShabbatPosition || 'center';
-
-  const sideWidth = document.getElementById('setting-side-width');
-  if (sideWidth) sideWidth.value = settingsData.display?.sideColumnWidth || 'normal';
+  setValIfUnfocused(document.getElementById('setting-yom-kippur-mode'), settingsData.display?.yomKippurMode || 'auto');
+  setValIfUnfocused(document.getElementById('setting-layout-side'), settingsData.display?.layoutSide || 'left');
+  setValIfUnfocused(document.getElementById('setting-pos-clock'), settingsData.display?.headerClockPosition || 'left');
+  setValIfUnfocused(document.getElementById('setting-pos-brand'), settingsData.display?.headerBrandPosition || 'right');
+  setValIfUnfocused(document.getElementById('setting-pos-shabbat'), settingsData.display?.headerShabbatPosition || 'center');
+  setValIfUnfocused(document.getElementById('setting-side-width'), settingsData.display?.sideColumnWidth || 'normal');
 
   const showNewsTicker = document.getElementById('setting-show-news-ticker');
   if (showNewsTicker) showNewsTicker.checked = settingsData.display?.showNewsTicker !== false;
@@ -2383,16 +2581,14 @@ function populateSettingsUI() {
   const showInterestSlide = document.getElementById('setting-show-interest-slide');
   if (showInterestSlide) showInterestSlide.checked = settingsData.display?.showInterestSlide !== false;
 
-  const customTicker = document.getElementById('setting-custom-ticker');
-  if (customTicker) customTicker.value = settingsData.display?.customTickerText || '';
+  setValIfUnfocused(document.getElementById('setting-custom-ticker'), settingsData.display?.customTickerText || '');
 
   // Theme
   const themeMode = settingsData.display?.theme || 'auto';
   const radioInputs = document.querySelectorAll('input[name="theme-mode"]');
   radioInputs.forEach(r => r.checked = (r.value === themeMode));
 
-  const customTheme = document.getElementById('custom-theme-select');
-  if (customTheme) customTheme.value = settingsData.display?.customTheme || 'modern-dark';
+  setValIfUnfocused(document.getElementById('custom-theme-select'), settingsData.display?.customTheme || 'modern-dark');
 
   // Tab 3: Contacts
   const showElevBarToggle = document.getElementById('toggle-show-elevator-bar');
@@ -2406,23 +2602,19 @@ function populateSettingsUI() {
   const vaad = contacts.find(c => c.name.includes('ועד') || c.name.includes('ניהול'));
 
   if (elev) {
-    const eName = document.getElementById('contact-elevator-name');
-    const ePhone = document.getElementById('contact-elevator-phone');
+    setValIfUnfocused(document.getElementById('contact-elevator-name'), elev.name);
+    setValIfUnfocused(document.getElementById('contact-elevator-phone'), elev.phone);
     const eEnabled = document.getElementById('contact-elevator-enabled');
-    if (eName) eName.value = elev.name;
-    if (ePhone) ePhone.value = elev.phone;
     if (eEnabled) eEnabled.checked = elev.enabled !== false;
   }
   if (city) {
-    const cPhone = document.getElementById('contact-city-phone');
+    setValIfUnfocused(document.getElementById('contact-city-phone'), city.phone);
     const cEnabled = document.getElementById('contact-city-enabled');
-    if (cPhone) cPhone.value = city.phone;
     if (cEnabled) cEnabled.checked = city.enabled !== false;
   }
   if (vaad) {
-    const vPhone = document.getElementById('contact-vaad-phone');
+    setValIfUnfocused(document.getElementById('contact-vaad-phone'), vaad.phone);
     const vEnabled = document.getElementById('contact-vaad-enabled');
-    if (vPhone) vPhone.value = vaad.phone;
     if (vEnabled) vEnabled.checked = vaad.enabled !== false;
   }
 
@@ -2435,31 +2627,28 @@ function populateSettingsUI() {
   const volLabel = document.getElementById('vol-label');
 
   if (radioEnabled) radioEnabled.checked = Boolean(settingsData.radio?.enabled);
-  if (radioStation) radioStation.value = settingsData.radio?.currentStation || 'galgalatz';
-  
-  let sVal = settingsData.radio?.startHour || '08:00';
+  setValIfUnfocused(radioStation, settingsData.radio?.currentStation || 'galgalatz');
+
+  let sVal = settingsData.radio?.startHour || '06:30';
   if (sVal === '00:08') sVal = '08:00';
-  if (radioStart) radioStart.value = sVal;
+  setValIfUnfocused(radioStart, sVal);
 
-  let eVal = settingsData.radio?.endHour || '21:00';
+  let eVal = settingsData.radio?.endHour || '23:00';
   if (eVal === '00:21') eVal = '21:00';
-  if (radioEnd) radioEnd.value = eVal;
+  setValIfUnfocused(radioEnd, eVal);
 
-  if (radioVol) radioVol.value = settingsData.radio?.volume || 0.4;
-  if (volLabel) volLabel.textContent = `${Math.round((settingsData.radio?.volume || 0.4) * 100)}%`;
+  const volVal = settingsData.radio?.volume !== undefined ? settingsData.radio.volume : 0.4;
+  setValIfUnfocused(radioVol, volVal);
+  if (volLabel) volLabel.textContent = `${Math.round(volVal * 100)}%`;
 
   // Tab 5: General & PIN
-  const bldName = document.getElementById('setting-bld-name');
-  const bldCity = document.getElementById('setting-bld-city');
-  const rssSource = document.getElementById('setting-rss-source');
-  const pinInput = document.getElementById('setting-new-pin');
-  const editorPinInput = document.getElementById('setting-new-editor-pin');
+  setValIfUnfocused(document.getElementById('setting-bld-name'), settingsData.building?.name || 'הירדן 5');
+  setValIfUnfocused(document.getElementById('setting-bld-city'), settingsData.building?.city || 'חדרה');
 
-  if (bldName) bldName.value = settingsData.building?.name || 'הירדן 5';
-  if (bldCity) bldCity.value = settingsData.building?.city || 'חדרה';
+  const rssSource = document.getElementById('setting-rss-source');
   const hasExplicitChannels = Array.isArray(settingsData.display?.newsChannels) && settingsData.display.newsChannels.length > 0;
   if (rssSource) {
-    rssSource.value = hasExplicitChannels ? (settingsData.display?.newsSource || 'smart_mix') : 'smart_mix';
+    setValIfUnfocused(rssSource, hasExplicitChannels ? (settingsData.display?.newsSource || 'smart_mix') : 'smart_mix');
   }
 
   const savedChannels = hasExplicitChannels
@@ -2470,41 +2659,147 @@ function populateSettingsUI() {
   const filterClickbaitCb = document.getElementById('setting-filter-clickbait');
   if (filterClickbaitCb) filterClickbaitCb.checked = settingsData.display?.filterClickbait !== false;
 
-  const customRssInput = document.getElementById('setting-custom-rss-url');
-  if (customRssInput) customRssInput.value = settingsData.display?.customRssUrl || '';
-  if (pinInput) pinInput.placeholder = settingsData.security?.adminPin ? 'מוגדר (הזן לשינוי)' : 'ברירת מחדל: 1234';
-  if (editorPinInput) editorPinInput.placeholder = settingsData.security?.editorPin ? 'מוגדר (הזן לשינוי)' : 'ברירת מחדל: 1111';
+  setValIfUnfocused(document.getElementById('setting-custom-rss-url'), settingsData.display?.customRssUrl || '');
+  const pinInput = document.getElementById('setting-new-pin');
+  const editorPinInput = document.getElementById('setting-new-editor-pin');
+  const hasAdminPin = Boolean(settingsData.security?.adminPin || settingsData.security?.hasAdminPin);
+  const hasEditorPin = Boolean(settingsData.security?.editorPin || settingsData.security?.hasEditorPin);
+  if (pinInput) pinInput.placeholder = hasAdminPin ? 'מוגדר (הזן לשינוי)' : 'ברירת מחדל: 9681';
+  if (editorPinInput) editorPinInput.placeholder = hasEditorPin ? 'מוגדר (הזן לשינוי)' : 'ברירת מחדל: 9090';
 
-  // Update Header Quick Radio Button State
+  // Update Header & Home Quick Music Controls
   updateHeaderRadioStatus(Boolean(settingsData.radio?.enabled));
+  updateQuickMusicUI();
 
   // Update Emergency Alert UI state
   updateEmergencyAlertUI(settingsData.display?.emergencyAlert);
 }
 
 // ==========================================
-// 8. HEADER QUICK CONTROLS (Radio & Emergency Refresh)
+// 8. QUICK MUSIC CARD & HEADER QUICK CONTROLS
 // ==========================================
+function updateQuickMusicUI() {
+  const isEnabled = Boolean(settingsData?.radio?.enabled);
+  const vol = settingsData?.radio?.volume !== undefined ? Number(settingsData.radio.volume) : 0.4;
+  const stationId = settingsData?.radio?.currentStation || 'galgalatz';
+  const startH = settingsData?.radio?.startHour || '06:30';
+  const endH = settingsData?.radio?.endHour || '23:00';
+  const st = getStationById(stationId);
+  const shortStName = (st?.name || 'גלגלצ').split('(')[0].trim();
+
+  const toggleBtn = document.getElementById('quick-radio-toggle-btn');
+  const subtext = document.getElementById('quick-music-subtext');
+  const emoji = document.getElementById('quick-music-status-emoji');
+  const quickSelect = document.getElementById('quick-station-select');
+
+  if (quickSelect && document.activeElement !== quickSelect) {
+    quickSelect.value = stationId;
+  }
+
+  if (isEnabled) {
+    if (emoji) emoji.textContent = '🔊';
+    if (subtext) subtext.textContent = `${shortStName} • עוצמה ${Math.round(vol * 100)}% • ${startH}–${endH}`;
+    if (toggleBtn) {
+      toggleBtn.className = 'px-3.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm shadow transition shrink-0 bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400';
+      toggleBtn.textContent = '🔊 פועל — כבה';
+    }
+  } else {
+    if (emoji) emoji.textContent = '🔇';
+    if (subtext) subtext.textContent = `כבוי כעת • (${shortStName})`;
+    if (toggleBtn) {
+      toggleBtn.className = 'px-3.5 py-2.5 rounded-xl font-extrabold text-xs sm:text-sm shadow transition shrink-0 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-600';
+      toggleBtn.textContent = '🔇 כבוי — הפעל';
+    }
+  }
+
+  const volGroup = document.getElementById('quick-volume-btn-group');
+  if (volGroup) {
+    volGroup.querySelectorAll('.quick-vol-btn').forEach(btn => {
+      btn.classList.remove('active', 'mute-active');
+      if (!isEnabled) {
+        if (btn.getAttribute('data-action') === 'mute') btn.classList.add('mute-active');
+      } else if (btn.hasAttribute('data-vol')) {
+        const targetV = parseFloat(btn.getAttribute('data-vol'));
+        if (Math.abs(vol - targetV) <= 0.12) {
+          btn.classList.add('active');
+        }
+      }
+    });
+  }
+}
+
+function setupQuickMusicCard() {
+  const toggleBtn = document.getElementById('quick-radio-toggle-btn');
+  const volGroup = document.getElementById('quick-volume-btn-group');
+  const quickSelect = document.getElementById('quick-station-select');
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', async () => {
+      if (!settingsData) await loadSettings();
+      const nextState = !Boolean(settingsData?.radio?.enabled);
+      await saveSettingsToServer(
+        { radio: { enabled: nextState } },
+        nextState ? '🔊 המוזיקה בלובי הופעלה!' : '🔇 המוזיקה בלובי הושתקה!'
+      );
+    });
+  }
+
+  if (volGroup) {
+    volGroup.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.quick-vol-btn');
+      if (!btn) return;
+      if (!settingsData) await loadSettings();
+
+      if (btn.getAttribute('data-action') === 'mute') {
+        await saveSettingsToServer({ radio: { enabled: false } }, '🔇 המוזיקה בלובי הושתקה!');
+        return;
+      }
+      const vol = parseFloat(btn.getAttribute('data-vol') || '0.45');
+      await saveSettingsToServer(
+        { radio: { enabled: true, volume: vol } },
+        `🔊 עוצמת המוזיקה עודכנה ל-${Math.round(vol * 100)}%!`
+      );
+    });
+  }
+
+  if (quickSelect) {
+    quickSelect.addEventListener('change', async () => {
+      if (!settingsData) await loadSettings();
+      const stId = quickSelect.value || 'galgalatz';
+      const st = getStationById(stId);
+      await saveSettingsToServer(
+        { radio: { currentStation: stId, enabled: true } },
+        `📻 התחנה הוחלפה ל-${(st?.name || stId).split('(')[0].trim()}!`
+      );
+    });
+  }
+}
+
 function setupHeaderQuickActions() {
+  const toggleViewBtn = document.getElementById('toggle-view-mode-btn');
+  if (toggleViewBtn) {
+    toggleViewBtn.addEventListener('click', () => {
+      if (currentRole !== 'admin') return;
+      adminSimplePreview = !adminSimplePreview;
+      sessionStorage.setItem('admin_simple_preview', adminSimplePreview ? '1' : '0');
+      applyRolePermissions();
+      showAdminToast(
+        adminSimplePreview ? '👤 עברת לתצוגת ועד פשוטה ונקייה' : '⚙️ חזרת לתצוגת מנהל מלאה',
+        adminSimplePreview ? '👤' : '⚙️'
+      );
+    });
+  }
+
   const liteModeBtn = document.getElementById('header-litemode-btn');
   if (liteModeBtn) {
     liteModeBtn.addEventListener('click', async () => {
-      if (!settingsData) return;
-      const currentLite = Boolean(settingsData.display?.liteMode);
-      const newLite = !currentLite;
-
-      const updatedDisplay = {
-        ...(settingsData.display || {}),
-        liteMode: newLite
-      };
-
+      if (!settingsData) await loadSettings();
+      const newLite = !Boolean(settingsData?.display?.liteMode);
       const ok = await saveSettingsToServer(
-        { display: updatedDisplay },
-        newLite ? '⚡ מצב חיסכון וביצועים הופעל בהצלחה!' : '✨ מצב עיצוב מלא (Glassmorphism) הופעל!'
+        { display: { liteMode: newLite } },
+        newLite ? '⚡ מצב חיסכון וביצועים הופעל!' : '✨ מצב עיצוב מלא הופעל!'
       );
-      if (ok) {
-        updateLiteModeUI(newLite);
-      }
+      if (ok) updateLiteModeUI(newLite);
     });
   }
 
@@ -2513,22 +2808,12 @@ function setupHeaderQuickActions() {
 
   if (radioBtn) {
     radioBtn.addEventListener('click', async () => {
-      if (!settingsData) return;
-      const isCurrentlyEnabled = Boolean(settingsData.radio?.enabled);
-      const newEnabledState = !isCurrentlyEnabled;
-
-      const updatedRadio = {
-        ...(settingsData.radio || {}),
-        enabled: newEnabledState
-      };
-
-      const ok = await saveSettingsToServer(
-        { radio: updatedRadio },
+      if (!settingsData) await loadSettings();
+      const newEnabledState = !Boolean(settingsData?.radio?.enabled);
+      await saveSettingsToServer(
+        { radio: { enabled: newEnabledState } },
         newEnabledState ? '🔊 הרדיו הופעל בהצלחה!' : '🔇 הרדיו הושתק בהצלחה!'
       );
-      if (ok) {
-        updateHeaderRadioStatus(newEnabledState);
-      }
     });
   }
 
@@ -2546,12 +2831,10 @@ function setupHeaderQuickActions() {
         }
       }
 
-      try {
-        window.dispatchEvent(new Event('storage'));
-      } catch (e) {}
+      try { window.dispatchEvent(new Event('storage')); } catch (e) {}
 
       if (cloudOk) {
-        showAdminToast('🔄 אות רענון ענן נשלח למסך הלובי!', '🚀');
+        showAdminToast('🔄 אות רענון נשלח למסך הלובי!', '🚀');
       } else {
         showAdminToast('אות רענון נשלח מקומית, אך שליחה לענן נכשלה.', '⚠️');
       }
@@ -2566,12 +2849,12 @@ function updateHeaderRadioStatus(isEnabled) {
   if (!radioBtn) return;
 
   if (isEnabled) {
-    radioBtn.className = 'bg-emerald-950 bg-opacity-70 hover:bg-emerald-900 border border-emerald-600 text-emerald-300 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm';
+    radioBtn.className = 'admin-only-block hidden sm:flex bg-emerald-950 hover:bg-emerald-900 border border-emerald-600 text-emerald-300 text-xs font-bold px-2.5 py-2 rounded-xl items-center gap-1 transition';
     if (radioIcon) radioIcon.textContent = '🔊';
     if (radioText) radioText.textContent = 'רדיו פועל';
     radioBtn.title = 'לחץ להשתקת הרדיו';
   } else {
-    radioBtn.className = 'bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 text-xs sm:text-sm px-2.5 sm:px-3 py-2 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-sm';
+    radioBtn.className = 'admin-only-block hidden sm:flex bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-200 text-xs font-bold px-2.5 py-2 rounded-xl items-center gap-1 transition';
     if (radioIcon) radioIcon.textContent = '🔇';
     if (radioText) radioText.textContent = 'רדיו מושתק';
     radioBtn.title = 'לחץ להפעלת הרדיו';
@@ -2579,47 +2862,53 @@ function updateHeaderRadioStatus(isEnabled) {
 }
 
 async function saveSettingsToServer(newSettings, successMessage) {
-  // Merge cleanly into global settingsData
+  // Deep-merge locally into settingsData for immediate UI state
   settingsData = {
     ...(settingsData || {}),
     ...newSettings,
     building: { ...(settingsData?.building || {}), ...(newSettings.building || {}) },
-    display: { ...(settingsData?.display || {}), ...(newSettings.display || {}) },
+    display: {
+      ...(settingsData?.display || {}),
+      ...(newSettings.display || {}),
+      ...(newSettings.display?.emergencyAlert
+        ? { emergencyAlert: { ...(settingsData?.display?.emergencyAlert || {}), ...newSettings.display.emergencyAlert } }
+        : {})
+    },
     radio: { ...(settingsData?.radio || {}), ...(newSettings.radio || {}) },
     security: { ...(settingsData?.security || {}), ...(newSettings.security || {}) },
     contacts: newSettings.contacts || settingsData?.contacts || []
   };
 
-  // Cache to localStorage
   localStorage.setItem('smart_lobby_settings', JSON.stringify(settingsData));
   populateSettingsUI();
 
-  // 1. Sync to Firebase Real-time Global Cloud
+  // 1. Sync ONLY the partial newSettings patch to Firebase Cloud ({ merge: true } deep-merges maps!)
+  // This prevents a stale backgrounded iPhone Safari tab from overwriting unrelated settings!
+  const cloudPatch = currentRole === 'editor'
+    ? {
+        ...(newSettings.radio ? { radio: newSettings.radio } : {}),
+        ...(newSettings.display?.emergencyAlert ? { display: { emergencyAlert: newSettings.display.emergencyAlert } } : {})
+      }
+    : { ...newSettings };
+  delete cloudPatch.newPin;
+
   let cloudSuccess = true;
   if (window.FirebaseSync) {
     try {
-      cloudSuccess = await window.FirebaseSync.saveSettings(settingsData);
-      if (cloudSuccess) {
-        console.log('⚡ Settings synced to Firebase Cloud successfully across all devices!');
-      } else {
-        console.warn('⚠️ Firebase saveSettings returned false.');
-      }
+      cloudSuccess = await window.FirebaseSync.saveSettings(cloudPatch);
     } catch (e) {
       console.warn('Firebase save settings warning:', e);
       cloudSuccess = false;
     }
   }
 
-  // 2. Also try local Node API if available
+  // 2. Also sync to local Node API if running locally
   if (isLocalServer()) {
     try {
-      const payloadToSend = currentRole === 'editor'
-        ? { radio: settingsData.radio, display: { emergencyAlert: settingsData.display?.emergencyAlert } }
-        : settingsData;
       await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: currentPin, newSettings: payloadToSend })
+        body: JSON.stringify({ pin: currentPin, newSettings })
       });
     } catch (err) {}
   }
@@ -2627,26 +2916,20 @@ async function saveSettingsToServer(newSettings, successMessage) {
   try { window.dispatchEvent(new Event('storage')); } catch (e) {}
 
   if (cloudSuccess) {
-    showAdminToast(successMessage || 'ההגדרות נשמרו וסונכרנו לכל המכשירים בהצלחה!', '⚡');
+    showAdminToast(successMessage || 'ההגדרות נשמרו בהצלחה!', '✅');
   } else {
     showAdminToast('ההגדרות נשמרו מקומית, אך הסנכרון לענן נכשל (בדוק חיבור אינטרנט).', '⚠️');
   }
   return cloudSuccess;
 }
 
-
 window.toggleNoticeHidden = async function(id) {
-  const n = window._adminNoticesMap ? window._adminNoticesMap[id] : null;
-  if (!n) return;
-
-  const newState = !Boolean(n.hidden);
-  n.hidden = newState;
-
-  let currentNotices = Object.values(window._adminNoticesMap || {});
+  let currentNotices = await getFreshNoticesForMutation();
   const idx = currentNotices.findIndex(item => item.id === id);
-  if (idx !== -1) {
-    currentNotices[idx].hidden = newState;
-  }
+  if (idx === -1) return;
+
+  const newState = !Boolean(currentNotices[idx].hidden);
+  currentNotices[idx] = { ...currentNotices[idx], hidden: newState };
 
   currentNotices = pruneExpiredNoticeImages(currentNotices);
   localStorage.setItem('smart_lobby_notices', JSON.stringify(currentNotices));
@@ -2656,15 +2939,21 @@ window.toggleNoticeHidden = async function(id) {
     cloudSuccess = await window.FirebaseSync.saveNotices(currentNotices);
   }
 
+  if (isLocalServer()) {
+    try {
+      await fetch('/api/notices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: currentPin, notice: currentNotices[idx] })
+      });
+    } catch (e) {}
+  }
+
   try { window.dispatchEvent(new Event('storage')); } catch (e) {}
 
   await loadNotices();
   if (cloudSuccess) {
-    if (newState) {
-      showAdminToast('ההודעה הוסתרה מהמסך בהצלחה! (נשמרת באדמין לשימוש עתידי)', '👁️‍🗨️');
-    } else {
-      showAdminToast('ההודעה מוצגת כעת במסך הלובי!', '👁️');
-    }
+    showAdminToast(newState ? 'ההודעה הוסתרה מהמסך (נשמרה במגירת המוסתרות)' : 'ההודעה הוחזרה לתצוגה במסך הלובי!', newState ? '🙈' : '👁️');
   } else {
     showAdminToast('הסטטוס שונה מקומית, אך הסנכרון לענן נכשל.', '⚠️');
   }
