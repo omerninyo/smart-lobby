@@ -639,12 +639,17 @@ app.get('/api/shabbat-holidays', async (req, res) => {
   }
 
   try {
-    const url = `https://www.hebcal.com/shabbat?cfg=json&latitude=${lat}&longitude=${lon}&tzid=Asia/Jerusalem&M=on&lg=he`;
+    const now = new Date();
+    const fmtIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const startIso = fmtIso(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+    const endIso = fmtIso(new Date(now.getTime() + 9 * 24 * 60 * 60 * 1000));
+    const url = `https://www.hebcal.com/hebcal?v=1&cfg=json&i=on&maj=on&min=on&mod=on&nx=on&mf=on&ss=on&o=on&c=on&s=on&latitude=${lat}&longitude=${lon}&tzid=Asia/Jerusalem&M=on&lg=he&start=${startIso}&end=${endIso}`;
     const response = await fetchWithTimeout(url, {}, 7000);
     if (!response.ok) throw new Error(`Hebcal fetch failed: ${response.status}`);
     
     const data = await response.json();
     const items = data.items || [];
+    const todayIso = fmtIso(now);
 
     let candleLighting = null;
     let havdalah = null;
@@ -652,61 +657,74 @@ app.get('/api/shabbat-holidays', async (req, res) => {
     const holidays = [];
 
     items.forEach(item => {
-      if (item.category === 'candles') {
+      const itemDay = String(item.date || '').slice(0, 10);
+      if (item.category === 'candles' && !candleLighting && itemDay >= todayIso) {
         const cleanTime = (item.title || '').match(/\d{1,2}:\d{2}/)?.[0] || item.title;
         candleLighting = {
           title: item.title,
           time: cleanTime,
           date: item.date
         };
-      } else if (item.category === 'havdalah') {
+      } else if (item.category === 'havdalah' && !havdalah && itemDay >= todayIso) {
         const cleanTime = (item.title || '').match(/\d{1,2}:\d{2}/)?.[0] || item.title;
         havdalah = {
           title: item.title,
           time: cleanTime,
           date: item.date
         };
-      } else if (item.category === 'parashat') {
+      } else if (item.category === 'parashat' && !parasha && itemDay >= todayIso) {
         parasha = item.hebrew || item.title;
       } else if (item.category === 'holiday' || item.category === 'roshchodesh' || item.category === 'omer' || item.category === 'fast') {
         holidays.push({
           title: item.hebrew || item.title,
+          title_orig: item.title_orig || '',
           category: item.category,
           subcat: item.subcat,
+          yomtov: Boolean(item.yomtov),
           date: item.date
         });
       }
     });
 
-    // Detect active holiday / theme recommendation
-    const now = new Date();
+    // Detect active holiday / theme recommendation for today
     const dayOfWeek = now.getDay(); // 0 = Sunday, 5 = Friday, 6 = Saturday
     const isShabbatActive = dayOfWeek === 5 || dayOfWeek === 6 || (dayOfWeek === 4 && now.getHours() >= 18);
 
+    const todaysHolidays = holidays.filter(h => String(h.date || '').slice(0, 10) === todayIso && h.category !== 'omer');
     let activeHoliday = null;
     let recommendedTheme = isShabbatActive ? 'shabbat' : 'default';
 
-    if (holidays.length > 0) {
-      activeHoliday = holidays[0];
-      const hTitle = activeHoliday.title;
+    if (todaysHolidays.length > 0) {
+      activeHoliday = todaysHolidays[0];
+      const hTitle = activeHoliday.title || '';
       if (hTitle.includes('ראש השנה')) recommendedTheme = 'rosh-hashanah';
-      else if (hTitle.includes('סוכות')) recommendedTheme = 'sukkot';
+      else if (hTitle.includes('כיפור')) recommendedTheme = 'yom-kippur';
+      else if (hTitle.includes('שמחת תורה') || hTitle.includes('שמיני עצרת')) recommendedTheme = 'simchat-torah';
+      else if (hTitle.includes('סוכות') || hTitle.includes('הושענא')) recommendedTheme = 'sukkot';
       else if (hTitle.includes('חנוכה')) recommendedTheme = 'hanukkah';
-      else if (hTitle.includes('פורים')) recommendedTheme = 'purim';
+      else if (hTitle.includes('ט״ו בשבט') || hTitle.includes('טו בשבט')) recommendedTheme = 'tu-bishvat';
+      else if (hTitle.includes('פורים') || hTitle.includes('אסתר')) recommendedTheme = 'purim';
       else if (hTitle.includes('פסח')) recommendedTheme = 'pesach';
+      else if (hTitle.includes('שואה') || hTitle.includes('הזכרון') || hTitle.includes('הזיכרון')) recommendedTheme = 'memorial';
       else if (hTitle.includes('עצמאות')) recommendedTheme = 'israel';
+      else if (hTitle.includes('ל״ג בעומר') || hTitle.includes('ל"ג בעומר')) recommendedTheme = 'lag-baomer';
       else if (hTitle.includes('שבועות')) recommendedTheme = 'shavuot';
     }
 
     const THEME_IMAGES = {
-      'default': 'images/wallpapers/landscapes/mediterranean_sunset_arch.jpg',
+      'default': 'images/wallpapers/abstract/luxury_fluid_gold.jpg',
       'shabbat': 'images/wallpapers/shabbat/shabbat_candles_luxury.jpg',
       'rosh-hashanah': 'images/wallpapers/holidays/rosh_hashanah.jpg',
+      'yom-kippur': 'images/wallpapers/holidays/yom_kippur.jpg',
       'sukkot': 'images/wallpapers/holidays/sukkot.jpg',
+      'simchat-torah': 'images/wallpapers/holidays/simchat_torah.jpg',
       'hanukkah': 'images/wallpapers/holidays/hanukkah.jpg',
+      'tu-bishvat': 'images/wallpapers/holidays/tu_bishvat.jpg',
       'purim': 'images/wallpapers/holidays/purim.jpg',
       'pesach': 'images/wallpapers/holidays/pesach.jpg',
-      'israel': 'images/wallpapers/holidays/independence_day.jpg',
+      'memorial': 'images/wallpapers/holidays/memorial_candle.jpg',
+      'israel': 'images/wallpapers/holidays/israel_independence.jpg',
+      'lag-baomer': 'images/wallpapers/holidays/lag_baomer.jpg',
       'shavuot': 'images/wallpapers/holidays/shavuot.jpg'
     };
 

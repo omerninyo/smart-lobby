@@ -39,8 +39,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     3. **Active vs. Archived Notice Separation** (`📢 הודעות שמוצגות כעת בלובי` up top; expired/hidden notices tucked into `📁 הודעות ישנות / מוסתרות` with 1-tap `🧹 מחק הודעות שפג תוקפן`).
     4. Collapsible `<details>` drawers at the bottom for `🧼 ימי ניקיון קבועים` and `🚨 הודעת חירום מתפרצת` (which automatically jumps to top `order: -10` and opens when active).
 
+- **Complete Year-Round Calendar, Live Data Source Modernization & Contextual Content Enrichment (`v269`):**
+  - **Live Data Sources Audit & Stream Modernization (`data/settings.json`, `js/screen.js`, `js/admin.js`, `server.js`):** Replaced 4 discontinued radio stream endpoints (`kan_88`, `kan_gimmel`, `kan_kol_hamusica`, `radios100fm`) with verified live `200 OK` MP3/AAC streams (`playerservices.streamtheworld.com` & `cdn.cybercdn.live`) + automatic runtime upgrade of legacy cached Firestore stream URLs; added direct CORS-open XML fast-path for `mako` (`rcs.mako.co.il`); expanded Open-Meteo client weather mapping to all 28 WMO weather codes (`0–99`) with `localStorage` weather caching; and integrated Hebrew Wikipedia's official daily history template (`תבנית:היום בהיסטוריה`, cached once per 24h in `localStorage` with family-friendly filtering).
+  - **Full Israeli Calendar & Special Days Repository (`hebcal?v=1&i=on`, `detectIsraelDstTransition`, `getCivicAndSeasonalSpecialDay`):** Upgraded from weekend-only `/shabbat` to a 10-day rolling full Israel calendar (`maj`, `min`, `mod`, `nx`, `mf`, `ss`, `o`, `c`, `s`) covering mid-week Jewish holidays, fast days, Rosh Chodesh, Sefirat HaOmer (fixing Lag BaOmer vs. Omer disambiguation), `יום הזכרון` spelling variants, `חג הסיגד`, `יום השפה העברית`, `יום המשפחה`, `חג המימונה`, evening transitions (`ערב יום הזיכרון` → `יום העצמאות`), automatic `Asia/Jerusalem` DST (`שעון קיץ / שעון חורף`) detection, school-year milestones, solstices/equinoxes, and 30+ national & international days, plus upcoming 7-day events inside the interactive calendar modal.
+  - **Zero-Widget Contextual Enrichment Across Existing Panels:** Dynamically adapts `daily_interest`, `weather_forecast` (`dailyTip`), `transit_commute` (Erev Chag & Yom Tov train/bus schedules), and `shabbat_calendar` ticker items to Memorial Days (dignified heritage mode), Jewish & Israeli holidays (14 dedicated holiday/Shabbat pools + 50+ general/local Hadera science & history sets), days of the week, and live weather conditions.
+
 ### Changed
-- **Cachebuster Bump:** Updated cachebuster across `index.html` and `admin.html` to `v=20261119_admin_ux_v268`.
+- **Cachebuster Bump:** Updated cachebuster across `index.html` and `admin.html` to `v=20261119_calendar_enrichment_v269`.
 - **1:1 Binary Synchronization:** Completely synchronized all frontend assets, configuration, and scripts between root and `public/` directory.
 
 ## [2.5.0] - 2026-10-18

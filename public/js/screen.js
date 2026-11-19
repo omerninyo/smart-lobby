@@ -227,8 +227,260 @@ const DAILY_INTEREST_SETS = [
     history: { title: '🚀 החללית וויאג\'ר 1 שוגרה ב-1977', text: 'היא העצם המרוחק ביותר שבנה האדם (מעל 24 מיליארד ק"מ מכדור הארץ) ועדיין משדרת אותות מהחלל הבין-כוכבי!' },
     trivia: { question: 'איזה גז מעניק לכוכב הלכת מאדים את צבעו האדום?', answer: 'תחמוצת ברזל (חלודה) המכסה את סלעי ואבק פני השטח של מאדים.' },
     tip: { title: '😊 חיוך משחרר אנדורפינים במוח', text: 'גם חיוך יזום מפעיל משוב עצבי מהפנים למוח שמפחית סטרס ומשפר את מצב הרוח תוך שניות.' }
+  },
+  {
+    history: { title: '🦈 כרישים בחורף בנחל חדרה', text: 'מדי חורף מתקבצים עשרות כרישים עפרוריים וסנפירתניים בשפך נחל חדרה בזכות המים החמימים היוצאים מתחנת הכוח אורות רבין — תופעת טבע ייחודית בעולם!' },
+    trivia: { question: 'איזה עץ נטעו חלוצי חדרה בסוף המאה ה-19 לייבוש הביצות?', answer: 'עץ האקליפטוס שהובא מאוסטרליה — ושרידיו המרשימים צומחים עד היום ביער חדרה ובפארק השרון.' },
+    tip: { title: '🌊 טיילת חוף אולגה ושמורת גדור', text: 'רצועת החוף של חדרה משלבת מפרצים טבעיים ורכסי כורכר קדומים שנוצרו מגלי הים במשך עשרות אלפי שנים.' }
+  },
+  {
+    history: { title: '🏛️ נמל קיסריה הקדום של הורדוס', text: 'לפני כ-2,000 שנה נבנה בקיסריה הנמל המלאכותי הגדול בים התיכון תוך שימוש בבטון הידראולי מיוחד מאפר געשי שהתקשה מתחת למים!' },
+    trivia: { question: 'מהו הלוח הקדום ביותר שנכתב בכתב עברי עתיק והתגלה בארץ?', answer: 'לוח גזר (מהמאה ה-10 לפנה"ס), המפרט את חודשי העבודה החקלאית לאורך השנה.' },
+    tip: { title: '🫒 שמן זית כתית מעולה נשמר בחושך', text: 'אור וחום מפרקים את נוגדי החמצון בשמן הזית; אחסון בבקבוק כהה בארון קריר שומר על איכותו לשנה שלמה.' }
+  },
+  {
+    history: { title: '🔬 מכון ויצמן והמחשב הישראלי הראשון (1955)', text: '"ויצק" (WEIZAC) שנבנה ברחובות ב-1955 היה המחשב האלקטרוני הראשון בישראל ואחד הראשונים בעולם כולו!' },
+    trivia: { question: 'כמה זוכי פרס נובל ישראלים הוכרזו עד כה?', answer: '13 זוכי פרס נובל ישראלים בתחומי הכימיה, הכלכלה, הספרות והשלום.' },
+    tip: { title: '🥜 במבה והפחתת אלרגיה לבוטנים בעולם', text: 'מחקר ה-LEAP הבינלאומי גילה שחשיפה מוקדמת לחטיף הבוטנים הישראלי מפחיתה ב-80% את הסיכון לאלרגיה לבוטנים!' }
+  },
+  {
+    history: { title: '🛰️ הלוויין הישראלי הראשון "אופק 1" (1988)', text: 'בספטמבר 1988 הפכה ישראל למדינה השמינית בלבד בעולם ששיגרה לוויין מתוצרת עצמית לחלל!' },
+    trivia: { question: 'מדוע לווייני "אופק" משוגרים מערבה בניגוד לכיוון סיבוב כדור הארץ?', answer: 'כדי שמסלול השיגור יעבור מעל הים התיכון הפתוח לבטיחות מרבית — הישג הנדסי נדיר בעולם החלל.' },
+    tip: { title: '🧭 למה כוכב הצפון כמעט אינו זז בשמיים?', text: 'ציר הסיבוב של כדור הארץ מצביע כמעט בדיוק לכיוון כוכב הצפון (פולאריס), ולכן כל שאר הכוכבים נראים חגים סביבו.' }
+  },
+  {
+    history: { title: '📜 גילוי מגילות מדבר יהודה (1947)', text: 'רועה צאן בדואי שחיפש עז תועה במערות קומראן גילה כדי חרס חתומים ובהם כתבי המקרא העתיקים ביותר שנמצאו אי פעם — בני מעל 2,000 שנה!' },
+    trivia: { question: 'מהי הציפור הלאומית של מדינת ישראל?', answer: 'הדוכיפת — נבחרה בשנת ה-60 למדינה בזכות כתרה המפואר והופעתה במסורת ישראל.' },
+    tip: { title: '🌿 אוורור קצר של 10 דקות בבוקר', text: 'פתיחת שני חלונות נגדיים בבוקר מרעננת את האוויר בבית ומורידה ריכוז פחמן דו-חמצני מבלי לקרר את הקירות.' }
+  },
+  {
+    history: { title: '💧 המוביל הארצי נחנך ב-1964', text: 'מערכת הנדסית אדירה באורך כ-130 ק"מ שהובילה מים מהכנרת לנגב, וכיום פועלת גם בכיוון ההפוך להזרמת מים מותפלים מהים התיכון אל הכנרת!' },
+    trivia: { question: 'איזה אחוז ממי השתייה הביתיים בישראל מגיע כיום מהתפלת מי ים?', answer: 'למעלה מ-75% ממי השתייה הביתיים בישראל מופקים במתקני התפלה מתקדמים לאורך חוף הים התיכון (כולל מתקן חדרה!).' },
+    tip: { title: '🚿 מתקן ההתפלה בחדרה מהגדולים מסוגו', text: 'מתקן ההתפלה בחוף חדרה מספק מעל 127 מיליון מ"ק מים מתוקים בשנה בטכנולוגיית אוסמוזה הפוכה.' }
+  },
+  {
+    history: { title: '🎼 הסימפוניה התשיעית של בטהובן (1824)', text: 'לודוויג ואן בטהובן הלחין וניצח על יצירת המופת שלו כשהוא חירש לחלוטין — הוא חש את תנודות המוזיקה דרך רצפת העץ של הבמה!' },
+    trivia: { question: 'איזה כלי נגינה נחשב לעתיק ביותר שהתגלה בחפירות ארכיאולוגיות?', answer: 'חליל עשוי עצם בן כ-40,000 שנה שהתגלה במערה בדרום גרמניה.' },
+    tip: { title: '🎧 שיר שנתקע בראש ("תולעת אוזניים")', text: 'המוח חוזר על לולאה מוזיקלית פתוחה; פתרון תשבץ קצר או שמיעת השיר עד סופו משחררים אותה מיידית.' }
+  },
+  {
+    history: { title: '🌳 שמורת אלוני יצחק ופארק השרון', text: 'סביב חדרה השתמרו יערות פארק עתיקים של אלון התבור ועצי חרוב בני מאות שנים שכיסו בעבר את כל מישור החוף.' },
+    trivia: { question: 'מדוע יחידת המשקל ליהלומים נקראת "קראט"?', answer: 'על שם זרעי עץ החרוב! בעולם העתיק שימשו זרעי החרוב כמשקולות מדויקות להפליא של 0.2 גרם.' },
+    tip: { title: '🐾 בדיקת חום המדרכה לפני טיול עם הכלב', text: 'בקיץ הישראלי אספלט בשמש מגיע ל-55 מעלות גם כשבחוץ 30 מעלות; מומלץ לטייל על דשא או בשעות הבוקר והערב.' }
+  },
+  {
+    history: { title: '🩺 המצאת הסטטוסקופ (1816)', text: 'הרופא הצרפתי רנה לאנק גלגל גיליון נייר קשיח לגליל כדי להאזין ללב מטופל, וגילה שהצליל מוגבר פי כמה מאוזן צמודה!' },
+    trivia: { question: 'כמה ליטרים של דם שואב לב האדם בממוצע בכל יממה?', answer: 'כ-7,500 ליטרים של דם ביממה אחת, דרך רשת כלי דם שאורכה הכולל כ-100,000 ק"מ!' },
+    tip: { title: '🥗 ויטמין C מכפיל ספיגת ברזל מהצומח', text: 'הוספת מיץ לימון טרי או פלפל אדום לסלט ירוק, טחינה או עדשים משפרת דרמטית את ספיגת הברזל בגוף.' }
+  },
+  {
+    history: { title: '🕯️ שעון המים של אל-ג\'זארי (1206)', text: 'לפני 800 שנה נבנו במזרח התיכון שעוני מים אוטומטיים מרהיבים עם דמויות מכניות שציינו כל שעה בדיוק מפתיע.' },
+    trivia: { question: 'מדוע חילקו את השעה ל-60 דקות ואת המעגל ל-360 מעלות?', answer: 'מורשת הבבלים הקדמונים שהשתמשו בשיטת ספירה על בסיס 60 — מספר שמתחלק ללא שארית ב-12 מחלקים שונים!' },
+    tip: { title: '🌙 חושך מוחלט בחדר השינה', text: 'אפילו תאורה חלשה מנורת המתנה מפחיתה הפרשת מלטונין; החשכת החדר משפרת משמעותית את עומק השינה.' }
   }
 ];
+
+// ==========================================
+// CONTEXTUAL SPECIAL-DAY, HOLIDAY, SHABBAT & MEMORIAL POOLS
+// ==========================================
+const CONTEXTUAL_INTEREST_POOLS = {
+  memorial: [
+    {
+      history: { tag: 'זוכרים ומוקירים', title: '🕯️ נר זיכרון ומורשת העם', text: 'בימי הזיכרון הממלכתיים מתייחד עם ישראל עם זכר הנספים והנופלים שבזכות עמידתם וגבורתם קמה ונבנתה המדינה.' },
+      trivia: { category: 'מורשת והנצחה', title: 'פרח דם המכבים', question: 'כיצד הפך פרח "דם המכבים" לסמל ההנצחה הממלכתי בישראל?', answer: 'לפי המסורת העברית, בכל מקום שבו נטפה טיפת דם של לוחמי החירות פרח הפרח האדום שאינו נובל גם לאחר קטיפתו.' },
+      tip: { icon: '🇮🇱', tag: 'קהילה וערבות הדדית', title: '🤝 אחדות וזיכרון משותף', text: 'העמידה המשותפת בצפירה, הדלקת נר הזיכרון והערבות ההדדית בין שכנים מחברות בין דורות של זיכרון ותקווה.' }
+    },
+    {
+      history: { tag: 'מורשת ישראל', title: '📜 יד ושם וחסידי אומות העולם', text: 'בשדרת חסידי אומות העולם בירושלים ניטעו אלפי עצים להוקרת האמיצים שסיכנו את חייהם להצלת יהודים בתקופת השואה.' },
+      trivia: { category: 'תרבות וזיכרון', title: 'שירת ההנצחה העברית', question: 'מי כתב את הטור האלמותי "מגש הכסף" בדצמבר 1947?', answer: 'המשורר נתן אלתרמן, בעקבות דבריו של חיים ויצמן כי "מדינה אינה ניתנת לעם על מגש של כסף".' },
+      tip: { icon: '🕯️', tag: 'כבוד הדדי', title: '🕊️ שמירה על שקט וכבוד היום', text: 'בימי הזיכרון אנו שומרים על אווירה שקטה ומכובדת בלובי ובשטחים המשותפים של הבניין.' }
+    }
+  ],
+  shabbat: [
+    {
+      history: { tag: 'שבת ומורשת', title: '🕯️ מסורת הדלקת נרות שבת', text: 'הדלקת נרות ערב שבת מלווה את הבית היהודי למעלה מ-2,000 שנה כסמל להכנסת אור, שלום בית ומנוחת הנפש עם כניסת השבת.' },
+      trivia: { category: 'טריוויה לשבת', title: 'חידת שבת', question: 'כמה פרשות שבוע בסך הכל נקראות בחמשת חומשי התורה לאורך השנה?', answer: '54 פרשות שבוע — מספרן מותאם לשנות עיבור ומחבר את הקהילות כולן לאותה קריאה שבועית.' },
+      tip: { icon: '🌊', tag: 'סוף שבוע בחדרה', title: '🌿 טיול שבת בפארק נחל חדרה ובחוף', text: 'שביל נחל חדרה המשוקם וטיילת החוף מציעים מסלול הליכה מישורי ונגיש עם תצפית מרהיבה לים התיכון.' }
+    },
+    {
+      history: { tag: 'טבע בסוף השבוע', title: '🌳 פארק השרון מעבר לפינה', text: 'מצפון ומדרום לחדרה משתרעת שמורת פארק השרון ובה עצי חרוב ואלון עתיקים, בריכת יער עונתית ופריחה עשירה בחורף ובאביב.' },
+      trivia: { category: 'טריוויה לשבת', title: 'חידת שבת', question: 'מדוע נוהגים לקלוע את חלת השבת ממספר רצועות בצק קלועות (לרוב 6 או 12)?', answer: 'זכר ל-12 חלות הפנים שהיו מונחות במשכן ובבית המקדש מדי שבת בשבתו.' },
+      tip: { icon: '☕', tag: 'מנוחת סוף השבוע', title: '📖 ניתוק מרעשי היומיום', text: 'מחקרים מראים שיום מנוחה שבועי קבוע מפחית משמעותית שחיקה נפשית ומשפר את איכות השינה לכל השבוע הבא.' }
+    }
+  ],
+  'rosh-hashanah': [
+    {
+      history: { tag: 'ראש השנה', title: '🍎 סימני החג — תפוח בדבש ורימון', text: 'מנהג אכילת סימני ראש השנה מתועד כבר בתלמוד בבלי כאיחול סמלי לשנה מתוקה ומלאת זכויות כגרגירי הרימון.' },
+      trivia: { category: 'טריוויה לראש השנה', title: 'חידת החג', question: 'מאיזה קרן מכינים באופן מסורתי את השופר לראש השנה?', answer: 'מקרן של איל כפופה — המסמלת ענווה ואת עקדת יצחק.' },
+      tip: { icon: '🍯', tag: 'מדע החג', title: '🐝 כיצד נוצר הדבש הטבעי?', text: 'כדי לייצר צנצנת אחת של חצי קילוגרם דבש, דבורי הכוורת מבקרות בכ-2 מיליון פרחים!' }
+    }
+  ],
+  sukkot: [
+    {
+      history: { tag: 'חג הסוכות', title: '🌿 ארבעת המינים וטבע ארץ ישראל', text: 'הלולב, האתרוג, ההדס והערבה מייצגים בתי גידול מגוונים בארץ — מנחלי מים ועד מטעי ההדרים והתמרים.' },
+      trivia: { category: 'טריוויה לסוכות', title: 'חידת החג', question: 'איזה מארבעת המינים ניחן גם בטעם וגם בריח לפי המדרש?', answer: 'האתרוג — המסמל שילוב של לימוד ומעשים טובים יחד.' },
+      tip: { icon: '🦅', tag: 'סתיו בישראל', title: '🍂 שיא נדידת הסתיו מעל מישור החוף', text: 'בימי חג הסוכות חולפות מעל אזור חדרה ועמק חפר להקות שקנאים, חסידות ועגורים בדרכן לאפריקה.' }
+    }
+  ],
+  hanukkah: [
+    {
+      history: { tag: 'חג החנוכה', title: '🕎 חנוכיות מכל תפוצות ישראל', text: 'במוזיאון ישראל שמורות חנוכיות בנות מאות שנים ממרוקו, תימן, פולין ואיטליה — שכל אחת מהן משלבת את סגנון האדריכלות המקומי.' },
+      trivia: { category: 'טריוויה לחנוכה', title: 'חידת החנוכייה', question: 'כמה נרות בסך הכל מדליקים לאורך כל שמונת ימי החנוכה (כולל השמש בכל ערב)?', answer: '44 נרות בסך הכל! (36 נרות החג + 8 נרות שמש).' },
+      tip: { icon: '🫒', tag: 'אור החג', title: '🔥 מדוע להבת נר תמיד עולה כלפי מעלה?', text: 'האוויר החם סביב הלהבה קל יותר מהאוויר הקר סביבו ועולה מעלה; בתחנת החלל (ללא כבידה) להבת נר היא כדור כחול עגול!' }
+    }
+  ],
+  'tu-bishvat': [
+    {
+      history: { tag: 'ט"ו בשבט', title: '🌳 נטיעות ט"ו בשבט והשקדייה הפורחת', text: 'השקד המצוי הוא העץ הראשון לפרוח בארץ בסוף החורף עוד לפני צמיחת העלים, ולכן הפך לסמל ההתחדשות של ט"ו בשבט.' },
+      trivia: { category: 'טריוויה לט"ו בשבט', title: 'שבעת המינים', question: 'אילו 7 גידולים נכללים ב"שבעת המינים" שבהם נשתבחה ארץ ישראל?', answer: 'חיטה, שעורה, גפן (ענבים), תאנה, רימון, זית שמן ותמר (דבש תמרים).' },
+      tip: { icon: '🌱', tag: 'סביבה וטבע', title: '🍃 עץ בוגר אחד מקרר כמו מזגן', text: 'עץ רחב-נוף ברחוב מוריד את טמפרטורת המדרכה תחתיו בעד 5–8 מעלות בקיץ בזכות צל ואידוי טבעי.' }
+    }
+  ],
+  purim: [
+    {
+      history: { tag: 'חג הפורים', title: '🎭 משלוח מנות וחיזוק השכנות הטובה', text: 'מצוות משלוח מנות נועדה להרבות אהבה, רעות ושמחה בין שכנים וחברים בקהילה.' },
+      trivia: { category: 'טריוויה לפורים', title: 'חידת המגילה', question: 'כמה מדינות השתרעו בממלכת אחשוורוש מהודו ועד כוש לפי מגילת אסתר?', answer: '127 מדינות!' },
+      tip: { icon: '🍪', tag: 'מתוק לחג', title: '🔺 גלגולן המפתיע של אוזני המן', text: 'מקור המאפה המשולש במאפה פרג ממרכז אירופה שנקרא "מוהן-טאשן" (כיסי פרג), שהפך בעברית משחקית ל"אוזני המן"!' }
+    }
+  ],
+  pesach: [
+    {
+      history: { tag: 'חג הפסח', title: '🍷 ההגדה של פסח — הספר המודפס והמאויר', text: 'הגדת סרייבו והגדת ראשי הציפורים מימי הביניים הן מיצירות האמנות היהודיות העתיקות והמרהיבות ששרדו עד ימינו.' },
+      trivia: { category: 'טריוויה לפסח', title: 'חידת ליל הסדר', question: 'כמה דקות לכל היותר נמשך תהליך לישת ואפיית המצה מרגע מגע המים בקמח כדי שלא תחמיץ?', answer: '18 דקות בדיוק!' },
+      tip: { icon: '🌸', tag: 'אביב בישראל', title: '🦋 חג האביב בשיא הפריחה', text: 'פסח נחגג תמיד בחודש האביב, שבו הטבע סביב חדרה והשרון מתמלא בחרציות, פרגים ופרפרים.' }
+    }
+  ],
+  israel: [
+    {
+      history: { tag: 'יום העצמאות', title: '🇮🇱 הכרזת העצמאות בה\' באייר תש"ח', text: 'הטקס בשדרות רוטשילד 16 בתל אביב נמשך 32 דקות בלבד בערב שבת, והועבר בשידור חי בתחנת הרדיו הצעירה "קול ישראל".' },
+      trivia: { category: 'טריוויה ישראלית', title: 'חידת המדינה', question: 'מי עיצבו את סמל מדינת ישראל הרשמי עם מנורת שבעת הקנים וענפי הזית?', answer: 'האחים גבריאל ומקסים שמיר בשנת 1949, בהשראת המנורה שעל שער טיטוס.' },
+      tip: { icon: '💡', tag: 'חדשנות כחול-לבן', title: '🚀 אומת החדשנות והמדע', text: 'מהטפטפות ועגבניות השרי ועד הדיסק-און-קי, Mobileye וכיפת ברזל — המצאות ישראליות מלוות מיליארדי אנשים בעולם מדי יום.' }
+    }
+  ],
+  jerusalem: [
+    {
+      history: { tag: 'יום ירושלים', title: '🦁 אמת המים הקדומה ונקבת השילוח', text: 'נקבת השילוח שנחצבה בסלע בימי המלך חזקיהו לפני כ-2,700 שנה משני כיוונים מנוגדים נפגשה באמצע בדיוק הנדסי מדהים!' },
+      trivia: { category: 'טריוויה לירושלים', title: 'חידת הבירה', question: 'כמה שערים פתוחים יש כיום בחומת העיר העתיקה בירושלים?', answer: '7 שערים פתוחים (שער יפו, שער שכם, שער האריות, שער ציון, שער האשפות, שער הפרחים והשער החדש) ועוד שער הרחמים החתום.' },
+      tip: { icon: '🏛️', tag: 'אבן ירושלמית', title: '✨ סוד הזוהר הזהוב בשקיעה', text: 'תקנה עירונית היסטורית מחייבת חיפוי כל מבנה בירושלים באבן גיר טבעית, המעניקה לעיר את זוהרה הזהוב בשעת השקיעה.' }
+    }
+  ],
+  shavuot: [
+    {
+      history: { tag: 'חג השבועות', title: '🌾 חג הקציר, הביכורים ומגילת רות', text: 'מגילת רות הנקראת בשבועות מעלה על נס את ערכי החסד, קבלת הגר והדאגה לחלש בשדות הקציר של בית לחם.' },
+      trivia: { category: 'טריוויה לשבועות', title: 'שמות החג', question: 'כמה שמות מסורתיים שונים יש לחג השבועות במקורות?', answer: '4 שמות: חג השבועות, חג הקציר, יום הביכורים, ועצרת (זמן מתן תורתנו).' },
+      tip: { icon: '🧀', tag: 'תזונה ומדע', title: '🥛 סידן ומוצרי חלב מותססים', text: 'יוגורט וגבינות מותססות מכילים חיידקים ידידותיים המפרקים חלק מהלקטוז ומקלים על העיכול.' }
+    }
+  ],
+  sigd: [
+    {
+      history: { tag: 'חג הסיגד', title: '🏔️ חג הסיגד וכמיהת יהדות אתיופיה לירושלים', text: 'בכ"ט בחשוון מצוין חג הסיגד הממלכתי — חג של התחדשות הברית, אחדות קהילתית וכיסופי דורות לירושלים.' },
+      trivia: { category: 'מורשת ישראל', title: 'חידת הסיגד', question: 'כמה ימים לאחר יום הכיפורים נחגג חג הסיגד בלוח העברי?', answer: '50 ימים בדיוק לאחר יום הכיפורים (בדומה ל-50 הימים שבין פסח לשבועות).' },
+      tip: { icon: '🤝', tag: 'קהילה ושכנות', title: '✨ פסיפס תרבויות ישראלי', text: 'עושר המסורות של קהילות ישראל מעשיר את לוח השנה המשותף בחגי אור, פיוס וחיבור קהילתי.' }
+    }
+  ],
+  'hebrew-lang': [
+    {
+      history: { tag: 'יום השפה העברית', title: '📚 תחיית השפה העברית — פלא לשוני עולמי', text: 'הפיכת העברית משפת תפילה וספר לשפת יומיום חיה ומדוברת בידי מיליונים נחשבת בבלשנות העולמית למקרה ייחודי בהיסטוריה!' },
+      trivia: { category: 'טריוויה עברית', title: 'חידושי מילים', question: 'איזו מילה יומיומית מתוקה חידש אליעזר בן-יהודה מהשורש ג.ל.ד (כמו קרח וקיפאון)?', answer: 'המילה "גלידה"! (לצד מילים כמו רכבת, מדרכה, מטרייה, בובה ואופניים).' },
+      tip: { icon: '✍️', tag: 'עברית יפה', title: '🔤 מילים עבריות למכשירים מוכרים', text: 'האקדמיה ללשון העברית חידשה מילים קליטות שנטמעו בשפה כמו "מרשתת" (אינטרנט), "יישומון" (אפליקציה) ו"הסכת" (פודקאסט).' }
+    }
+  ],
+  'family-day': [
+    {
+      history: { tag: 'יום המשפחה', title: '💐 מל\' בשבט ועד יום המשפחה הישראלי', text: 'מצוין בל\' בשבט לזכרה של הנרייטה סאלד, מייסדת "עליית הנוער" וארגון הדסה, שהייתה אם לאלפי ילדים שעלו לארץ.' },
+      trivia: { category: 'טריוויה ישראלית', title: 'חידת יום המשפחה', question: 'באיזו עיר בישראל החל לראשונה המנהג לציין את "יום האם" בשנת 1947 לפני שהתרחב לכל הארץ?', answer: 'בחיפה — ביוזמת עיתון הילדים המקומי וראש העיר אבא חושי.' },
+      tip: { icon: '🏡', tag: 'חיי משפחה וקהילה', title: '🍽️ ארוחה משפחתית משותפת', text: 'מחקרים ארוכי טווח מראים שארוחה משפחתית משותפת מחזקת ביטחון רגשי, אוצר מילים וקשר בין-דורי.' }
+    }
+  ]
+};
+
+function formatLocalIsoDate(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function getJerusalemUtcOffsetMinutes(d) {
+  try {
+    const str = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', timeZoneName: 'shortOffset' }).format(d);
+    const m = str.match(/GMT([+-]\d+)(?::(\d+))?/);
+    if (!m) return 120;
+    const sign = m[1].startsWith('-') ? -1 : 1;
+    return sign * (Math.abs(parseInt(m[1], 10)) * 60 + parseInt(m[2] || '0', 10));
+  } catch (e) {
+    return -d.getTimezoneOffset();
+  }
+}
+
+function detectIsraelDstTransition(now = new Date()) {
+  const noon = (offsetDays) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + offsetDays, 12, 0, 0);
+  const offYesterday = getJerusalemUtcOffsetMinutes(noon(-1));
+  const offToday = getJerusalemUtcOffsetMinutes(noon(0));
+  const offTomorrow = getJerusalemUtcOffsetMinutes(noon(1));
+
+  if (offTomorrow > offToday) {
+    return { icon: '⏰', text: 'הלילה עוברים לשעון קיץ (02:00 → 03:00)', subtitle: 'הלילה מזיזים את השעון שעה אחת קדימה לשעון קיץ' };
+  }
+  if (offToday > offYesterday) {
+    return { icon: '☀️', text: 'שעון קיץ נכנס לתוקף היום', subtitle: 'שעות האור מתארכות בשעות אחר הצהריים והערב' };
+  }
+  if (offTomorrow < offToday) {
+    return { icon: '⏰', text: 'הלילה עוברים לשעון חורף (02:00 → 01:00)', subtitle: 'הלילה מזיזים את השעון שעה אחת אחורה ומרוויחים שעת שינה' };
+  }
+  if (offToday < offYesterday) {
+    return { icon: '🍂', text: 'שעון חורף נכנס לתוקף היום', subtitle: 'בוקר מואר מוקדם יותר והחשיכה מקדימה בערב' };
+  }
+  return null;
+}
+
+function getCivicAndSeasonalSpecialDay(now = new Date()) {
+  const m = now.getMonth() + 1; // 1..12
+  const d = now.getDate();
+
+  // 1. Automatic Israel Daylight Saving Time (שעון קיץ / שעון חורף)
+  const dst = detectIsraelDstTransition(now);
+  if (dst) return { ...dst, type: 'dst' };
+
+  // 2. Major Israeli School & Seasonal Milestones + Notable National/Global Days
+  const key = `${m}-${d}`;
+  const SPECIAL_GREGORIAN_DAYS = {
+    '1-1': { icon: '🎆', text: 'שנה אזרחית חדשה — 1 בינואר', fact: 'היום הראשון בלוח הגרגוריאני שהונהג ב-1582 ומבוסס על שנת השמש (365.2425 ימים).' },
+    '1-27': { icon: '🕯️', text: 'יום הזיכרון הבינלאומי לשואה', fact: 'נקבע על ידי האו"ם בתאריך שחרור מחנה אושוויץ-בירקנאו (27 בינואר 1945).' },
+    '2-14': { icon: '❤️', text: 'יום האהבה הבינלאומי (14.2)', fact: 'יום המצוין ברחבי העולם במחווה של פרחים, הערכה ותשומת לב לאנשים היקרים לנו.' },
+    '3-3': { icon: '🦌', text: 'יום חיי הבר והטבע העולמי', fact: 'מוקדש לשמירה על המגוון הביולוגי ובעלי החיים בטבע ובשמורות ארץ ישראל.' },
+    '3-8': { icon: '🌸', text: 'יום האישה הבינלאומי', fact: 'מציין את הישגיהן של נשים במדע, בחברה, בתרבות ובקהילה לאורך ההיסטוריה.' },
+    '3-14': { icon: '🔬', text: 'יום המדע הישראלי ויום הפאי (3.14)', fact: 'מצוין ב-14 במרץ — יום הולדתו של אלברט איינשטיין (1879), שהוריש את ארכיונו לאוניברסיטה העברית.' },
+    '3-20': { icon: '🌸', text: 'יום השוויון האביבי — תחילת האביב', fact: 'ביום השוויון האביבי אורך היום ואורך הלילה שווים כמעט לחלוטין בכל כדור הארץ!' },
+    '3-22': { icon: '💧', text: 'יום המים העולמי', fact: 'ישראל מובילה עולמית במחזור מים לחקלאות (מעל 85% השבה!) ובהתפלת מי ים.' },
+    '4-2': { icon: '💙', text: 'יום המודעות העולמי לאוטיזם', fact: 'מוקדש להיכרות, הכלה, רגישות ושילוב בקהילה ובמערכת החינוך.' },
+    '4-7': { icon: '🩺', text: 'יום הבריאות העולמי', fact: 'מציין את הקמת ארגון הבריאות העולמי ומקדם אורח חיים פעיל ורפואה מונעת.' },
+    '4-12': { icon: '🚀', text: 'יום האדם בחלל', fact: 'ב-12 באפריל 1961 הפך יורי גגארין לאדם הראשון שהקיף את כדור הארץ בחלל, ו-20 שנה אחריו שוגרה מעבורת החלל הראשונה.' },
+    '4-22': { icon: '🌍', text: 'יום כדור הארץ העולמי', fact: 'מצוין במעל 190 מדינות לקידום שמירה על הסביבה, חיסכון באנרגיה וניקיון הטבע.' },
+    '4-23': { icon: '📚', text: 'יום הספר העולמי', fact: 'מוקדש לאהבת הקריאה, לספרות העולמית והעברית ולשימור אוצרות הידע האנושי.' },
+    '5-9': { icon: '🎖️', text: 'יום הניצחון על גרמניה הנאצית (9 במאי)', fact: 'מציין את כניעת גרמניה הנאצית במלחמת העולם השנייה בשנת 1945 ואת גבורת הלוחמים והווטרנים.' },
+    '5-16': { icon: '💡', text: 'יום האור הבינלאומי של אונסק"ו', fact: 'מציין את הפעלת הלייזר הראשון בהיסטוריה ב-16 במאי 1960 ואת תפקיד האור במדע וברפואה.' },
+    '5-20': { icon: '🐝', text: 'יום הדבורה העולמי', fact: 'למעלה מ-75% מגידולי המזון בעולם תלויים בהאבקת דבורים ומאביקים טבעיים!' },
+    '6-5': { icon: '🌱', text: 'יום איכות הסביבה העולמי', fact: 'הזדמנות מצוינת למיחזור אריזות, נייר ובקבוקים ושמירה על סביבת המגורים הירוקה.' },
+    '6-8': { icon: '🌊', text: 'יום האוקיינוסים והים העולמי', fact: 'האוקיינוסים מייצרים מעל 50% מהחמצן שאנו נושמים בזכות אצות הפיטופלנקטון הזעירות!' },
+    '6-20': { icon: '🎒', text: 'סיום שנת הלימודים בעל-יסודי', fact: 'חופשת קיץ נעימה, מהנה ובטוחה לכל בני הנוער ותלמידי התיכונים וחטיבות הביניים בבניין!' },
+    '6-21': { icon: '☀️', text: 'היום הארוך בשנה — תחילת הקיץ', fact: 'ב-21 ביוני השמש מגיעה לנקודה הצפונית ביותר בשמיים וזהו היום המואר הארוך ביותר בשנה!' },
+    '6-30': { icon: '🏖️', text: 'סיום שנת הלימודים ביסודי ובגנים', fact: 'חופש גדול שמח ובטוח לכל ילדי הבניין והמשפחות — סעו בזהירות בחניון ובכבישי הגישה!' },
+    '7-1': { icon: '🏖️', text: 'היום הראשון של החופש הגדול', fact: 'קיץ נעים ובטוח לכל ילדי הבניין — הקפידו על שתייה מרובה ובטיחות בדרכים ובים!' },
+    '7-20': { icon: '🌕', text: 'יום הנחיתה הראשונה על הירח (1969)', fact: 'ב-20 ביולי 1969 דרך ניל ארמסטרונג על פני הירח במשימת אפולו 11 לעיני 600 מיליון צופים.' },
+    '8-12': { icon: '🌠', text: 'שיא מטר המטאורים "פרסאידים"', fact: 'מדי אמצע אוגוסט חוצה כדור הארץ שובל אבק של שביט סוויפט-טאטל ויוצר "כוכבים נופלים" בשמי הלילה.' },
+    '9-1': { icon: '🎒', text: 'פתיחת שנת הלימודים — 1 בספטמבר', fact: 'בהצלחה רבה לכל ילדי הגנים, כיתה א\' ותלמידי הבניין בשנת הלימודים החדשה!' },
+    '9-22': { icon: '🍂', text: 'יום השוויון הסתווי — תחילת הסתיו', fact: 'ביום השוויון הסתווי היום והלילה משתווים באורכם ומבשרים את בוא הסתיו ונדידת הציפורים.' },
+    '10-1': { icon: '☕', text: 'יום האזרח הוותיק ויום הקפה הבינלאומי', fact: 'יום הוקרה לוותיקים ולגמלאים בקהילה — לצד חגיגה עולמית למשקה הקפה האהוב.' },
+    '10-4': { icon: '🐾', text: 'יום בעלי החיים העולמי', fact: 'יום אהבה ודאגה לחיות המחמד בבניין ולבעלי החיים בטבע.' },
+    '10-16': { icon: '🌾', text: 'יום המזון העולמי', fact: 'מוקדש לחקלאות בת-קיימא, תזונה בריאה וצמצום בזבוז מזון בעולם.' },
+    '11-13': { icon: '🤝', text: 'יום האדיבות והמעשים הטובים העולמי', fact: 'חיוך במעלית, החזקת הדלת לשכן ומילה טובה יוצרים קהילה נעימה וחמה בכל הבניין.' },
+    '11-20': { icon: '🎈', text: 'יום הילד הבינלאומי', fact: 'מציין את אמנת זכויות הילד של האו"ם ומוקדש לרווחתם, חינוכם ושמחתם של הילדים.' },
+    '11-29': { icon: '🇮🇱', text: 'כ"ט בנובמבר (1947)', fact: 'ב-29 בנובמבר 1947 אישרה העצרת הכללית של האו"ם ברוב של 33 מול 13 את הקמת המדינה היהודית בארץ ישראל!' },
+    '12-3': { icon: '♿', text: 'יום שוויון זכויות לאנשים עם מוגבלות', fact: 'מוקדש לנגישות מלאה, כבוד ושוויון הזדמנויות במרחב הציבורי ובקהילה.' },
+    '12-10': { icon: '🏅', text: 'יום הענקת פרסי נובל', fact: 'ב-10 בדצמבר מוענקים בשטוקהולם פרסי נובל במדעים ובספרות לפורצי הדרך של האנושות.' },
+    '12-21': { icon: '❄️', text: 'היום הקצר בשנה — תחילת החורף', fact: 'ממחר שעות האור בצהריים יתחילו להתארך מחדש בכמה דקות מדי שבוע לקראת האביב!' }
+  };
+
+  return SPECIAL_GREGORIAN_DAYS[key] || null;
+}
 
 function decodeHtmlEntities(str) {
   if (!str || typeof str !== 'string') return '';
@@ -325,6 +577,7 @@ class BuildingSignageApp {
     this.weather = null;
     this.shabbatData = null;
     this.newsItems = [];
+    this.onThisDayEvents = [];
 
     this.currentSlideIndex = 0;
     this.slides = [];
@@ -377,6 +630,7 @@ class BuildingSignageApp {
     await Promise.all([
       this.fetchWeather(),
       this.fetchShabbatAndHolidays(),
+      this.fetchWikipediaOnThisDay(),
       this.fetchNotices(),
       this.fetchPhotos(),
       this.fetchWallpapers()
@@ -400,6 +654,7 @@ class BuildingSignageApp {
       this.fetchWeather();
       this.fetchNews();
       this.fetchShabbatAndHolidays();
+      this.fetchWikipediaOnThisDay();
       this.checkRadioSchedule();
     });
   }
@@ -861,32 +1116,61 @@ class BuildingSignageApp {
     this.slideStartTime = Date.now();
   }
 
+  isMemorialDayActive() {
+    const theme = this.shabbatData?.recommendedTheme || '';
+    const activeTitle = this.shabbatData?.activeHoliday?.title || '';
+    return theme === 'memorial' || /שואה|הזיכרון|הזכרון|תשעה באב/.test(activeTitle);
+  }
+
   getSpecialHebrewCalendarBadges() {
-    if (!this.shabbatData?.holidays) return [];
+    const now = new Date();
+    const todayIso = formatLocalIsoDate(now);
+    const tomorrowIso = formatLocalIsoDate(new Date(now.getTime() + 24 * 60 * 60 * 1000));
     const badges = [];
     const seen = new Set();
+    const activeHolidayTitle = this.shabbatData?.activeHoliday?.title || '';
 
-    for (const h of this.shabbatData.holidays) {
+    const pushBadge = (icon, text) => {
+      const clean = String(text || '').trim();
+      if (!clean || seen.has(clean) || clean === activeHolidayTitle) return;
+      seen.add(clean);
+      badges.push({ icon, text: clean });
+    };
+
+    const holidays = this.shabbatData?.holidays || [];
+    for (const h of holidays) {
       const title = h.title || '';
       const cat = h.category || '';
-      const key = `${cat}:${title}`;
-      if (seen.has(key)) continue;
+      const subcat = h.subcat || '';
+      const itemDay = String(h.date || '').slice(0, 10);
+
+      // Show today's items (plus evening Hanukkah candle or Erev items starting afternoon)
+      const isToday = itemDay === todayIso;
+      const isEveningPreview = itemDay === tomorrowIso && now.getHours() >= 16 && (title.includes('חנוכה') || cat === 'roshchodesh');
+      if (!isToday && !isEveningPreview) continue;
 
       if (title.includes('חנוכה') || title.toLowerCase().includes('chanukah')) {
-        seen.add(key);
-        const icon = title.includes('נר') ? '🕯️' : '🕎';
-        badges.push({ icon, text: title });
-      } else if (cat === 'omer' || title.includes('עומר')) {
-        seen.add(key);
-        const text = title.includes('עומר') ? title : `ספירת העומר • ${title}`;
-        badges.push({ icon: '🌾', text });
+        pushBadge(title.includes('נר') ? '🕯️' : '🕎', title);
       } else if (cat === 'roshchodesh' || title.includes('ראש חודש')) {
-        seen.add(key);
-        const text = title.includes('ראש חודש') ? title : `ראש חודש ${title}`;
-        badges.push({ icon: '🌙', text });
+        pushBadge('🌙', title.includes('ראש חודש') ? title : `ראש חודש ${title}`);
+      } else if (cat === 'omer') {
+        pushBadge('🌾', title.includes('עומר') ? title : `ספירת העומר • ${title}`);
+      } else if (cat === 'fast' || subcat === 'fast') {
+        pushBadge('🕯️', title);
+      } else if (subcat === 'shabbat' && (now.getDay() === 5 || now.getDay() === 6)) {
+        pushBadge('📜', title);
+      } else if (subcat === 'modern' || subcat === 'minor') {
+        pushBadge('✨', title);
       }
     }
-    return badges;
+
+    // Add Israel DST / Civic / Seasonal / Global Special Day if no conflicting major holiday overcrowding header
+    const civic = this.shabbatData?.civicSpecialDay || getCivicAndSeasonalSpecialDay(now);
+    if (civic && badges.length < 2) {
+      pushBadge(civic.icon || '📅', civic.text);
+    }
+
+    return badges.slice(0, 2);
   }
 
   openWeatherModal() {
@@ -960,33 +1244,53 @@ class BuildingSignageApp {
     const candle = this.shabbatData.candleLighting?.time || '18:50';
     const havdalah = this.shabbatData.havdalah?.time || '19:46';
     const parasha = this.shabbatData.parasha || 'פרשת השבוע';
+    const todayIso = formatLocalIsoDate(new Date());
 
     const specialBadges = this.getSpecialHebrewCalendarBadges();
     const badgesHtml = specialBadges.map(b => `
-      <div style="background: rgba(254, 240, 138, 0.12); border: 1px solid rgba(254, 240, 138, 0.35); padding: 0.75rem 1rem; border-radius: 0.8rem; font-weight: 700; color: #fef08a; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-        <span style="font-size: 1.3rem;">${b.icon}</span>
+      <div style="background: rgba(254, 240, 138, 0.12); border: 1px solid rgba(254, 240, 138, 0.35); padding: 0.7rem 1rem; border-radius: 0.8rem; font-weight: 700; color: #fef08a; display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.45rem;">
+        <span style="font-size: 1.25rem;">${b.icon}</span>
         <span>${escapeHtml(b.text)}</span>
       </div>
     `).join('');
 
-    this.openModal('🕯️ זמני שבת ומועדי ישראל - חדרה', `
-      <div style="display: flex; flex-direction: column; gap: 1.25rem; text-align: center;">
-        <div style="font-size: 2.2rem; color: #fbbf24;">✨ שבת שלום ומבורכת ✨</div>
+    const upcomingItems = (this.shabbatData.holidays || [])
+      .filter(h => h.category !== 'omer' && String(h.date || '').slice(0, 10) >= todayIso)
+      .slice(0, 5);
+    const upcomingHtml = upcomingItems.length > 0 ? `
+      <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 0.85rem 1rem; border-radius: 0.85rem; text-align: right;">
+        <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 700; margin-bottom: 0.5rem;">📅 מועדים וימים מיוחדים בימים הקרובים:</div>
+        ${upcomingItems.map(item => {
+          const dObj = new Date(String(item.date).slice(0, 10) + 'T12:00:00');
+          const dLabel = !isNaN(dObj.getTime()) ? dObj.toLocaleDateString('he-IL', { weekday: 'short', day: '2-digit', month: '2-digit' }) : '';
+          return `<div style="display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.95rem;"><span style="color: #f8fafc; font-weight: 700;">${escapeHtml(item.title)}</span><span style="color: #7dd3fc; font-weight: 600;">${escapeHtml(dLabel)}</span></div>`;
+        }).join('')}
+      </div>
+    ` : '';
+
+    const headerGreeting = this.isMemorialDayActive()
+      ? '🕯️ זיכרון ומורשת ישראל'
+      : (this.shabbatData.activeHoliday?.customGreeting || '✨ שבת שלום ומועדי ישראל ✨');
+
+    this.openModal('🕯️ לוח עברי, זמני שבת ומועדים - חדרה', `
+      <div style="display: flex; flex-direction: column; gap: 1rem; text-align: center;">
+        <div style="font-size: 1.9rem; font-weight: 800; color: #fbbf24;">${escapeHtml(headerGreeting)}</div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-          <div style="background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.3); padding: 1.25rem; border-radius: 1rem;">
-            <div style="font-size: 0.9rem; color: #fbbf24; font-weight: 700;">🕯️ כניסת שבת</div>
-            <div style="font-family: var(--font-heading); font-size: 2rem; font-weight: 900; color: #fff; margin-top: 0.3rem;">${candle}</div>
+          <div style="background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.3); padding: 1.1rem; border-radius: 1rem;">
+            <div style="font-size: 0.9rem; color: #fbbf24; font-weight: 700;">🕯️ הדלקת נרות (חדרה)</div>
+            <div style="font-family: var(--font-heading); font-size: 1.95rem; font-weight: 900; color: #fff; margin-top: 0.25rem;">${escapeHtml(candle)}</div>
           </div>
-          <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); padding: 1.25rem; border-radius: 1rem;">
-            <div style="font-size: 0.9rem; color: #94a3b8; font-weight: 700;">🌟 יציאת שבת</div>
-            <div style="font-family: var(--font-heading); font-size: 2rem; font-weight: 900; color: #fff; margin-top: 0.3rem;">${havdalah}</div>
+          <div style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); padding: 1.1rem; border-radius: 1rem;">
+            <div style="font-size: 0.9rem; color: #94a3b8; font-weight: 700;">🌟 יציאת שבת / חג</div>
+            <div style="font-family: var(--font-heading); font-size: 1.95rem; font-weight: 900; color: #fff; margin-top: 0.25rem;">${escapeHtml(havdalah)}</div>
           </div>
         </div>
         ${badgesHtml ? `<div>${badgesHtml}</div>` : ''}
-        <div style="background: rgba(255,255,255,0.04); padding: 1rem; border-radius: 0.8rem;">
+        <div style="background: rgba(255,255,255,0.04); padding: 0.85rem 1rem; border-radius: 0.8rem;">
           <span style="color: #94a3b8;">פרשת השבוע: </span>
-          <span style="color: #fbbf24; font-weight: 800; font-size: 1.2rem;">${parasha}</span>
+          <span style="color: #fbbf24; font-weight: 800; font-size: 1.18rem;">${escapeHtml(parasha)}</span>
         </div>
+        ${upcomingHtml}
       </div>
     `);
   }
@@ -1342,21 +1646,40 @@ class BuildingSignageApp {
       const daily = data.daily;
       const weatherCodeMap = {
         0: { desc: 'בהיר ונאה', day: '☀️', night: '🌙' },
-        1: { desc: 'בהיר ברובו', day: '🌤️', night: '🌤️' },
-        2: { desc: 'מעונן חלקית', day: '⛅', night: '⛅' },
+        1: { desc: 'בהיר ברובו', day: '🌤️', night: '🌙' },
+        2: { desc: 'מעונן חלקית', day: '⛅', night: '☁️' },
         3: { desc: 'מעונן', day: '☁️', night: '☁️' },
-        45: { desc: 'אביך', day: '🌫️', night: '🌫️' },
-        61: { desc: 'גשם קל', day: '🌧️', night: '🌧️' },
-        63: { desc: 'גשם', day: '🌧️', night: '🌧️' },
-        80: { desc: 'ממטרים קלים', day: '🌦️', night: '🌦️' },
-        95: { desc: 'סופת רעמים', day: '⛈️', night: '⛈️' }
+        45: { desc: 'ערפל / אובך', day: '🌫️', night: '🌫️' },
+        48: { desc: 'ערפל כבד', day: '🌫️', night: '🌫️' },
+        51: { desc: 'טפטוף קל', day: '🌦️', night: '🌧️' },
+        53: { desc: 'טפטוף', day: '🌦️', night: '🌧️' },
+        55: { desc: 'טפטוף רציף', day: '🌧️', night: '🌧️' },
+        56: { desc: 'טפטוף קר', day: '🌧️', night: '🌧️' },
+        57: { desc: 'טפטוף חזק', day: '🌧️', night: '🌧️' },
+        61: { desc: 'גשם קל', day: '🌦️', night: '🌧️' },
+        63: { desc: 'גשם בינוני', day: '🌧️', night: '🌧️' },
+        65: { desc: 'גשם חזק', day: '🌧️', night: '🌧️' },
+        66: { desc: 'גשם קר', day: '🌧️', night: '🌧️' },
+        67: { desc: 'גשם כבד', day: '⛈️', night: '⛈️' },
+        71: { desc: 'שלג קל', day: '🌨️', night: '🌨️' },
+        73: { desc: 'שלג', day: '🌨️', night: '🌨️' },
+        75: { desc: 'שלג כבד', day: '❄️', night: '❄️' },
+        77: { desc: 'גרגירי קרח', day: '❄️', night: '❄️' },
+        80: { desc: 'ממטרי גשם קלים', day: '🌦️', night: '🌧️' },
+        81: { desc: 'ממטרי גשם', day: '🌧️', night: '🌧️' },
+        82: { desc: 'ממטרים עזים', day: '⛈️', night: '⛈️' },
+        85: { desc: 'ממטרי שלג', day: '🌨️', night: '🌨️' },
+        86: { desc: 'ממטרי שלג כבדים', day: '❄️', night: '❄️' },
+        95: { desc: 'סופת רעמים', day: '⛈️', night: '⛈️' },
+        96: { desc: 'סופת רעמים וברד', day: '⛈️', night: '⛈️' },
+        99: { desc: 'סופת רעמים וברד כבד', day: '⛈️', night: '⛈️' }
       };
       const wInfo = weatherCodeMap[current.weather_code] || { desc: 'נאה', day: '☀️', night: '🌙' };
       const daysMap = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
       const forecast = [];
       if (daily?.time) {
         for (let i = 0; i < Math.min(daily.time.length, 4); i++) {
-          const dateObj = new Date(daily.time[i]);
+          const dateObj = new Date(daily.time[i] + 'T12:00:00');
           const dInfo = weatherCodeMap[daily.weather_code[i]] || { desc: 'נאה', day: '☀️' };
           forecast.push({
             dayName: i === 0 ? 'היום' : (i === 1 ? 'מחר' : `יום ${daysMap[dateObj.getDay()]}`),
@@ -1410,24 +1733,51 @@ class BuildingSignageApp {
       const seaWaveHeightCm = `${waveCm} ס"מ • ${seaDesc}`;
       const seaTemp = `${Math.round(marineData?.current?.sea_surface_temperature ?? 24)}°`;
 
-      // 4. Smart Daily Tip
-      const isRain = (daily?.precipitation_probability_max?.[0] || 0) >= 40 ||
-        [51, 53, 55, 61, 63, 65, 80, 81, 82, 95].includes(current.weather_code) ||
+      // 4. Contextual & Day-Aware Smart Daily Tip
+      const rainProb = daily?.precipitation_probability_max?.[0] || 0;
+      const isRain = rainProb >= 40 ||
+        [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99].includes(current.weather_code) ||
         (current.precipitation && current.precipitation > 0);
+      const tempNow = Math.round(current.temperature_2m);
+      const feelsNow = Math.round(current.apparent_temperature);
+      const windKmh = Math.round(current.wind_speed_10m || 0);
+      const nowObj = new Date();
+      const dow = nowObj.getDay();
+      const hourNow = nowObj.getHours();
 
       let dailyTip = '👕 מזג אוויר נוח לתליית כביסה ולפעילות בחוץ';
-      if (isRain) {
-        dailyTip = '🌧️ צפוי גשם היום — מומלץ לא לתלות כביסה בחוץ';
+      if ([95, 96, 99, 82, 65, 67].includes(current.weather_code) || windKmh >= 42) {
+        dailyTip = '⛈️ מזג אוויר סוער — מומלץ לחזק חפצים במרפסות ולקחת מטרייה';
+      } else if (isRain) {
+        dailyTip = `🌧️ סיכוי של ${Math.max(rainProb, 45)}% לגשם היום — מומלץ לקחת מטרייה ולא לתלות כביסה בחוץ`;
       } else if (aqiVal > 70) {
-        dailyTip = '🌫️ אובך באוויר — מומלץ להגיף חלונות';
-      } else if (Math.round(current.apparent_temperature) > 31 || Math.round(current.temperature_2m) > 31) {
-        dailyTip = '☀️ עומס חום גבוה — הקפידו על שתייה מרובה';
+        dailyTip = '🌫️ אובך באוויר בחדרה — מומלץ להגיף חלונות ולהימנע ממאמץ ממושך בחוץ';
+      } else if (feelsNow >= 33 || tempNow >= 32) {
+        dailyTip = (hourNow >= 11 && hourNow <= 16)
+          ? '☀️ עומס חום כבד — הקפידו על שתייה מרובה והימנעו מהליכת כלבים על אספלט חם'
+          : '☀️ יום חם בחוץ — הקפידו על שתייה מרובה וחבישת כובע ביציאה לשמש';
+      } else if (tempNow <= 12) {
+        dailyTip = '🧥 קריר בחוץ בחדרה — מומלץ להצטייד בלבוש חם ביציאה מהבניין';
+      } else if (uvVal >= 8 && current.is_day) {
+        dailyTip = '🕶️ קרינת UV גבוהה מאוד היום — מומלץ להצטייד בכובע, משקפי שמש וקרם הגנה';
+      } else if (this.isMemorialDayActive()) {
+        dailyTip = '🌤️ מזג אוויר נוח ומתון היום באזור חדרה והשרון';
+      } else if ((dow === 5 || dow === 6) && waveCm < 75 && tempNow >= 20 && tempNow <= 30) {
+        dailyTip = '🌊 מזג אוויר נעים וים נוח — תנאים מצוינים לטיול סוף שבוע בטיילת חוף חדרה';
+      } else {
+        const pleasantVariants = [
+          '👕 מזג אוויר נוח ונעים לתליית כביסה ולסידורים בחוץ',
+          '🪟 אוויר נקי ונעים בחדרה — זמן מצוין לאוורור הדירה',
+          '🚶 טמפרטורה נוחה להליכה נעימה בשכונה ובפארק נחל חדרה',
+          '🌿 תנאי מזג אוויר מאוזנים ונוחים היום באזור חדרה והשרון'
+        ];
+        dailyTip = pleasantVariants[(dow + Math.floor(hourNow / 6)) % pleasantVariants.length];
       }
 
       this.weather = {
         city: cityName,
-        temperature: Math.round(current.temperature_2m),
-        apparentTemperature: Math.round(current.apparent_temperature),
+        temperature: tempNow,
+        apparentTemperature: feelsNow,
         humidity: current.relative_humidity_2m,
         description: wInfo.desc,
         iconEmoji: current.is_day ? wInfo.day : wInfo.night,
@@ -1446,10 +1796,23 @@ class BuildingSignageApp {
         sunset: daily?.sunset?.[0] ? daily.sunset[0].split('T')[1].slice(0, 5) : '19:15',
         forecast
       };
+      try {
+        localStorage.setItem('smart_lobby_weather_cache', JSON.stringify({ timestamp: Date.now(), weather: this.weather }));
+      } catch (e) {}
       this.renderWeather();
       this.buildSlides();
     } catch (omErr) {
-      console.warn('Weather fallback failed:', omErr);
+      console.warn('Weather fallback note:', omErr);
+      if (!this.weather) {
+        try {
+          const cached = JSON.parse(localStorage.getItem('smart_lobby_weather_cache') || 'null');
+          if (cached?.weather) {
+            this.weather = cached.weather;
+            this.renderWeather();
+            this.buildSlides();
+          }
+        } catch (e) {}
+      }
     }
   }
 
@@ -1545,216 +1908,391 @@ class BuildingSignageApp {
       ]
     };
 
-    // Direct Hebcal Client Call
+    // Direct Hebcal Full Israel Calendar Call (10-day rolling window: yesterday -> +9 days)
+    // Covers ALL weekday & weekend holidays, fasts, Rosh Chodesh, Omer, special Shabbatot & modern Israeli days!
     try {
       const lat = this.settings?.building?.lat || 32.4340;
       const lon = this.settings?.building?.lon || 34.9197;
-      const url = `https://www.hebcal.com/shabbat?cfg=json&latitude=${lat}&longitude=${lon}&tzid=Asia/Jerusalem&M=on&lg=he`;
-      const resp = await fetchWithTimeout(url, {}, 8000);
-      if (resp.ok) {
-        const data = await resp.json();
-        const items = data.items || [];
-        let candleLighting = null;
-        let havdalah = null;
-        let parasha = null;
-        const holidays = [];
+      const now = new Date();
+      const startIso = formatLocalIsoDate(new Date(now.getTime() - 24 * 60 * 60 * 1000));
+      const endIso = formatLocalIsoDate(new Date(now.getTime() + 9 * 24 * 60 * 60 * 1000));
+      const url = `https://www.hebcal.com/hebcal?v=1&cfg=json&i=on&maj=on&min=on&mod=on&nx=on&mf=on&ss=on&o=on&c=on&s=on&latitude=${lat}&longitude=${lon}&tzid=Asia/Jerusalem&M=on&lg=he&start=${startIso}&end=${endIso}`;
 
-        items.forEach(item => {
-          if (item.category === 'candles') {
-            const cleanTime = (item.title || '').match(/\d{1,2}:\d{2}/)?.[0] || item.title;
-            candleLighting = { title: item.title, time: cleanTime, date: item.date };
-          } else if (item.category === 'havdalah') {
-            const cleanTime = (item.title || '').match(/\d{1,2}:\d{2}/)?.[0] || item.title;
-            havdalah = { title: item.title, time: cleanTime, date: item.date };
-          } else if (item.category === 'parashat') {
-            parasha = item.hebrew || item.title;
-          } else if (item.category === 'holiday' || item.category === 'roshchodesh' || item.category === 'omer' || item.category === 'fast') {
-            holidays.push({ title: item.hebrew || item.title, category: item.category, date: item.date });
-          }
-        });
-
-        const now = new Date();
-        const month = now.getMonth(); // 0-11 (7=Aug, 8=Sep, 11=Dec, 0=Jan)
-        const dateOfMonth = now.getDate();
-        const dayOfWeek = now.getDay();
-        
-        // Active from Friday morning through Saturday night, or Thursday 18:00+
-        const isShabbatActive = (dayOfWeek === 5) || (dayOfWeek === 6) || (dayOfWeek === 4 && now.getHours() >= 18);
-        
-        let activeEvent = null;
-        let recommendedTheme = 'default';
-        let themeImages = HOLIDAY_COLLECTIONS.default;
-
-        // 1. Match Jewish Holidays from Hebcal (search across all holidays for primary event)
-        let jewishHolidayEvent = null;
-        const matchHoliday = (hTitle) => {
-          const hLower = (hTitle || '').toLowerCase();
-          if (hLower.includes('ראש השנה')) {
-            return {
-              theme: 'rosh-hashanah',
-              images: HOLIDAY_COLLECTIONS['rosh-hashanah'],
-              event: { title: 'ראש השנה', customGreeting: 'שנה טובה ומתוקה!', subtitle: 'ועד הבית מאחל לכל הדיירים ובני ביתם שנה של שגשוג, בריאות, שלום והתחדשות', icon: '🍎' }
-            };
-          } else if (hLower.includes('כיפור')) {
-            return {
-              theme: 'yom-kippur',
-              images: HOLIDAY_COLLECTIONS['yom-kippur'],
-              event: { title: 'יום הכיפורים', customGreeting: 'גמר חתימה טובה!', subtitle: 'צום קל ומועיל לכל הדיירים והצמים • שנת סליחה ושלום', icon: '🕍' }
-            };
-          } else if (hLower.includes('שמחת תורה') || hLower.includes('שמיני עצרת')) {
-            return {
-              theme: 'simchat-torah',
-              images: HOLIDAY_COLLECTIONS['simchat-torah'],
-              event: { title: 'שמחת תורה', customGreeting: 'חג שמחת תורה שמח!', subtitle: 'מועדים לשמחה וחגים וזמנים לששון לכל דיירי הבניין', icon: '📜' }
-            };
-          } else if (hLower.includes('סוכות') || hLower.includes('הושענא')) {
-            return {
-              theme: 'sukkot',
-              images: HOLIDAY_COLLECTIONS['sukkot'],
-              event: { title: 'חג הסוכות', customGreeting: 'חג סוכות שמח!', subtitle: 'ועד הבית מאחל חג סוכות מבורך, שמחה ואושפיזין מבורכים', icon: '⛺' }
-            };
-          } else if (hLower.includes('חנוכה')) {
-            return {
-              theme: 'hanukkah',
-              images: HOLIDAY_COLLECTIONS['hanukkah'],
-              event: { title: 'חנוכה', customGreeting: 'חג חנוכה שמח ומאיר!', subtitle: 'חג של אור, שמחה, ניסים ונפלאות לכל המשפחות', icon: '🕎' }
-            };
-          } else if (hLower.includes('ט״ו בשבט') || hLower.includes('טו בשבט')) {
-            return {
-              theme: 'tu-bishvat',
-              images: HOLIDAY_COLLECTIONS['tu-bishvat'],
-              event: { title: 'ט"ו בשבט', customGreeting: 'חג לאילנות שמח!', subtitle: 'חג צמיחה, פריחה והתחדשות הטבע לכל דיירי הבניין', icon: '🌳' }
-            };
-          } else if (hLower.includes('פורים') || hLower.includes('אסתר')) {
-            return {
-              theme: 'purim',
-              images: HOLIDAY_COLLECTIONS['purim'],
-              event: { title: 'פורים', customGreeting: 'חג פורים שמח ומבדח!', subtitle: 'ליהודים הייתה אורה ושמחה וששון ויקר • חג מלא צהלה', icon: '🎭' }
-            };
-          } else if (hLower.includes('פסח')) {
-            return {
-              theme: 'pesach',
-              images: HOLIDAY_COLLECTIONS['pesach'],
-              event: { title: 'פסח', customGreeting: 'חג פסח כשר ושמח!', subtitle: 'חג אביב וחרות מלבלב, שקט ושלווה לכל דיירי הבניין', icon: '🍷' }
-            };
-          } else if (hLower.includes('שואה')) {
-            return {
-              theme: 'memorial',
-              images: HOLIDAY_COLLECTIONS['memorial'],
-              event: { title: 'יום הזיכרון לשואה ולגבורה', customGreeting: 'יום הזיכרון לשואה ולגבורה', subtitle: 'נזכור ולא נשכח • מרכינים ראש לזכר ששת המיליונים', icon: '🕯️' }
-            };
-          } else if (hLower.includes('הזיכרון') || hLower.includes('חללי')) {
-            return {
-              theme: 'memorial',
-              images: HOLIDAY_COLLECTIONS['memorial'],
-              event: { title: 'יום הזיכרון לחללי מערכות ישראל', customGreeting: 'יום הזיכרון לחללי מערכות ישראל ופעולות האיבה', subtitle: 'במותם ציוו לנו את החיים • יהי זכרם ברוך ונצור בליבנו תמיד', icon: '🇮🇱' }
-            };
-          } else if (hLower.includes('עצמאות')) {
-            return {
-              theme: 'israel',
-              images: HOLIDAY_COLLECTIONS['israel'],
-              event: { title: 'יום העצמאות', customGreeting: 'חג עצמאות שמח למדינת ישראל!', subtitle: 'חג שמח ומלא גאווה לאומית לכל דיירי הבניין ועם ישראל', icon: '🇮🇱' }
-            };
-          } else if (hLower.includes('עומר') || hLower.includes('ל״ג')) {
-            return {
-              theme: 'lag-baomer',
-              images: HOLIDAY_COLLECTIONS['lag-baomer'],
-              event: { title: 'ל"ג בעומר', customGreeting: 'ל"ג בעומר שמח!', subtitle: 'חג שמח ומאיר לכל המשפחות והילדים', icon: '🔥' }
-            };
-          } else if (hLower.includes('ירושלים')) {
-            return {
-              theme: 'jerusalem',
-              images: HOLIDAY_COLLECTIONS['jerusalem'],
-              event: { title: 'יום ירושלים', customGreeting: 'יום ירושלים שמח!', subtitle: 'שמחי ירושלים וגילו בה כל אוהביה', icon: '🦁' }
-            };
-          } else if (hLower.includes('שבועות')) {
-            return {
-              theme: 'shavuot',
-              images: HOLIDAY_COLLECTIONS['shavuot'],
-              event: { title: 'שבועות', customGreeting: 'חג שבועות שמח!', subtitle: 'חג מתן תורה, חג הקציר והביכורים לכל הדיירים', icon: '🌾' }
-            };
-          } else if (hLower.includes('ט״ו באב') || hLower.includes('טו באב')) {
-            return {
-              theme: 'tu-baav',
-              images: HOLIDAY_COLLECTIONS['tu-baav'],
-              event: { title: 'ט"ו באב', customGreeting: 'יום אהבה עברי שמח!', subtitle: 'שמחה, אהבה ואחווה בקרב כל משפחות הבניין', icon: '❤️' }
-            };
-          }
-          return null;
-        };
-
-        for (const h of holidays) {
-          const match = matchHoliday(h.title);
-          if (match) {
-            recommendedTheme = match.theme;
-            themeImages = match.images;
-            jewishHolidayEvent = match.event;
-            break;
-          }
+      let data = null;
+      try {
+        const resp = await fetchWithTimeout(url, {}, 8000);
+        if (resp.ok) {
+          data = await resp.json();
+          try {
+            localStorage.setItem('smart_lobby_hebcal_cache', JSON.stringify({ timestamp: Date.now(), data }));
+          } catch (e) {}
         }
-
-        // 2. Determine Final Theme & Active Event
-        // Priority 1: Major Jewish Holiday
-        if (jewishHolidayEvent) {
-          activeEvent = jewishHolidayEvent;
-        }
-        // Priority 2: Shabbat (Thursday evening through Saturday night)
-        else if (isShabbatActive) {
-          recommendedTheme = 'shabbat';
-          themeImages = HOLIDAY_COLLECTIONS['shabbat'];
-          activeEvent = null; // Clean Shabbat mode - no conflicting badges
-        }
-        // Priority 3: Civil Dates (Weekdays only)
-        else if ((month === 7 && dateOfMonth >= 27) || (month === 8 && dateOfMonth <= 3)) {
-          recommendedTheme = 'back-to-school';
-          themeImages = HOLIDAY_COLLECTIONS['back-to-school'];
-          activeEvent = {
-            title: 'פתיחת שנת הלימודים',
-            customGreeting: 'שלום כיתה א\' ושנת לימודים מוצלחת!',
-            subtitle: 'ועד הבית מברך את כל ילדי ותלמידי הבניין בשנת לימודים פורייה, מהנה ובטוחה',
-            icon: '🎒'
-          };
-        } else if ((month === 11 && dateOfMonth >= 30) || (month === 0 && dateOfMonth <= 2)) {
-          recommendedTheme = 'new-year';
-          themeImages = HOLIDAY_COLLECTIONS['new-year'];
-          activeEvent = {
-            title: 'שנה אזרחית חדשה',
-            customGreeting: 'שנה אזרחית טובה ומבורכת! Happy New Year',
-            subtitle: 'ועד הבניין מאחל שנה של הצלחה, בריאות והתחלות חדשות וטובות',
-            icon: '🎆'
-          };
-        } else {
-          recommendedTheme = 'default';
-          themeImages = HOLIDAY_COLLECTIONS['default'];
-          activeEvent = null;
-        }
-
-        const shuffledThemeImages = (Array.isArray(themeImages) && themeImages.length > 1)
-          ? [...themeImages].sort(() => Math.random() - 0.5)
-          : themeImages;
-
-        this.shabbatData = {
-          isShabbatActive,
-          parasha,
-          candleLighting,
-          havdalah,
-          holidays,
-          activeHoliday: activeEvent,
-          recommendedTheme,
-          themeImage: shuffledThemeImages[0],
-          themeImages: shuffledThemeImages
-        };
-
-        // Update default wallpapers to match current holiday/special event theme!
-        this.wallpapers = shuffledThemeImages.map((url, i) => ({ id: `theme-wall-${i}`, url }));
-
-        this.applySettings();
-        this.renderShabbatAndHolidays();
-        this.buildSlides();
-        this.rotateBackground();
+      } catch (netErr) {
+        try {
+          const cached = JSON.parse(localStorage.getItem('smart_lobby_hebcal_cache') || 'null');
+          if (cached?.data) data = cached.data;
+        } catch (e) {}
       }
+
+      const items = data?.items || [];
+      const todayIso = formatLocalIsoDate(now);
+      const tomorrowIso = formatLocalIsoDate(new Date(now.getTime() + 24 * 60 * 60 * 1000));
+      const hourNow = now.getHours();
+
+      let candleLighting = null;
+      let havdalah = null;
+      let parasha = null;
+      const holidays = [];
+
+      items.forEach(item => {
+        const itemDay = String(item.date || '').slice(0, 10);
+        if (item.category === 'candles' && !candleLighting && itemDay >= todayIso) {
+          const cleanTime = (item.title || '').match(/\d{1,2}:\d{2}/)?.[0] || item.title;
+          candleLighting = { title: item.title, time: cleanTime, date: item.date };
+        } else if (item.category === 'havdalah' && !havdalah && itemDay >= todayIso) {
+          const cleanTime = (item.title || '').match(/\d{1,2}:\d{2}/)?.[0] || item.title;
+          havdalah = { title: item.title, time: cleanTime, date: item.date };
+        } else if (item.category === 'parashat' && !parasha && itemDay >= todayIso) {
+          parasha = item.hebrew || item.title;
+        } else if (item.category === 'holiday' || item.category === 'roshchodesh' || item.category === 'omer' || item.category === 'fast') {
+          holidays.push({
+            title: item.hebrew || item.title,
+            title_orig: item.title_orig || '',
+            category: item.category,
+            subcat: item.subcat || '',
+            yomtov: Boolean(item.yomtov),
+            memo: item.memo || '',
+            date: item.date
+          });
+        }
+      });
+
+      const month = now.getMonth(); // 0-11
+      const dateOfMonth = now.getDate();
+      const dayOfWeek = now.getDay();
+
+      // Active from Friday morning through Saturday night, or Thursday 18:00+
+      const isShabbatActive = (dayOfWeek === 5) || (dayOfWeek === 6) || (dayOfWeek === 4 && hourNow >= 18);
+
+      let activeEvent = null;
+      let recommendedTheme = 'default';
+      let contextPoolKey = null;
+      let themeImages = HOLIDAY_COLLECTIONS.default;
+
+      const matchHoliday = (hItem) => {
+        if (!hItem || hItem.category === 'omer') return null; // Never confuse Sefirat HaOmer with Lag BaOmer!
+        const hLower = (hItem.title || '').toLowerCase();
+        if (hLower.includes('ראש השנה') && !hLower.includes('למעשר')) {
+          return {
+            theme: 'rosh-hashanah', pool: 'rosh-hashanah',
+            images: HOLIDAY_COLLECTIONS['rosh-hashanah'],
+            event: { title: 'ראש השנה', customGreeting: 'שנה טובה ומתוקה!', subtitle: 'ועד הבית מאחל לכל הדיירים ובני ביתם שנה של שגשוג, בריאות, שלום והתחדשות', icon: '🍎' }
+          };
+        } else if (hLower.includes('כיפור')) {
+          return {
+            theme: 'yom-kippur', pool: 'memorial',
+            images: HOLIDAY_COLLECTIONS['yom-kippur'],
+            event: { title: 'יום הכיפורים', customGreeting: 'גמר חתימה טובה!', subtitle: 'צום קל ומועיל לכל הדיירים והצמים • שנת סליחה ושלום', icon: '🕍' }
+          };
+        } else if (hLower.includes('שמחת תורה') || hLower.includes('שמיני עצרת')) {
+          return {
+            theme: 'simchat-torah', pool: 'sukkot',
+            images: HOLIDAY_COLLECTIONS['simchat-torah'],
+            event: { title: 'שמחת תורה ושמיני עצרת', customGreeting: 'חג שמחת תורה שמח!', subtitle: 'מועדים לשמחה וחגים וזמנים לששון לכל דיירי הבניין', icon: '📜' }
+          };
+        } else if (hLower.includes('סוכות') || hLower.includes('הושענא')) {
+          return {
+            theme: 'sukkot', pool: 'sukkot',
+            images: HOLIDAY_COLLECTIONS['sukkot'],
+            event: { title: 'חג הסוכות', customGreeting: 'חג סוכות שמח!', subtitle: 'ועד הבית מאחל חג סוכות מבורך, שמחה ואושפיזין מבורכים', icon: '⛺' }
+          };
+        } else if (hLower.includes('סיגד')) {
+          return {
+            theme: 'jerusalem', pool: 'sigd',
+            images: HOLIDAY_COLLECTIONS['jerusalem'],
+            event: { title: 'חג הסיגד', customGreeting: 'חג סיגד שמח ומבורך!', subtitle: 'חג של אחדות, התחדשות הקהילה וכמיהת הדורות לירושלים', icon: '🏔️' }
+          };
+        } else if (hLower.includes('חנוכה')) {
+          return {
+            theme: 'hanukkah', pool: 'hanukkah',
+            images: HOLIDAY_COLLECTIONS['hanukkah'],
+            event: { title: hItem.title || 'חנוכה', customGreeting: 'חג חנוכה שמח ומאיר!', subtitle: 'חג של אור, שמחה, ניסים ונפלאות לכל המשפחות בבניין', icon: '🕎' }
+          };
+        } else if (hLower.includes('השפה העברית')) {
+          return {
+            theme: 'default', pool: 'hebrew-lang',
+            images: HOLIDAY_COLLECTIONS['default'],
+            event: { title: 'יום השפה העברית', customGreeting: 'יום השפה העברית שמח!', subtitle: 'מוקירים את תחיית השפה העברית ואוצרות התרבות והמילה', icon: '📚' }
+          };
+        } else if (hLower.includes('ט״ו בשבט') || hLower.includes('טו בשבט')) {
+          return {
+            theme: 'tu-bishvat', pool: 'tu-bishvat',
+            images: HOLIDAY_COLLECTIONS['tu-bishvat'],
+            event: { title: 'ט"ו בשבט', customGreeting: 'ט"ו בשבט שמח — חג לאילנות!', subtitle: 'חג צמיחה, פריחה והתחדשות הטבע לכל דיירי הבניין', icon: '🌳' }
+          };
+        } else if (hLower.includes('יום המשפחה')) {
+          return {
+            theme: 'family-day', pool: 'family-day',
+            images: HOLIDAY_COLLECTIONS['family-day'],
+            event: { title: 'יום המשפחה', customGreeting: 'יום המשפחה שמח לכל משפחות הבניין!', subtitle: 'מאחלים חום, אהבה, בריאות ושמחה בכל בית ובית', icon: '💐' }
+          };
+        } else if (hLower.includes('פורים') || hLower.includes('אסתר')) {
+          return {
+            theme: 'purim', pool: 'purim',
+            images: HOLIDAY_COLLECTIONS['purim'],
+            event: { title: hLower.includes('אסתר') ? 'תענית אסתר וערב פורים' : 'חג הפורים', customGreeting: 'חג פורים שמח ומבדח!', subtitle: 'ליהודים הייתה אורה ושמחה וששון ויקר • חג מלא צהלה', icon: '🎭' }
+          };
+        } else if (hLower.includes('פסח') && !hLower.includes('שני')) {
+          return {
+            theme: 'pesach', pool: 'pesach',
+            images: HOLIDAY_COLLECTIONS['pesach'],
+            event: { title: 'חג הפסח', customGreeting: 'חג פסח כשר ושמח!', subtitle: 'חג אביב וחרות מלבלב, שקט ושלווה לכל דיירי הבניין', icon: '🍷' }
+          };
+        } else if (hLower.includes('שואה')) {
+          return {
+            theme: 'memorial', pool: 'memorial',
+            images: HOLIDAY_COLLECTIONS['memorial'],
+            event: { title: 'יום הזיכרון לשואה ולגבורה', customGreeting: 'יום הזיכרון לשואה ולגבורה', subtitle: 'נזכור ולא נשכח • מרכינים ראש לזכר ששת המיליונים', icon: '🕯️' }
+          };
+        } else if (hLower.includes('חרבות ברזל')) {
+          return {
+            theme: 'memorial', pool: 'memorial',
+            images: HOLIDAY_COLLECTIONS['memorial'],
+            event: { title: 'יום הזיכרון לחללי מלחמת חרבות ברזל', customGreeting: 'יום הזיכרון לחללי מלחמת חרבות ברזל', subtitle: 'מרכינים ראש לזכר הנופלים והנרצחים • יהי זכרם ברוך', icon: '🕯️' }
+          };
+        } else if (hLower.includes('הזיכרון') || hLower.includes('הזכרון') || hLower.includes('חללי')) {
+          if (hLower.includes('רבין')) {
+            return {
+              theme: 'memorial', pool: 'memorial',
+              images: HOLIDAY_COLLECTIONS['memorial'],
+              event: { title: 'יום הזיכרון ליצחק רבין', customGreeting: 'יום הזיכרון הממלכתי ליצחק רבין', subtitle: 'יום זיכרון ממלכתי לערכי הדמוקרטיה, הסובלנות והאחדות בחברה הישראלית', icon: '🕯️' }
+            };
+          }
+          return {
+            theme: 'memorial', pool: 'memorial',
+            images: HOLIDAY_COLLECTIONS['memorial'],
+            event: { title: 'יום הזיכרון לחללי מערכות ישראל', customGreeting: 'יום הזיכרון לחללי מערכות ישראל ונפגעי פעולות האיבה', subtitle: 'במותם ציוו לנו את החיים • יהי זכרם ברוך ונצור בליבנו תמיד', icon: '🇮🇱' }
+          };
+        } else if (hLower.includes('עצמאות')) {
+          return {
+            theme: 'israel', pool: 'israel',
+            images: HOLIDAY_COLLECTIONS['israel'],
+            event: { title: 'יום העצמאות', customGreeting: 'חג עצמאות שמח למדינת ישראל!', subtitle: 'חג שמח ומלא גאווה לאומית לכל דיירי הבניין ועם ישראל', icon: '🇮🇱' }
+          };
+        } else if (hLower.includes('ל״ג בעומר') || hLower.includes('ל"ג בעומר')) {
+          return {
+            theme: 'lag-baomer', pool: null,
+            images: HOLIDAY_COLLECTIONS['lag-baomer'],
+            event: { title: 'ל"ג בעומר', customGreeting: 'ל"ג בעומר שמח!', subtitle: 'חג שמח ומאיר לכל המשפחות והילדים', icon: '🔥' }
+          };
+        } else if (hLower.includes('ירושלים')) {
+          return {
+            theme: 'jerusalem', pool: 'jerusalem',
+            images: HOLIDAY_COLLECTIONS['jerusalem'],
+            event: { title: 'יום ירושלים', customGreeting: 'יום ירושלים שמח!', subtitle: 'שמחי ירושלים וגילו בה כל אוהביה', icon: '🦁' }
+          };
+        } else if (hLower.includes('שבועות')) {
+          return {
+            theme: 'shavuot', pool: 'shavuot',
+            images: HOLIDAY_COLLECTIONS['shavuot'],
+            event: { title: 'חג השבועות', customGreeting: 'חג שבועות שמח!', subtitle: 'חג מתן תורה, חג הקציר והביכורים לכל הדיירים', icon: '🌾' }
+          };
+        } else if (hLower.includes('תשעה באב')) {
+          return {
+            theme: 'memorial', pool: 'memorial',
+            images: HOLIDAY_COLLECTIONS['memorial'],
+            event: { title: 'תשעה באב', customGreeting: 'צום תשעה באב', subtitle: 'יום זיכרון לחורבן בתי המקדש ולקריאה לאהבת חינם וכבוד הדדי', icon: '🕯️' }
+          };
+        } else if (hLower.includes('ט״ו באב') || hLower.includes('טו באב')) {
+          return {
+            theme: 'tu-baav', pool: null,
+            images: HOLIDAY_COLLECTIONS['tu-baav'],
+            event: { title: 'ט"ו באב', customGreeting: 'ט"ו באב שמח!', subtitle: 'שמחה, אהבה ואחווה בקרב כל משפחות הבניין', icon: '❤️' }
+          };
+        }
+        return null;
+      };
+
+      // Filter strictly to TODAY's active items + accurate Israeli evening transitions!
+      const candidateTodayItems = holidays.filter(h => {
+        const dIso = String(h.date || '').slice(0, 10);
+        const t = h.title || '';
+        if (dIso === todayIso) {
+          // On Memorial Day evening at 19:50+, transition cleanly into Independence Day!
+          if ((t.includes('הזכרון') || t.includes('הזיכרון') || t.includes('שואה')) && hourNow >= 20) {
+            return false;
+          }
+          return true;
+        }
+        if (dIso === tomorrowIso) {
+          // Memorial Day / Holocaust Remembrance Day starts the evening before at 19:30!
+          if ((t.includes('הזכרון') || t.includes('הזיכרון') || t.includes('שואה')) && hourNow >= 19) return true;
+          // Independence Day starts on Memorial Day evening at 19:55!
+          if (t.includes('עצמאות') && hourNow >= 20) return true;
+        }
+        return false;
+      });
+
+      let jewishHolidayEvent = null;
+      for (const h of candidateTodayItems) {
+        const match = matchHoliday(h);
+        if (match) {
+          recommendedTheme = match.theme;
+          contextPoolKey = match.pool;
+          themeImages = match.images;
+          jewishHolidayEvent = match.event;
+          break;
+        }
+      }
+
+      // Check Mimouna (evening of 7th day of Pesach: today had פסח ז׳ and hour >= 19)
+      if (!jewishHolidayEvent && hourNow >= 19 && holidays.some(h => String(h.date || '').slice(0, 10) === todayIso && (h.title || '').includes('פסח ז'))) {
+        recommendedTheme = 'pesach';
+        contextPoolKey = 'pesach';
+        themeImages = HOLIDAY_COLLECTIONS['pesach'];
+        jewishHolidayEvent = {
+          title: 'חג המימונה',
+          customGreeting: 'תרבחו ותסעדו — חג מימונה שמח!',
+          subtitle: 'ועד הבית מאחל ברכה, שפע, מתיקות ושכנות טובה לכל דיירי הבניין',
+          icon: '🍯'
+        };
+      }
+
+      const civicSpecialDay = getCivicAndSeasonalSpecialDay(now);
+      const isErevYomTovToday = holidays.some(h => String(h.date || '').slice(0, 10) === todayIso && (h.title || '').startsWith('ערב ') && h.subcat === 'major');
+      const isYomTovToday = holidays.some(h => String(h.date || '').slice(0, 10) === todayIso && Boolean(h.yomtov));
+
+      // 2. Determine Final Theme & Active Event
+      if (jewishHolidayEvent) {
+        activeEvent = jewishHolidayEvent;
+      } else if (isShabbatActive) {
+        recommendedTheme = 'shabbat';
+        contextPoolKey = 'shabbat';
+        themeImages = HOLIDAY_COLLECTIONS['shabbat'];
+        activeEvent = null;
+      } else if ((month === 7 && dateOfMonth >= 29) || (month === 8 && dateOfMonth <= 2)) {
+        recommendedTheme = 'back-to-school';
+        themeImages = HOLIDAY_COLLECTIONS['back-to-school'];
+        activeEvent = {
+          title: 'פתיחת שנת הלימודים',
+          customGreeting: 'שלום כיתה א\' ושנת לימודים מוצלחת!',
+          subtitle: 'ועד הבית מברך את כל ילדי ותלמידי הבניין בשנת לימודים פורייה, מהנה ובטוחה',
+          icon: '🎒'
+        };
+      } else if ((month === 11 && dateOfMonth === 31) || (month === 0 && dateOfMonth <= 2)) {
+        recommendedTheme = 'new-year';
+        themeImages = HOLIDAY_COLLECTIONS['new-year'];
+        activeEvent = {
+          title: 'שנה אזרחית חדשה',
+          customGreeting: 'שנה אזרחית טובה ומבורכת!',
+          subtitle: 'ועד הבניין מאחל שנה של הצלחה, בריאות והתחלות חדשות וטובות',
+          icon: '🎆'
+        };
+      } else {
+        recommendedTheme = 'default';
+        themeImages = HOLIDAY_COLLECTIONS['default'];
+        activeEvent = null;
+      }
+
+      const shuffledThemeImages = (Array.isArray(themeImages) && themeImages.length > 1)
+        ? [...themeImages].sort(() => Math.random() - 0.5)
+        : themeImages;
+
+      this.shabbatData = {
+        isShabbatActive,
+        isErevYomTovToday,
+        isYomTovToday,
+        parasha,
+        candleLighting,
+        havdalah,
+        holidays,
+        civicSpecialDay,
+        contextPoolKey,
+        activeHoliday: activeEvent,
+        recommendedTheme,
+        themeImage: shuffledThemeImages[0],
+        themeImages: shuffledThemeImages
+      };
+
+      this.wallpapers = shuffledThemeImages.map((url, i) => ({ id: `theme-wall-${i}`, url }));
+
+      this.applySettings();
+      this.renderShabbatAndHolidays();
+      this.buildSlides();
+      this.rotateBackground();
     } catch (hebErr) {
       console.warn('Hebcal fallback failed:', hebErr);
+    }
+  }
+
+  async fetchWikipediaOnThisDay() {
+    const now = new Date();
+    const monthNamesHeb = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+    const dayNum = now.getDate();
+    const monthNum = now.getMonth() + 1;
+    const dateKey = `${monthNum}-${dayNum}`;
+    const labelDate = `${dayNum} ב${monthNamesHeb[now.getMonth()]}`;
+
+    // 1. Check 24h localStorage cache for today's date first (zero redundant network calls on rk3368!)
+    try {
+      const cached = JSON.parse(localStorage.getItem('smart_lobby_otd_cache') || 'null');
+      if (cached && cached.dateKey === dateKey && Array.isArray(cached.events) && cached.events.length > 0) {
+        this.onThisDayEvents = cached.events;
+        return;
+      }
+    } catch (e) {}
+
+    // 2. Fetch official Hebrew Wikipedia daily history template (CORS-open with &origin=*)
+    try {
+      const pageTitle = `תבנית:היום בהיסטוריה ${labelDate}`;
+      const apiUrl = `https://he.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(pageTitle)}&prop=text&format=json&origin=*`;
+      const resp = await fetchWithTimeout(apiUrl, {}, 7000);
+      if (!resp.ok) return;
+      const json = await resp.json();
+      const rawHtml = json?.parse?.text?.['*'] || '';
+      if (!rawHtml) return;
+
+      const sensitivePattern = /מתאבד|התאבדות|נרצח|רצח|טבח|אונס|פיגוע|הוצא להורג|הוצאתו להורג|הוצאה להורג|פשע מלחמה|השמדה/;
+      const matches = [...rawHtml.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
+      const parsedEvents = [];
+
+      for (const m of matches) {
+        let line = decodeHtmlEntities(m[1] || '')
+          .replace(/\s*\(בתמונה\)\s*/g, ' ')
+          .replace(/\[\d+\]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (!line || line.length < 22 || line.length > 210) continue;
+        if (sensitivePattern.test(line)) continue;
+
+        const yearMatch = line.match(/^(\d{3,4})\s*[–—-]\s*(.+)$/);
+        if (yearMatch) {
+          parsedEvents.push({
+            tag: `היום בהיסטוריה • ${labelDate}`,
+            title: `📅 שנת ${yearMatch[1]} (${dayNum}.${monthNum})`,
+            text: yearMatch[2].trim()
+          });
+        } else {
+          parsedEvents.push({
+            tag: `היום בהיסטוריה • ${labelDate}`,
+            title: `📅 היום בהיסטוריה — ${labelDate}`,
+            text: line
+          });
+        }
+      }
+
+      if (parsedEvents.length > 0) {
+        this.onThisDayEvents = parsedEvents;
+        try {
+          localStorage.setItem('smart_lobby_otd_cache', JSON.stringify({
+            dateKey,
+            fetchedAt: Date.now(),
+            events: parsedEvents
+          }));
+        } catch (e) {}
+      }
+    } catch (e) {
+      // Quiet fallback to built-in curated sets if offline
     }
   }
 
@@ -1936,9 +2474,13 @@ class BuildingSignageApp {
     } else if (channelKey === 'shabbat_calendar') {
       const hebDate = this.formatHebrewDate(new Date());
       const parasha = this.shabbatData?.parasha ? ` • ${this.shabbatData.parasha}` : '';
-      const candle = this.shabbatData?.candleLighting?.time ? ` • כניסת שבת: ${this.shabbatData.candleLighting.time}` : '';
-      const havdalah = this.shabbatData?.havdalah?.time ? ` • יציאת שבת: ${this.shabbatData.havdalah.time}` : '';
+      const candle = this.shabbatData?.candleLighting?.time ? ` • הדלקת נרות: ${this.shabbatData.candleLighting.time}` : '';
+      const havdalah = this.shabbatData?.havdalah?.time ? ` • הבדלה: ${this.shabbatData.havdalah.time}` : '';
       items.push({ title: `[לוח עברי] היום ${hebDate}${parasha}${candle}${havdalah}` });
+      const badges = this.getSpecialHebrewCalendarBadges();
+      badges.forEach(b => {
+        items.push({ title: `[היום בלוח] ${b.text}` });
+      });
     } else if (channelKey === 'daily_trivia') {
       const set = this.getDailyInterestData();
       if (set?.history) {
@@ -2008,10 +2550,13 @@ class BuildingSignageApp {
 
     const LOCAL_CHANNEL_KEYS = new Set(['building_notices', 'local_weather', 'shabbat_calendar', 'daily_trivia']);
 
-    // Direct CORS-open JSON endpoints (respond in ~50-250ms directly in browser)
+    // Direct CORS-open JSON & XML endpoints (respond in ~50-250ms directly in browser without third-party proxy!)
     const DIRECT_WP_JSON = {
       hayadan: 'https://www.hayadan.org.il/wp-json/wp/v2/posts?per_page=10&_fields=title,date',
       geektime: 'https://www.geektime.co.il/wp-json/wp/v2/posts?per_page=10&_fields=title,date'
+    };
+    const DIRECT_CORS_XML = {
+      mako: 'https://rcs.mako.co.il/rss/news-israel.xml'
     };
 
     const PRESET_CHANNELS = {
@@ -2078,6 +2623,23 @@ class BuildingSignageApp {
       }
 
       if (!feedUrl) return [];
+
+      // 0B. Fast Path: Direct CORS-open XML RSS (e.g. N12/Mako responds in ~80ms with Access-Control-Allow-Origin: *)
+      if (DIRECT_CORS_XML[feedKey]) {
+        try {
+          const res = await fetchWithTimeout(DIRECT_CORS_XML[feedKey], {}, 6000);
+          if (res.ok) {
+            const xmlText = await res.text();
+            const rawTitles = extractXmlRssTitles(xmlText);
+            const parsed = [];
+            for (const rawTitle of rawTitles.slice(0, 12)) {
+              const formatted = filterClickbaitAndFormatHeadline(rawTitle, label, enableClickbaitFilter);
+              if (formatted) parsed.push({ title: formatted });
+            }
+            if (parsed.length > 0) return parsed;
+          }
+        } catch (e) {}
+      }
 
       // 1. Primary Live XML RSS Gateway: r.jina.ai (CORS-open, supports Ynet, N12/Mako, Globes, Walla, Maariv)
       try {
@@ -2381,10 +2943,12 @@ class BuildingSignageApp {
     const mins = now.getMinutes();
     const nowMins = hours * 60 + mins;
 
-    // A. Train Timetable (Hadera West Station)
-    // Friday afternoon (~15:18) through Saturday evening (~20:15)
-    const isFridayShabbatPause = (day === 5 && nowMins > 15 * 60 + 20);
-    const isSaturdayShabbatPause = (day === 6 && nowMins < 20 * 60 + 15);
+    // A. Train Timetable (Hadera West Station) — Aware of Shabbat, Erev Chag & Yom Tov!
+    const isErevChag = Boolean(this.shabbatData?.isErevYomTovToday);
+    const isYomTov = Boolean(this.shabbatData?.isYomTovToday);
+    const isEarlyCutoffDay = day === 5 || isErevChag;
+    const isFridayShabbatPause = (isEarlyCutoffDay && nowMins > 15 * 60 + 20);
+    const isSaturdayShabbatPause = ((day === 6 || isYomTov) && nowMins < 20 * 60 + 15);
     const isShabbatTrainPause = isFridayShabbatPause || isSaturdayShabbatPause;
     const isLateNight = (nowMins >= 23 * 60 + 40) || (nowMins < 5 * 60 + 15);
 
@@ -2394,18 +2958,19 @@ class BuildingSignageApp {
     let trainNoteNorth = '';
 
     if (isShabbatTrainPause) {
-      trainNoteSouth = 'שבת — תנועת הרכבות תחודש במוצ"ש (~20:30)';
-      trainNoteNorth = 'שבת — תנועת הרכבות תחודש במוצ"ש (~20:45)';
+      const pauseLabel = isYomTov && day !== 6 ? 'חג — תנועת הרכבות תחודש בצאת החג' : 'שבת — תנועת הרכבות תחודש במוצ"ש';
+      trainNoteSouth = `${pauseLabel} (~20:30)`;
+      trainNoteNorth = `${pauseLabel} (~20:45)`;
     } else if (isLateNight) {
       trainNoteSouth = 'חידוש שירות בבוקר: 05:18, 05:48';
       trainNoteNorth = 'חידוש שירות בבוקר: 05:35, 06:05';
     } else {
       // South departures: minute :18 and :48 on active operating hours (05:18 - 23:18)
-      const southMaxHour = day === 5 ? 15 : 23;
+      const southMaxHour = isEarlyCutoffDay ? 15 : 23;
       const southSlots = [18, 48];
       for (let h = hours; h <= hours + 2 && trainsSouth.length < 2; h++) {
-        if (h > southMaxHour || (h === 15 && day === 5)) {
-          if (h === 15 && day === 5 && mins <= 18 && trainsSouth.length === 0) {
+        if (h > southMaxHour || (h === 15 && isEarlyCutoffDay)) {
+          if (h === 15 && isEarlyCutoffDay && mins <= 18 && trainsSouth.length === 0) {
             const diff = 18 - mins;
             trainsSouth.push({ time: '15:18', diff: diff === 0 ? 'ברציף כעת' : (diff === 1 ? 'בעוד דקה' : `בעוד ${diff} דק'`) });
           }
@@ -2421,19 +2986,19 @@ class BuildingSignageApp {
         }
       }
       if (trainsSouth.length === 0) {
-        if (day === 5) {
-          trainNoteSouth = 'סיום שירות שישי — חידוש במוצ"ש (~20:30)';
+        if (isEarlyCutoffDay) {
+          trainNoteSouth = isErevChag ? 'סיום שירות ערב חג — חידוש בצאת החג' : 'סיום שירות שישי — חידוש במוצ"ש (~20:30)';
         } else {
           trainNoteSouth = 'חידוש שירות בבוקר: 05:18, 05:48';
         }
       }
 
       // North departures: minute :05 and :35 on active operating hours (05:35 - 23:35)
-      const northMaxHour = day === 5 ? 15 : 23;
+      const northMaxHour = isEarlyCutoffDay ? 15 : 23;
       const northSlots = [5, 35];
       for (let h = hours; h <= hours + 2 && trainsNorth.length < 2; h++) {
-        if (h > northMaxHour || (h === 15 && day === 5)) {
-          if (h === 15 && day === 5 && mins <= 5 && trainsNorth.length === 0) {
+        if (h > northMaxHour || (h === 15 && isEarlyCutoffDay)) {
+          if (h === 15 && isEarlyCutoffDay && mins <= 5 && trainsNorth.length === 0) {
             const diff = 5 - mins;
             trainsNorth.push({ time: '15:05', diff: diff === 0 ? 'ברציף כעת' : (diff === 1 ? 'בעוד דקה' : `בעוד ${diff} דק'`) });
           }
@@ -2449,8 +3014,8 @@ class BuildingSignageApp {
         }
       }
       if (trainsNorth.length === 0) {
-        if (day === 5) {
-          trainNoteNorth = 'סיום שירות שישי — חידוש במוצ"ש (~20:45)';
+        if (isEarlyCutoffDay) {
+          trainNoteNorth = isErevChag ? 'סיום שירות ערב חג — חידוש בצאת החג' : 'סיום שירות שישי — חידוש במוצ"ש (~20:45)';
         } else {
           trainNoteNorth = 'חידוש שירות בבוקר: 05:35, 06:05';
         }
@@ -2459,8 +3024,8 @@ class BuildingSignageApp {
 
     // B. Buses in Hayarden / Hadera Area
     let busStatusDesc = 'פעילות סדירה';
-    if ((day === 5 && hours >= 16) || (day === 6 && hours < 19)) {
-      busStatusDesc = 'לוח שבת מופחת';
+    if ((isEarlyCutoffDay && hours >= 16) || ((day === 6 || isYomTov) && hours < 19)) {
+      busStatusDesc = isYomTov && day !== 6 ? 'לוח חג מופחת' : 'לוח שבת מופחת';
     } else if (hours >= 23 || hours < 5) {
       busStatusDesc = 'שירות לילה מופחת';
     }
@@ -2526,17 +3091,78 @@ class BuildingSignageApp {
     if (advance) {
       this.interestCycleTick = (this.interestCycleTick || 0) + 1;
     }
-    const len = DAILY_INTEREST_SETS.length;
-    // Combine 2-minute time window + per-slide-visit cycle tick so questions rotate continuously throughout the day
+    const now = new Date();
+    const dow = now.getDay();
     const twoMinSeed = Math.floor(Date.now() / (2 * 60 * 1000));
     const cycle = this.interestCycleTick || 0;
+    const step = Math.abs(twoMinSeed + cycle);
 
+    // 1. Dignified Memorial Day Mode (יום השואה / יום הזיכרון / תשעה באב): strictly respectful heritage content
+    if (this.isMemorialDayActive()) {
+      const memPool = CONTEXTUAL_INTEREST_POOLS.memorial;
+      const item = memPool[step % memPool.length];
+      return {
+        slideHeading: '🕯️ זוכרים ומוקירים — מורשת, היסטוריה וזיכרון',
+        slidePill: this.shabbatData?.activeHoliday?.title || 'יום זיכרון ממלכתי',
+        isMemorial: true,
+        history: item.history,
+        trivia: item.trivia,
+        tip: item.tip
+      };
+    }
+
+    // 2. Active Holiday / Shabbat Contextual Pool Blending (50% holiday/Shabbat theme, 50% general + Wikipedia On-This-Day!)
+    const poolKey = this.shabbatData?.contextPoolKey || (this.shabbatData?.isShabbatActive ? 'shabbat' : null);
+    const contextPool = poolKey && CONTEXTUAL_INTEREST_POOLS[poolKey] ? CONTEXTUAL_INTEREST_POOLS[poolKey] : null;
+
+    let slideHeading = '🧠 רגע של עניין במעלית — היום בהיסטוריה, מדע וטריוויה';
+    let slidePill = '🔄 מתחלף בכל סבב • לחץ לחידה חדשה';
+    if (this.shabbatData?.activeHoliday?.title) {
+      slideHeading = `✨ לרגל ${this.shabbatData.activeHoliday.title} — מורשת, טריוויה וסקרנות`;
+    } else if (this.shabbatData?.isShabbatActive) {
+      const parashaLabel = this.shabbatData?.parasha ? ` • ${this.shabbatData.parasha}` : '';
+      slideHeading = `🕯️ סוף שבוע נעים${parashaLabel} — מורשת, מדע וטריוויה`;
+    } else if (dow === 0) {
+      slideHeading = '☀️ פותחים שבוע טוב — היום בהיסטוריה, מדע וטריוויה';
+    } else if (dow === 4) {
+      slideHeading = '🌿 לקראת סוף השבוע — היום בהיסטוריה, טבע וטריוויה';
+    }
+
+    if (contextPool && step % 2 === 0) {
+      const cItem = contextPool[Math.floor(step / 2) % contextPool.length];
+      return {
+        slideHeading,
+        slidePill,
+        history: cItem.history,
+        trivia: cItem.trivia,
+        tip: cItem.tip
+      };
+    }
+
+    const len = DAILY_INTEREST_SETS.length;
     const historyIdx = Math.abs(twoMinSeed + cycle) % len;
     const triviaIdx = Math.abs(twoMinSeed * 3 + cycle * 7 + 5) % len;
     const tipIdx = Math.abs(twoMinSeed * 5 + cycle * 13 + 11) % len;
 
+    // Weave in LIVE Wikipedia Hebrew "היום בהיסטוריה" events & Civic/Seasonal Special Day facts!
+    let historyCard = DAILY_INTEREST_SETS[historyIdx].history;
+    const civicDay = this.shabbatData?.civicSpecialDay || getCivicAndSeasonalSpecialDay(now);
+    const otdList = Array.isArray(this.onThisDayEvents) ? this.onThisDayEvents : [];
+
+    if (civicDay && civicDay.fact && step % 3 === 0) {
+      historyCard = {
+        tag: 'מועדים ולוח שנה',
+        title: `${civicDay.icon || '📅'} ${civicDay.text}`,
+        text: civicDay.fact
+      };
+    } else if (otdList.length > 0 && step % 2 === 1) {
+      historyCard = otdList[Math.floor(step / 2) % otdList.length];
+    }
+
     return {
-      history: DAILY_INTEREST_SETS[historyIdx].history,
+      slideHeading,
+      slidePill,
+      history: historyCard,
       trivia: DAILY_INTEREST_SETS[triviaIdx].trivia,
       tip: DAILY_INTEREST_SETS[tipIdx].tip
     };
@@ -2545,23 +3171,31 @@ class BuildingSignageApp {
   refreshDailyInterestSlide(showToast = false) {
     const nextData = this.getDailyInterestData(true);
     const activeCard = document.querySelector('.slide-card.active') || document;
+    const headingEl = activeCard.querySelector('.interest-slide-heading') || document.querySelector('.interest-slide-heading');
+    const hTag = activeCard.querySelector('.interest-history-tag') || document.querySelector('.interest-history-tag');
     const hTitle = activeCard.querySelector('.interest-history-title') || document.querySelector('.interest-history-title');
     const hText = activeCard.querySelector('.interest-history-text') || document.querySelector('.interest-history-text');
+    const tCat = activeCard.querySelector('.interest-trivia-cat') || document.querySelector('.interest-trivia-cat');
     const tQuestion = activeCard.querySelector('.interest-trivia-question') || document.querySelector('.interest-trivia-question');
     const tAnswer = activeCard.querySelector('.interest-trivia-answer') || document.querySelector('.interest-trivia-answer');
+    const tipTag = activeCard.querySelector('.interest-tip-tag') || document.querySelector('.interest-tip-tag');
     const tipTitle = activeCard.querySelector('.interest-tip-title') || document.querySelector('.interest-tip-title');
     const tipText = activeCard.querySelector('.interest-tip-text') || document.querySelector('.interest-tip-text');
 
+    if (headingEl && nextData.slideHeading) headingEl.textContent = nextData.slideHeading;
+    if (hTag) hTag.textContent = nextData.history?.tag || 'מדע והיסטוריה';
     if (hTitle && nextData.history) hTitle.textContent = nextData.history.title;
     if (hText && nextData.history) hText.textContent = nextData.history.text;
+    if (tCat) tCat.textContent = nextData.trivia?.category || 'טריוויה מתחלפת';
     if (tQuestion && nextData.trivia) tQuestion.textContent = nextData.trivia.question;
     if (tAnswer && nextData.trivia) tAnswer.textContent = nextData.trivia.answer;
+    if (tipTag) tipTag.textContent = nextData.tip?.tag || 'מדע בחיי היומיום';
     if (tipTitle && nextData.tip) tipTitle.textContent = nextData.tip.title;
     if (tipText && nextData.tip) tipText.textContent = nextData.tip.text;
 
     if (showToast) {
       this.pauseTemporarily(18000);
-      this.showTouchToast('נטענו חידת טריוויה ועובדות חדשות! 🧠', '✨');
+      this.showTouchToast(nextData.isMemorial ? 'הוצג פרק זיכרון ומורשת נוסף' : 'נטענו עובדת היום וחידת טריוויה חדשה! 🧠', nextData.isMemorial ? '🕯️' : '✨');
     }
   }
 
@@ -3024,18 +3658,20 @@ class BuildingSignageApp {
       // SLIDE TYPE: DAILY INTEREST & TRIVIA
       else if (slide.type === 'daily_interest') {
         const d = this.getDailyInterestData();
+        const triviaTitle = d.trivia?.title || (d.isMemorial ? 'מורשת וזיכרון' : 'חידת הטריוויה');
+        const answerLabel = d.isMemorial ? '🕯️ פירוט:' : '💡 תשובה:';
         contentHtml = `
-          <div class="interest-slide-layout" onclick="window.signageApp.refreshDailyInterestSlide(true)" style="cursor: pointer;" title="לחץ להחלפת חידת טריוויה ועובדות">
+          <div class="interest-slide-layout" onclick="window.signageApp.refreshDailyInterestSlide(true)" style="cursor: pointer;" title="לחץ להחלפת תוכן">
             <div class="forecast-title-row">
-              <h2>🧠 רגע של עניין במעלית — מדע, טריוויה וסקרנות</h2>
-              <span class="slide-header-pill slide-header-pill-purple">🔄 מתחלף בכל סבב • לחץ לחידה חדשה</span>
+              <h2 class="interest-slide-heading">${escapeHtml(d.slideHeading || '🧠 רגע של עניין במעלית — היום בהיסטוריה, מדע וטריוויה')}</h2>
+              <span class="slide-header-pill slide-header-pill-purple">${escapeHtml(d.slidePill || '🔄 מתחלף בכל סבב • לחץ לחידה חדשה')}</span>
             </div>
             <div class="interest-cards-grid">
               <div class="interest-card interest-card-history">
                 <div class="interest-card-header">
                   <span class="interest-card-icon">📅</span>
                   <div class="interest-card-titles">
-                    <span class="interest-card-tag">${escapeHtml(d.history?.tag || 'מדע והיסטוריה')}</span>
+                    <span class="interest-card-tag interest-history-tag">${escapeHtml(d.history?.tag || 'מדע והיסטוריה')}</span>
                     <h3 class="interest-history-title">${escapeHtml(d.history?.title || 'הידעת?')}</h3>
                   </div>
                 </div>
@@ -3043,23 +3679,23 @@ class BuildingSignageApp {
                   <p class="interest-card-text interest-history-text">${escapeHtml(d.history?.text || '')}</p>
                 </div>
                 <div class="interest-card-footer-pill history-pill">
-                  <span>🌍 עובדות מרתקות מעולם המדע, החלל וההיסטוריה</span>
+                  <span>🌍 היום בהיסטוריה, מדע, חלל ומורשת</span>
                 </div>
               </div>
 
               <div class="interest-card interest-card-trivia">
                 <div class="interest-card-header">
-                  <span class="interest-card-icon">🧠</span>
+                  <span class="interest-card-icon">${d.isMemorial ? '🕯️' : '🧠'}</span>
                   <div class="interest-card-titles">
-                    <span class="interest-card-tag">${escapeHtml(d.trivia?.category || 'טריוויה מתחלפת')}</span>
-                    <h3>חידת הטריוויה</h3>
+                    <span class="interest-card-tag interest-trivia-cat">${escapeHtml(d.trivia?.category || 'טריוויה מתחלפת')}</span>
+                    <h3>${escapeHtml(triviaTitle)}</h3>
                   </div>
                 </div>
                 <div class="interest-card-body-box">
                   <p class="interest-card-text trivia-question interest-trivia-question">${escapeHtml(d.trivia?.question || '')}</p>
                 </div>
                 <div class="trivia-answer-box">
-                  <span class="trivia-answer-label">💡 תשובה:</span>
+                  <span class="trivia-answer-label">${answerLabel}</span>
                   <span class="trivia-answer-text interest-trivia-answer">${escapeHtml(d.trivia?.answer || '')}</span>
                 </div>
               </div>
@@ -3068,7 +3704,7 @@ class BuildingSignageApp {
                 <div class="interest-card-header">
                   <span class="interest-card-icon">${d.tip?.icon || '💡'}</span>
                   <div class="interest-card-titles">
-                    <span class="interest-card-tag">מדע בחיי היומיום</span>
+                    <span class="interest-card-tag interest-tip-tag">${escapeHtml(d.tip?.tag || 'מדע בחיי היומיום')}</span>
                     <h3 class="interest-tip-title">${escapeHtml(d.tip?.title || 'עובדה מפתיעה')}</h3>
                   </div>
                 </div>
@@ -3076,12 +3712,12 @@ class BuildingSignageApp {
                   <p class="interest-card-text interest-tip-text">${escapeHtml(d.tip?.text || '')}</p>
                 </div>
                 <div class="interest-card-footer-pill tip-pill">
-                  <span>🔬 תופעות יומיומיות מפתיעות בגוף האדם ובטבע</span>
+                  <span>🔬 טבע, סביבה וחיי היומיום</span>
                 </div>
               </div>
             </div>
             <div class="stage-notice-footer">
-              <span>מתחלף אוטומטית בכל סבב מצגת (40 ערכות מדע, חלל וטריוויה) • לחץ על המסך להחלפה מיידית</span>
+              <span>מותאם אוטומטית לתאריך, למועדי ישראל ולימות השבוע • מתעדכן מוויקיפדיה העברית ולוח השנה</span>
               <span>ועד הבית • ${escapeHtml(this.settings?.building?.name || "הבניין")}</span>
             </div>
           </div>
@@ -3497,18 +4133,23 @@ class BuildingSignageApp {
       { id: 'galgalatz', name: 'גלגלצ', url: 'https://glzwizzlv.bynetcdn.com/glglz_mp3' },
       { id: '103fm', name: '103FM', url: 'https://cdn.cybercdn.live/103FM/Live/icecast.audio' },
       { id: 'glz', name: 'גלי צה"ל', url: 'https://glzwizzlv.bynetcdn.com/glz_mp3' },
-      { id: 'kan_88', name: 'כאן 88', url: 'https://kanliveicy.media.kan.org.il/icy/kan88_mp3' },
-      { id: 'kan_gimmel', name: 'כאן גימל', url: 'https://kanliveicy.media.kan.org.il/icy/kangimmel_mp3' },
-      { id: 'kan_kol_hamusica', name: 'קול המוסיקה', url: 'https://kanliveicy.media.kan.org.il/icy/kankolhamusica_mp3' },
+      { id: 'kan_88', name: 'כאן 88', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/KAN_88.mp3' },
+      { id: 'kan_gimmel', name: 'כאן גימל', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/KAN_GIMMEL.mp3' },
+      { id: 'kan_kol_hamusica', name: 'קול המוסיקה', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/KAN_KOL_HAMUSICA.mp3' },
       { id: 'eco99', name: 'Eco 99', url: 'https://eco01.livecdn.biz/ecolive/99fm_aac/icecast.audio' },
-      { id: 'radios100fm', name: '100FM', url: 'https://radios100fm.livecdn.biz/radios100fm' },
+      { id: 'radios100fm', name: '100FM', url: 'https://cdn.cybercdn.live/Radios_100FM/Audio/icecast.audio' },
       { id: 'chillhop', name: 'Chillout Lounge', url: 'https://streams.ilovemusic.de/iloveradio17.mp3' },
       { id: 'dance', name: 'Dance Hits', url: 'https://streams.ilovemusic.de/iloveradio2.mp3' }
     ];
 
-    return radio.stations?.find(s => s.id === radio.currentStation) 
-      || fallbackStations.find(s => s.id === radio.currentStation) 
-      || fallbackStations[0];
+    const fromFallback = fallbackStations.find(s => s.id === radio.currentStation);
+    const fromCloud = radio.stations?.find(s => s.id === radio.currentStation);
+    if (fromCloud && fromCloud.url) {
+      const isLegacyBroken = fromCloud.url.includes('kanliveicy.media.kan.org.il') || fromCloud.url.includes('radios100fm.livecdn.biz');
+      if (!isLegacyBroken) return fromCloud;
+      if (fromFallback) return { ...fromCloud, url: fromFallback.url };
+    }
+    return fromFallback || fallbackStations[0];
   }
 
   stopRadioImmediate() {
@@ -3719,6 +4360,7 @@ class BuildingSignageApp {
 
     setInterval(() => {
       this.fetchShabbatAndHolidays();
+      this.fetchWikipediaOnThisDay();
     }, 60 * 60 * 1000);
 
     // Check notice status every 60 seconds (scheduled start, expiration, recurring day change)
@@ -3811,9 +4453,10 @@ class BuildingSignageApp {
         });
       }
 
-      // Refresh weather, calendar, and notices gently without parallel storm
+      // Refresh weather, calendar, daily history, and notices gently without parallel storm
       await this.fetchWeather();
       await this.fetchShabbatAndHolidays();
+      await this.fetchWikipediaOnThisDay();
       if (reason === 'remote_soft_reload') {
         await this.fetchSettings();
         await this.fetchNotices();

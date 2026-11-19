@@ -95,11 +95,11 @@ const RADIO_STATIONS_MAP = [
   { id: 'galgalatz', name: 'גלגלצ (Galgalatz)', url: 'https://glzwizzlv.bynetcdn.com/glglz_mp3' },
   { id: '103fm', name: '103FM (רדיו ללא הפסקה)', url: 'https://cdn.cybercdn.live/103FM/Live/icecast.audio' },
   { id: 'glz', name: 'גלי צה"ל (GLZ)', url: 'https://glzwizzlv.bynetcdn.com/glz_mp3' },
-  { id: 'kan_88', name: 'כאן 88 (Kan 88)', url: 'https://kanliveicy.media.kan.org.il/icy/kan88_mp3' },
-  { id: 'kan_gimmel', name: 'כאן גימל (מוזיקה ישראלית)', url: 'https://kanliveicy.media.kan.org.il/icy/kangimmel_mp3' },
-  { id: 'kan_kol_hamusica', name: 'קול המוסיקה (קלאסית ורוגע)', url: 'https://kanliveicy.media.kan.org.il/icy/kankolhamusica_mp3' },
+  { id: 'kan_88', name: 'כאן 88 (Kan 88)', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/KAN_88.mp3' },
+  { id: 'kan_gimmel', name: 'כאן גימל (מוזיקה ישראלית)', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/KAN_GIMMEL.mp3' },
+  { id: 'kan_kol_hamusica', name: 'קול המוסיקה (קלאסית ורוגע)', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/KAN_KOL_HAMUSICA.mp3' },
   { id: 'eco99', name: 'Eco 99 FM', url: 'https://eco01.livecdn.biz/ecolive/99fm_aac/icecast.audio' },
-  { id: 'radios100fm', name: 'רדיוס 100FM', url: 'https://radios100fm.livecdn.biz/radios100fm' },
+  { id: 'radios100fm', name: 'רדיוס 100FM', url: 'https://cdn.cybercdn.live/Radios_100FM/Audio/icecast.audio' },
   { id: 'chillhop', name: 'Chillout / Lofi Lounge (מוזיקה נעימה 24/7)', url: 'https://streams.ilovemusic.de/iloveradio17.mp3' },
   { id: 'dance', name: 'I Love Dance & Hits', url: 'https://streams.ilovemusic.de/iloveradio2.mp3' }
 ];
@@ -208,9 +208,13 @@ async function getFreshNoticesForMutation() {
 }
 
 function getStationById(id) {
-  const fromSettings = settingsData?.radio?.stations?.find(s => s.id === id);
-  if (fromSettings && fromSettings.url) return fromSettings;
   const fromMap = RADIO_STATIONS_MAP.find(s => s.id === id);
+  const fromSettings = settingsData?.radio?.stations?.find(s => s.id === id);
+  if (fromSettings && fromSettings.url) {
+    const isLegacyBroken = fromSettings.url.includes('kanliveicy.media.kan.org.il') || fromSettings.url.includes('radios100fm.livecdn.biz');
+    if (!isLegacyBroken) return fromSettings;
+    if (fromMap) return { ...fromSettings, url: fromMap.url };
+  }
   if (fromMap) return fromMap;
   return RADIO_STATIONS_MAP[0];
 }

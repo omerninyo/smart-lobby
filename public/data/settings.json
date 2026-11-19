@@ -120,17 +120,17 @@
       {
         "id": "kan_88",
         "name": "כאן 88 (Kan 88)",
-        "url": "https://kanliveicy.media.kan.org.il/icy/kan88_mp3"
+        "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/KAN_88.mp3"
       },
       {
         "id": "kan_gimmel",
         "name": "כאן גימל (מוזיקה ישראלית)",
-        "url": "https://kanliveicy.media.kan.org.il/icy/kangimmel_mp3"
+        "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/KAN_GIMMEL.mp3"
       },
       {
         "id": "kan_kol_hamusica",
         "name": "קול המוסיקה (קלאסית ורוגע)",
-        "url": "https://kanliveicy.media.kan.org.il/icy/kankolhamusica_mp3"
+        "url": "https://playerservices.streamtheworld.com/api/livestream-redirect/KAN_KOL_HAMUSICA.mp3"
       },
       {
         "id": "eco99",
@@ -140,7 +140,7 @@
       {
         "id": "radios100fm",
         "name": "רדיוס 100FM",
-        "url": "https://radios100fm.livecdn.biz/radios100fm"
+        "url": "https://cdn.cybercdn.live/Radios_100FM/Audio/icecast.audio"
       },
       {
         "id": "chillhop",
