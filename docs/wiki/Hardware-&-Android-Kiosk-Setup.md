@@ -24,6 +24,6 @@
 ---
 
 ## 🛡️ Built-In 24/7 Watchdogs & Blackbox Diagnostics
-* **45-Second Modal Auto-Close:** Any touch modal (`#interactive-modal`) left open by a resident automatically closes after 45 seconds so it never blocks the main slideshow or night reloads.
-* **Nightly Memory Watchdog:** Performs a clean reload at `23:05` (after radio shutoff) and `04:00 AM` to clear WebView heap accumulation.
-* **Blackbox Flight Recorder (Tab 5 in Admin):** Logs clean reloads, remote force reloads, JS errors, and unexpected hardware restarts (`unclean_crash_restart`) to Firestore `smart_lobby/device_logs`.
+* **45-Second Modal Auto-Close:** Any touch modal (`#interactive-modal`) left open by a resident automatically closes after 45 seconds so it never blocks the main slideshow or night maintenance.
+* **Gesture-Preserving Nightly Maintenance (`v267`):** At `23:05` (after radio shutoff) and `04:00 AM`, if scheduled morning radio (`autoPlaySchedule`) is active, the screen performs a non-destructive in-memory DOM & audio-buffer sweep instead of a hard `window.location.reload()`, preserving Chromium `navigator.userActivation` so `06:30` morning radio starts automatically without touch prompts. Hard reloads run only when morning radio is disabled or WebView heap exceeds critical thresholds (`>380 MB`).
+* **Blackbox Flight Recorder (Tab 5 in Admin):** Logs clean maintenance cycles, remote force reloads, JS errors, and unexpected hardware restarts (`unclean_crash_restart`) to Firestore `smart_lobby/device_logs`.

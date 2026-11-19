@@ -1062,12 +1062,7 @@ class BuildingSignageApp {
   }
 
   showOnScreenAdminPrompt() {
-    const pin = prompt('הזן קוד PIN לניהול השילוט הדיגיטלי:');
-    if (pin === '1234' || pin === '9681' || pin === '9090' || pin === '1111' || pin === this.settings?.security?.adminPin || pin === this.settings?.security?.editorPin) {
-      window.location.href = this.isLocalServer() ? '/admin' : 'admin.html';
-    } else if (pin !== null) {
-      alert('קוד PIN שגוי');
-    }
+    window.location.href = this.isLocalServer() ? '/admin' : 'admin.html';
   }
 
   pauseTemporarily(durationMs = 25000) {
@@ -3866,7 +3861,7 @@ class BuildingSignageApp {
             </div>
             <div class="emergency-alert-footer">
               <span class="emergency-alert-time">עודכן: ${formattedTime || 'עכשיו'}</span>
-              <span class="emergency-alert-tag">${escapeHtml(this.settings?.building?.name || 'הירדן 5')}, ${escapeHtml(this.settings?.building?.city || 'חדרה')} • שידור חירום</span>
+              <span class="emergency-alert-tag">${escapeHtml(this.settings?.building?.name || 'הבניין')}, ${escapeHtml(this.settings?.building?.city || 'לוח דיגיטלי')} • שידור חירום</span>
             </div>
           </div>
         `;

@@ -102,7 +102,7 @@
       </div>
       <div>
         <div class="flex items-center gap-1.5">
-          <span class="font-bold text-sm text-white" id="app-bld-title">הירדן 5</span>
+          <span class="font-bold text-sm text-white" id="app-bld-title">הבניין שלנו</span>
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="סנכרון ענן פעיל"></span>
         </div>
         <p class="text-[10px] text-gray-400 leading-none">פאנל ניהול שילוט • Mobile v2</p>
@@ -224,7 +224,7 @@
                 <span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-amber-950 text-amber-300 border border-amber-800/80">⌛ פג תוקף (הוסרה אוטומטית מהלובי)</span>
                 <span class="text-[11px] text-gray-500">• ועדי שכונה</span>
               </div>
-              <h3 class="font-bold text-sm text-gray-200 truncate">תרומת דם בשניר 7</h3>
+              <h3 class="font-bold text-sm text-gray-200 truncate">תרומת דם קהילתית בשכונה</h3>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
               <button onclick="openNoticeSheet('notice-3')" class="touch-press px-2.5 py-1 text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700">✏️ ערוך</button>
@@ -310,7 +310,7 @@
           <span>הודעה מותאמת אישית בפס החדשות (טיקר)</span>
         </h3>
         <p class="text-[11px] text-gray-400">הטקסט ירוץ באופן קבוע בתחתית המסך לצד מבזקי החדשות:</p>
-        <textarea id="custom-ticker-input" rows="2" placeholder="לדוגמה: ברוכים הבאים לבניין הירדן 5 • נא לשמור על שקט בין 14:00 ל-16:00..." class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-white text-xs"></textarea>
+        <textarea id="custom-ticker-input" rows="2" placeholder="לדוגמה: ברוכים הבאים לבניין שלנו • נא לשמור על שקט בין 14:00 ל-16:00..." class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-white text-xs"></textarea>
         <button onclick="showToast('טקסט הטיקר נשמר בהצלחה!', '📢')" class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-blue-300 font-bold text-xs rounded-xl border border-gray-700 touch-press">
           עדכן טיקר במסך
         </button>
@@ -624,7 +624,7 @@
         <div class="grid grid-cols-2 gap-2.5 text-xs">
           <div>
             <label class="block text-gray-400 mb-1">שם הבניין / כתובת</label>
-            <input type="text" id="setting-bld-name" value="הירדן 5" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-white font-bold" />
+            <input type="text" id="setting-bld-name" value="הבניין שלנו" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-2.5 text-white font-bold" />
           </div>
           <div>
             <label class="block text-gray-400 mb-1">עיר (לתחזית ושבת)</label>
@@ -1042,13 +1042,13 @@
       } else if (id === 'notice-3') {
         titleEl.textContent = 'עריכת הודעת ועד (פגת תוקף)';
         idInput.value = 'notice-3';
-        titleInput.value = 'תרומת דם בשניר 7';
+        titleInput.value = 'תרומת דם קהילתית בשכונה';
         contentInput.value = 'ב-15/9 בין השעות 16:00-20:00 אנו עושים התרמת דם. כל מנה מצילה חיים!';
         authorInput.value = 'ועדי שכונה';
         expiresInput.value = '2026-09-15T20:00';
         urgentInput.checked = false;
         hiddenInput.checked = false;
-        selectPresetImage('images/notices/blood_donation.jpg', 'תרומת דם בשניר 7');
+        selectPresetImage('images/notices/blood_donation.jpg', 'תרומת דם קהילתית בשכונה');
       }
 
       sheet.classList.remove('hidden');

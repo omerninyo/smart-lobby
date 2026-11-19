@@ -4,10 +4,10 @@ The lobby display (`index.html`) combines an autonomous Jewish calendar engine w
 
 ---
 
-## 🕯️ Live Hebrew Calendar & Holiday Themes
+## 🕯️ Complete Year-Round Hebrew, Israeli & Civic Calendar
 * **Live Hebrew Date Header (`#clock-date-greg`):** Displays the exact Hebrew date in traditional Hebrew letter numerics alongside the Gregorian date beneath the main clock (e.g., `יום רביעי, 21 באוקטובר • י' בחשוון תשפ"ז`).
-* **Contextual Tradition Badges:** Automatically displays header and modal badges for **🕯️ Hanukkah Candles (נרות חנוכה)**, **🌾 Sefirat HaOmer (ספירת העומר)**, and **🌙 Rosh Chodesh (ראש חודש)**, while prioritizing major holidays over minor calendar entries.
-* **GPS Shabbat & Automated Holiday Themes:** Calculates exact candle lighting, Havdalah, and Parashat HaShavua via Hebcal GPS API, and switches backgrounds across 15 Jewish holidays and national Israeli dates.
+* **10-Day Rolling Full Israel Calendar (`hebcal?v=1&i=on`):** Covers both weekday and weekend holidays, fast days, Rosh Chodesh, Sefirat HaOmer, Sigd, Hebrew Language Day, Family Day, Mimouna, accurate Memorial Day → Independence Day evening transitions, and upcoming 7-day calendar events inside the interactive modal.
+* **Automatic Israel DST (`detectIsraelDstTransition`) & 30+ Special Days:** Detects `Asia/Jerusalem` summer/winter clock changes automatically alongside school-year milestones, solstices/equinoxes, and national/international special days.
 
 ---
 
@@ -30,10 +30,7 @@ Controlled via `#setting-show-transit-slide` in Tab 2 of Admin:
 
 ## 🧠 "Elevator Moment of Interest" Slide (`daily_interest`)
 Controlled via `#setting-show-interest-slide` in Tab 2 of Admin:
-* Rotates 20 curated Hebrew infotainment sets daily (`dayOfYear % 20`), presenting 3 cards:
-  1. **📅 היום בהיסטוריה / הידעת?:** Science, history, space, and nature facts.
-  2. **🧠 חידת הטריוויה היומית לדיירים:** Engaging question with a highlighted answer box at the bottom.
-  3. **💡 טיפ היום לבית ולקהילה:** Practical energy-saving, maintenance, and good-neighbor tips.
+* Blends **50+ curated Hebrew science, space & local nature sets** with **live daily Hebrew Wikipedia "On This Day" (`תבנית:היום בהיסטוריה`)** events (cached once per 24h in `localStorage` with family-friendly filtering), **14 dedicated Holiday & Shabbat pools**, and a dignified **Memorial Day heritage mode**.
 
 ---
 

@@ -19,3 +19,9 @@ UNIVERSAL_WEBAPP_ARCHITECTURE_GUIDE.md
 RULES.md
 .gemini/
 .agent/
+
+# Private Local Uploads & Custom Config
+uploads/
+public/uploads/
+js/config.js
+public/js/config.js

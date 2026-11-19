@@ -6,10 +6,10 @@ The admin dashboard (`admin.html`) is mobile-optimized and features role-based a
 
 ## 👥 Access Roles & PIN Codes
 
-| Role | Default Template PIN | Visible Tabs | Description |
+| Role | Default Template PIN | Visible View | Description |
 | :--- | :---: | :---: | :--- |
-| **👤 Committee Member** | `1111` | 📢 Tab 1 (Notices & Emergency), 📻 Tab 4 (Radio) | Simplified mode for non-technical committee members. Hides complex display calibration and security settings while allowing full notice management and emergency alerts. |
-| **🔑 Master Admin** | `1234` | All 6 Tabs | Full control over display calibration, `Lite Mode`, resolution scaling, slide toggles, contacts, Blackbox Flight Recorder logs, and security PINs. |
+| **👤 Committee Member** | `1111` *(Hashed via SHA-256 once customized)* | **Unified Single-Screen Home** | Streamlined iPhone-first view (`simple-committee-mode`) with Hero Publish button, 1-tap notice duration pills, Home-Screen Quick Music & 4 instant-save volume buttons, Active vs. Archived notices drawer, and collapsible Cleaning & Emergency drawers. |
+| **🔑 Master Admin** | `1234` *(Hashed via SHA-256 once customized)* | **All 6 Tabs (`3×2` Mobile Grid) + `👤 תצוגת ועד` Toggle** | Full control over display calibration, `Lite Mode`, `1080p`/`720p` scaling, 14-channel modular news matrix, contacts, Blackbox Flight Recorder logs, and SHA-256 hashed PINs. |
 
 ---
 

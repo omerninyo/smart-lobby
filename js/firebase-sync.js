@@ -17,9 +17,19 @@
     measurementId: "G-RPM140HVZD"
   };
 
+  const currentHost = (typeof window !== "undefined" && window.location && window.location.hostname)
+    ? window.location.hostname.toLowerCase()
+    : "";
+  const isAuthorizedPrimaryHost = !currentHost
+    || currentHost === "lobby.ninyo.co"
+    || currentHost === "omerninyo.github.io"
+    || currentHost === "localhost"
+    || currentHost === "127.0.0.1"
+    || /^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./.test(currentHost);
+
   const firebaseConfig = (window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey && !window.FIREBASE_CONFIG.apiKey.startsWith('YOUR_'))
     ? window.FIREBASE_CONFIG
-    : defaultFirebaseConfig;
+    : (isAuthorizedPrimaryHost ? defaultFirebaseConfig : null);
 
   class FirebaseSyncManager {
     constructor() {
@@ -55,6 +65,14 @@
 
       this.initPromise = new Promise(async (resolve) => {
         try {
+          if (!firebaseConfig || !firebaseConfig.apiKey) {
+            console.info("[FirebaseSync] No Firebase config configured for this host — running in standalone local mode.");
+            this.isInitialized = false;
+            this.initPromise = null;
+            resolve(false);
+            return;
+          }
+
           if (typeof firebase === "undefined") {
             // Attempt to dynamically load Firebase compat SDK if not present on window (e.g. cold boot while offline)
             if (typeof document !== "undefined") {

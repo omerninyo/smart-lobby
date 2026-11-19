@@ -311,8 +311,98 @@ function showAdminToast(msg, icon = '✅') {
 }
 
 // ==========================================
-// 1. AUTHENTICATION (DUAL PIN: Master Admin & Committee Member)
+// 1. AUTHENTICATION (DUAL PIN + SHA-256 HASHING)
 // ==========================================
+function pureJsSha256Hex(ascii) {
+  const rightRotate = (v, a) => (v >>> a) | (v << (32 - a));
+  const mathPow = Math.pow, maxWord = mathPow(2, 32);
+  let result = '';
+  const words = [], asciiBitLength = ascii.length * 8;
+  let hash = [], k = [], primeCounter = 0;
+  const isComposite = {};
+  for (let candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (let i = 0; i < 313; i += candidate) isComposite[i] = candidate;
+      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+    }
+  }
+  ascii += '\x80';
+  while ((ascii.length % 64) - 56) ascii += '\x00';
+  for (let i = 0; i < ascii.length; i++) {
+    const j = ascii.charCodeAt(i);
+    words[i >> 2] |= j << (((3 - i) % 4) * 8);
+  }
+  words[words.length] = (asciiBitLength / maxWord) | 0;
+  words[words.length] = asciiBitLength;
+  for (let j = 0; j < words.length;) {
+    const w = words.slice(j, (j += 16));
+    const oldHash = hash.slice(0);
+    for (let i = 0; i < 64; i++) {
+      const w15 = w[i - 15], w2 = w[i - 2];
+      const a = hash[0], e = hash[4];
+      const temp1 = hash[7] + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) + ((e & hash[5]) ^ (~e & hash[6])) + k[i] +
+        (w[i] = i < 16 ? w[i] : (w[i - 16] + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) | 0);
+      const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      hash = [(temp1 + temp2) | 0].concat(hash);
+      hash[4] = (hash[4] + temp1) | 0;
+      hash.pop();
+    }
+    for (let i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+  }
+  for (let i = 0; i < 8; i++) {
+    for (let j = 3; j + 1; j--) {
+      const b = (hash[i] >> (j * 8)) & 255;
+      result += (b < 16 ? '0' : '') + b.toString(16);
+    }
+  }
+  return result;
+}
+
+async function hashPinSha256(pin) {
+  const payload = 'smart_lobby_pin_v1:' + String(pin || '').trim();
+  try {
+    if (typeof crypto !== 'undefined' && crypto.subtle && typeof TextEncoder !== 'undefined') {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+  } catch (e) {}
+  try {
+    const utf8 = unescape(encodeURIComponent(payload));
+    return pureJsSha256Hex(utf8);
+  } catch (e) {
+    return pureJsSha256Hex(payload);
+  }
+}
+
+async function upgradePlaintextCloudPinsIfNeeded() {
+  const sec = settingsData?.security;
+  if (!sec || (!sec.adminPin && !sec.editorPin)) return;
+  if (!window.FirebaseSync || typeof firebase === 'undefined' || !firebase.firestore?.FieldValue) return;
+  try {
+    const securityPatch = {};
+    if (sec.adminPin) {
+      securityPatch.adminPinHash = await hashPinSha256(sec.adminPin);
+      securityPatch.hasAdminPin = true;
+      securityPatch.adminPin = firebase.firestore.FieldValue.delete();
+      settingsData.security.adminPinHash = securityPatch.adminPinHash;
+      settingsData.security.hasAdminPin = true;
+      delete settingsData.security.adminPin;
+    }
+    if (sec.editorPin) {
+      securityPatch.editorPinHash = await hashPinSha256(sec.editorPin);
+      securityPatch.hasEditorPin = true;
+      securityPatch.editorPin = firebase.firestore.FieldValue.delete();
+      settingsData.security.editorPinHash = securityPatch.editorPinHash;
+      settingsData.security.hasEditorPin = true;
+      delete settingsData.security.editorPin;
+    }
+    localStorage.setItem('smart_lobby_settings', JSON.stringify(settingsData));
+    await window.FirebaseSync.saveSettings({ security: securityPatch });
+    console.log('🔐 [Security] Automatically upgraded cloud PINs from plaintext to SHA-256 hashes.');
+  } catch (e) {}
+}
+
 function setupAuth() {
   const pinInput = document.getElementById('pin-input');
   const pinBtn = document.getElementById('pin-submit-btn');
@@ -335,8 +425,12 @@ function setupAuth() {
     const pin = pinInput ? pinInput.value.trim() : '';
     if (!pin) return;
 
-    // On local Node.js server, verify PIN directly against server (since GET /api/settings strips raw PINs)
-    if (isLocalServer()) {
+    // Always ensure fresh settings from Cloud Firestore (or local fallback) before checking PIN
+    await loadSettings();
+
+    // On standalone local Node.js server (when Cloud Firestore is not active), verify PIN directly against server
+    const isCloudActive = Boolean(window.FirebaseSync && window.FirebaseSync.isInitialized);
+    if (isLocalServer() && !isCloudActive) {
       try {
         const testRes = await fetch('/api/settings', {
           method: 'POST',
@@ -358,30 +452,37 @@ function setupAuth() {
       } catch (err) {}
     }
 
-    // Always ensure fresh settings from Cloud Firestore before checking PIN
-    await loadSettings();
+    const sec = settingsData?.security || {};
+    const pinHash = await hashPinSha256(pin);
 
-    const adminPin = settingsData?.security?.adminPin || '9681';
-    const editorPin = settingsData?.security?.editorPin || '9090';
+    // 1. Check Committee Member / Editor PIN (SHA-256 hash -> configured plaintext -> default '1111' ONLY if unconfigured)
+    const isEditorMatch = sec.editorPinHash
+      ? (pinHash === sec.editorPinHash)
+      : (sec.editorPin ? (pin === String(sec.editorPin)) : (pin === '1111'));
 
-    // 1. Check Committee Member / Editor PIN (Simplified view)
-    if (pin === editorPin || pin === '9090' || pin === '1111') {
+    if (isEditorMatch) {
       currentRole = 'editor';
       currentPin = pin;
       sessionStorage.setItem('admin_pin', pin);
       sessionStorage.setItem('admin_role', 'editor');
       if (pinError) pinError.classList.add('hidden');
+      upgradePlaintextCloudPinsIfNeeded();
       unlockAdmin();
       return;
     }
 
-    // 2. Check Master Admin PIN (Full access to all tabs & display controls)
-    if (pin === adminPin || pin === '9681' || pin === '1234') {
+    // 2. Check Master Admin PIN (SHA-256 hash -> configured plaintext -> default '1234' ONLY if unconfigured)
+    const isAdminMatch = sec.adminPinHash
+      ? (pinHash === sec.adminPinHash)
+      : (sec.adminPin ? (pin === String(sec.adminPin)) : (pin === '1234'));
+
+    if (isAdminMatch) {
       currentRole = 'admin';
       currentPin = pin;
       sessionStorage.setItem('admin_pin', pin);
       sessionStorage.setItem('admin_role', 'admin');
       if (pinError) pinError.classList.add('hidden');
+      upgradePlaintextCloudPinsIfNeeded();
       unlockAdmin();
       return;
     }
@@ -465,6 +566,7 @@ function applyRolePermissions() {
 
 async function loadAllData() {
   await loadSettings();
+  upgradePlaintextCloudPinsIfNeeded();
   await loadNotices();
 }
 
@@ -2426,19 +2528,28 @@ function setupGeneralSettings() {
       const newPin = document.getElementById('setting-new-pin')?.value.trim();
       const newEditorPin = document.getElementById('setting-new-editor-pin')?.value.trim();
 
+      const securityPatch = {};
+      if (newPin) {
+        securityPatch.adminPinHash = await hashPinSha256(newPin);
+        securityPatch.hasAdminPin = true;
+        if (typeof firebase !== 'undefined' && firebase.firestore?.FieldValue) {
+          securityPatch.adminPin = firebase.firestore.FieldValue.delete();
+        }
+      }
+      if (newEditorPin) {
+        securityPatch.editorPinHash = await hashPinSha256(newEditorPin);
+        securityPatch.hasEditorPin = true;
+        if (typeof firebase !== 'undefined' && firebase.firestore?.FieldValue) {
+          securityPatch.editorPin = firebase.firestore.FieldValue.delete();
+        }
+      }
+
       const updatedSettings = {
         building: {
-          name: document.getElementById('setting-bld-name')?.value.trim() || 'הירדן 5',
-          city: document.getElementById('setting-bld-city')?.value.trim() || 'חדרה'
+          name: document.getElementById('setting-bld-name')?.value.trim() || settingsData?.building?.name || 'הבניין שלנו',
+          city: document.getElementById('setting-bld-city')?.value.trim() || settingsData?.building?.city || 'חדרה'
         },
-        ...((newPin || newEditorPin)
-          ? {
-              security: {
-                ...(newPin ? { adminPin: newPin } : {}),
-                ...(newEditorPin ? { editorPin: newEditorPin } : {})
-              }
-            }
-          : {}),
+        ...((newPin || newEditorPin) ? { security: securityPatch } : {}),
         ...(newPin ? { newPin } : {})
       };
 
@@ -2646,7 +2757,7 @@ function populateSettingsUI() {
   if (volLabel) volLabel.textContent = `${Math.round(volVal * 100)}%`;
 
   // Tab 5: General & PIN
-  setValIfUnfocused(document.getElementById('setting-bld-name'), settingsData.building?.name || 'הירדן 5');
+  setValIfUnfocused(document.getElementById('setting-bld-name'), settingsData.building?.name || 'הבניין שלנו');
   setValIfUnfocused(document.getElementById('setting-bld-city'), settingsData.building?.city || 'חדרה');
 
   const rssSource = document.getElementById('setting-rss-source');
@@ -2666,10 +2777,10 @@ function populateSettingsUI() {
   setValIfUnfocused(document.getElementById('setting-custom-rss-url'), settingsData.display?.customRssUrl || '');
   const pinInput = document.getElementById('setting-new-pin');
   const editorPinInput = document.getElementById('setting-new-editor-pin');
-  const hasAdminPin = Boolean(settingsData.security?.adminPin || settingsData.security?.hasAdminPin);
-  const hasEditorPin = Boolean(settingsData.security?.editorPin || settingsData.security?.hasEditorPin);
-  if (pinInput) pinInput.placeholder = hasAdminPin ? 'מוגדר (הזן לשינוי)' : 'ברירת מחדל: 9681';
-  if (editorPinInput) editorPinInput.placeholder = hasEditorPin ? 'מוגדר (הזן לשינוי)' : 'ברירת מחדל: 9090';
+  const hasAdminPin = Boolean(settingsData.security?.adminPinHash || settingsData.security?.adminPin || settingsData.security?.hasAdminPin);
+  const hasEditorPin = Boolean(settingsData.security?.editorPinHash || settingsData.security?.editorPin || settingsData.security?.hasEditorPin);
+  if (pinInput) pinInput.placeholder = hasAdminPin ? 'מוגדר ומוצפן (הזן לשינוי)' : 'ברירת מחדל: 1234';
+  if (editorPinInput) editorPinInput.placeholder = hasEditorPin ? 'מוגדר ומוצפן (הזן לשינוי)' : 'ברירת מחדל: 1111';
 
   // Update Header & Home Quick Music Controls
   updateHeaderRadioStatus(Boolean(settingsData.radio?.enabled));

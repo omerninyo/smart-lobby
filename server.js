@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const multer = require('multer');
 const Parser = require('rss-parser');
 
@@ -18,6 +19,16 @@ const rssParser = new Parser({
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve optional js/config.js without 404 console noise when running in standalone local mode
+app.get('/js/config.js', (req, res) => {
+  const rootCfg = path.join(__dirname, 'js', 'config.js');
+  const pubCfg = path.join(__dirname, 'public', 'js', 'config.js');
+  if (fs.existsSync(rootCfg)) return res.sendFile(rootCfg);
+  if (fs.existsSync(pubCfg)) return res.sendFile(pubCfg);
+  res.type('application/javascript').send('/* Optional Firebase config — see js/config.example.js */\n');
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Ensure storage directories exist
@@ -104,15 +115,35 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
   }
 }
 
+function hashPinSha256(pin) {
+  return crypto.createHash('sha256').update('smart_lobby_pin_v1:' + String(pin || '').trim()).digest('hex');
+}
+
 function getPinAuthRole(pin) {
-  if (!pin) return null;
+  const cleanPin = String(pin || '').trim();
+  if (!cleanPin) return null;
   const current = readJsonFile(SETTINGS_FILE, {});
-  const adminPin = current.security?.adminPin || '9681';
-  const editorPin = current.security?.editorPin || '9090';
-  const MASTER_PINS = ['9681', '1234'];
-  const EDITOR_PINS = ['9090', '1111'];
-  if (pin === adminPin || MASTER_PINS.includes(pin)) return 'admin';
-  if (pin === editorPin || EDITOR_PINS.includes(pin)) return 'editor';
+  const sec = current.security || {};
+  const pinHash = hashPinSha256(cleanPin);
+
+  // 1. Master Admin check (SHA-256 hash -> configured plaintext -> default '1234' ONLY when unconfigured)
+  if (sec.adminPinHash) {
+    if (pinHash === sec.adminPinHash) return 'admin';
+  } else if (sec.adminPin) {
+    if (cleanPin === String(sec.adminPin)) return 'admin';
+  } else if (cleanPin === '1234') {
+    return 'admin';
+  }
+
+  // 2. Committee Editor check (SHA-256 hash -> configured plaintext -> default '1111' ONLY when unconfigured)
+  if (sec.editorPinHash) {
+    if (pinHash === sec.editorPinHash) return 'editor';
+  } else if (sec.editorPin) {
+    if (cleanPin === String(sec.editorPin)) return 'editor';
+  } else if (cleanPin === '1111') {
+    return 'editor';
+  }
+
   return null;
 }
 
@@ -120,8 +151,8 @@ function sanitizeSettingsForClient(settings) {
   const safe = { ...(settings || {}) };
   if (safe.security) {
     safe.security = {
-      hasAdminPin: Boolean(settings.security.adminPin),
-      hasEditorPin: Boolean(settings.security.editorPin)
+      hasAdminPin: Boolean(settings.security.adminPinHash || settings.security.adminPin),
+      hasEditorPin: Boolean(settings.security.editorPinHash || settings.security.editorPin)
     };
   }
   return safe;
@@ -265,6 +296,28 @@ app.post('/api/settings', (req, res) => {
   const cleanNewSettings = { ...newSettings };
   delete cleanNewSettings.newPin;
 
+  const nextSecurity = { ...(current.security || {}) };
+  if (isMasterAdmin) {
+    if (newSettings?.newPin || newSettings?.security?.adminPin) {
+      nextSecurity.adminPinHash = hashPinSha256(newSettings.newPin || newSettings.security.adminPin);
+      nextSecurity.hasAdminPin = true;
+      delete nextSecurity.adminPin;
+    } else if (newSettings?.security?.adminPinHash) {
+      nextSecurity.adminPinHash = String(newSettings.security.adminPinHash);
+      nextSecurity.hasAdminPin = true;
+      delete nextSecurity.adminPin;
+    }
+    if (newSettings?.security?.editorPin) {
+      nextSecurity.editorPinHash = hashPinSha256(newSettings.security.editorPin);
+      nextSecurity.hasEditorPin = true;
+      delete nextSecurity.editorPin;
+    } else if (newSettings?.security?.editorPinHash) {
+      nextSecurity.editorPinHash = String(newSettings.security.editorPinHash);
+      nextSecurity.hasEditorPin = true;
+      delete nextSecurity.editorPin;
+    }
+  }
+
   const updated = {
     ...current,
     ...cleanNewSettings,
@@ -280,12 +333,7 @@ app.post('/api/settings', (req, res) => {
       ...(current.radio || {}),
       ...(cleanNewSettings?.radio || {})
     },
-    security: {
-      ...(current.security || {}),
-      ...(isMasterAdmin && newSettings?.newPin ? { adminPin: newSettings.newPin } : {}),
-      ...(isMasterAdmin && newSettings?.security?.adminPin ? { adminPin: newSettings.security.adminPin } : {}),
-      ...(isMasterAdmin && newSettings?.security?.editorPin ? { editorPin: newSettings.security.editorPin } : {})
-    }
+    security: nextSecurity
   };
 
   writeJsonFile(SETTINGS_FILE, updated);
