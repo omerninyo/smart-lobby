@@ -4,10 +4,10 @@
   <b><a href="CHANGELOG.md">📋 Full Changelog</a></b>
 </p>
 
-# 🏢 Smart Building Digital Signage (לוח שילוט דיגיטלי חכם לבניין) — v2.7.0
+# 🏢 Smart Building Digital Signage (לוח שילוט דיגיטלי חכם לבניין) — v2.7.1
 > A modern, autonomous, touchscreen-enabled `1920×1080` Digital Signage Kiosk & Dual-Mode Building Committee Management Platform (Simplified Committee Mode + Full Master Admin) for iPhone, Android, and Desktop.
 
-[![Version](https://img.shields.io/badge/Version-2.7.0-2563eb.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-2.7.1-2563eb.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT%20with%20Attribution-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Web%20%7C%20Android%207%2B%20Kiosk-brightgreen.svg)]()
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-brightgreen.svg)](https://omerninyo.github.io/smart-lobby)
@@ -120,7 +120,7 @@
 ### 🌤️ 4. Full-Stage `1920×1080` Info Panels (Weather/Marine, Transit & Trivia)
 * **Weather, Air Quality & Marine (`weather_forecast`):** All 28 WMO weather codes, enlarged 4-day forecast, and spacious `2×2` grid for European `AQI`, `UV` index, wave height & sea temperature, plus a dynamic weather- and day-aware resident tip.
 * **Transit & Highway Commute (`transit_commute`):** Upcoming Israel Railways departures (aware of weekdays, Fridays, Shabbat, Erev Chag, and Yom Tov), non-truncated bus route badges, and peak-hour highway drive times.
-* **Daily Interest & Trivia (`daily_interest`):** Distance-readable `1080p` typography (`~31px–35px`) rotating tens of thousands of science, history, and trivia combinations.
+* **Daily Interest & Trivia (`daily_interest`):** Distance-readable `1080p` typography (`~31px–35px`) rotating tens of thousands of science, history, and trivia combinations, with an **extended adaptive reading window (`18s` vs. `12s` standard slides, `20s` on tap)** synchronized to the top progress bar.
 
 ### 📰 5. Modular 14-Channel News Matrix & Anti-Clickbait Engine
 * **Granular Multi-Channel Selector (`#modular-news-matrix`):** Choose quick presets (`smart_mix`, `science_tech`, `economy`, `building_only`) or toggle individual checkboxes across **14 live channels**: News (`Ynet`, `Ynet Flash`, `N12/Mako` direct CORS XML, `Walla`, `Maariv`), Economy (`Globes`, `Ynet Econ`), Science/Tech (`Hayadan`, `Geektime`, `Ynet Tech`), and Local Building/Weather/Calendar/Trivia updates, with color-coded source tags and anti-clickbait filtering.
@@ -171,6 +171,7 @@ graph TD
 
 | Version | Date | Highlights |
 | :--- | :---: | :--- |
+| **`v2.7.1`** | `2026-11-23` | **Adaptive Per-Slide Timing & Extended Trivia Reading Window:** Dynamic per-slide scheduler (`getSlideDurationMs` + `scheduleSlideTimer`) keeping the 3-card `daily_interest` trivia screen visible 50% longer (`18s` vs. `12s` standard slides, `20s` on tap) with zero progress-bar desync after touch pauses or modals. |
 | **`v2.7.0`** | `2026-11-19` | **Dual-Mode Mobile Admin (Simplified Committee + Full Master), Complete Year-Round Israel Calendar, Live Wikipedia On-This-Day, Backend Hardening & `SHA-256` Security:** Redesigned mobile Admin for non-technical committee members (zero-scroll Home with Quick Music & 4 instant volume buttons, 1-tap notice duration pills, Active/Archived separation, `3×2` admin tab grid, partial-merge cloud sync); full rolling Israel Hebcal (`i=on`) + automatic Israel DST + 30+ special days + **live daily Hebrew Wikipedia "On This Day"** + 14 contextual holiday/memorial/Shabbat pools; 10 modernized radio streams; **`SHA-256` hashed PINs**, fork isolation, `46fr/54fr` split-notice clipping fix, and 26 refreshed live screenshots. |
 | **`v2.6.1–2.6.2`** | `2026-11-05` | **14-Channel Modular News Builder, Cleaning Schedule, Full-Stage `1080p` Scaling & `rk3368` Crash Prevention:** Granular 14-channel news matrix (`#modular-news-matrix`), permanent Cleaning Schedule configurator with previous-evening alerts, full-stage `1920×1080` panel scaling, overnight audio-gesture preservation for morning radio auto-resume, and `rk3368` native Stagefright/GPU/TLS leak fixes. |
 | **`v2.6.0`** | `2026-10-21` | **Air Quality & Marine Station, Transit Slide, Live Hebrew Date & Enriched 14-Image Notice Pools:** Open-Meteo AQI/UV/Marine integration, `transit_commute` & `daily_interest` slides, live Hebrew calendar header, automated Pikud HaOref poller, and 14 lightweight dog & building notice images. |

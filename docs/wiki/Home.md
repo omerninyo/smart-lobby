@@ -1,4 +1,4 @@
-# 🏢 Welcome to the Smart Building Digital Signage Wiki (v2.7.0)
+# 🏢 Welcome to the Smart Building Digital Signage Wiki (v2.7.1)
 
 Welcome to the official documentation and knowledge base for **Smart Building Digital Signage (שילוט דיגיטלי חכם לבניין)**.
 

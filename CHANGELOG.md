@@ -4,6 +4,12 @@ All notable changes to the Smart Lobby open-source template will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.1] - 2026-11-23
+### Improved & Fixed
+- **Extended Adaptive Reading Window for Trivia Screens (`js/screen.js`):** Replaced the uniform `setInterval` slideshow loop with a dynamic per-slide `setTimeout` + synchronized progress-bar engine (`getSlideDurationMs`, `scheduleSlideTimer`, `stopSlideshowTimers`). The 3-card Daily Interest & Trivia slide (`daily_interest`) now automatically stays on screen **50% longer (`18s` vs. `12s` standard slides, minimum `+5s`, with optional `display.triviaSlideDurationSeconds` override)** so residents waiting for the elevator can comfortably read the historical event, trivia riddle, and answer.
+- **Cross-System Slideshow Timer & Touch Synchronization (`pauseTemporarily`, `closeModal`, `refreshDailyInterestSlide`):** Eliminated mid-progress-bar slide cutoffs that previously occurred when a legacy fixed `setInterval` fired shortly after unpausing or manual navigation. Prevented `#stage-container` tap-to-pause bubbling from freezing the progress bar when tapping `.interest-slide-layout`, giving manual trivia taps a clean `20s` reading cycle starting smoothly from `0%`.
+- **Cachebuster & SemVer Bump:** Promoted release version to `2.7.1` and updated asset cachebusters across `index.html` and `admin.html` to `v=20261123_v271_trivia_timing`.
+
 ## [2.7.0] - 2026-11-19
 ### Added
 - **Dual-Mode Mobile Admin UX — Simplified Committee Mode vs. Full Master Admin (`admin.html`, `js/admin.js`):** Fixed all broken Tailwind v3 utility classes under `tailwindcss@2.2.19`, restored pinch-to-zoom accessibility (`viewport-fit=cover` + safe-area insets + `46px` coarse touch targets + `16px` zoom-free inputs), added PIN show/hide toggle, replaced horizontal scrolling tabs with a visible `3×2` mobile grid + `👤 תצוגת ועד` live preview switcher for Master Admin, and reordered the Committee Home screen (`scrollHeight` reduced by `55%` from `3775px` to `1705px`):

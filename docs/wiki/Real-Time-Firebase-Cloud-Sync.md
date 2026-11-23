@@ -1,4 +1,4 @@
-# ⚡ Real-Time Firebase Cloud Sync & Blackbox Telemetry (v2.7.0)
+# ⚡ Real-Time Firebase Cloud Sync & Blackbox Telemetry (v2.7.1)
 
 The platform features instant, two-way cloud synchronization and remote hardware telemetry powered by **Google Firebase Firestore**.
 

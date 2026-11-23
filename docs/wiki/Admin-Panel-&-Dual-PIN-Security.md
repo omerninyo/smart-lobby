@@ -1,4 +1,4 @@
-# 🔐 Dual-Mode Admin Panel, Smart Composer, Cleaning Days & SHA-256 Security (v2.7.0)
+# 🔐 Dual-Mode Admin Panel, Smart Composer, Cleaning Days & SHA-256 Security (v2.7.1)
 
 The admin dashboard (`admin.html`) provides two tailored interfaces in one app — a **Simplified Single-Page Committee Mode** built for non-technical/elderly committee members on iPhone, and a **Full 6-Tab Master Admin** with a `3×2` mobile grid, `SHA-256` PIN security, and partial-merge cloud sync.
 

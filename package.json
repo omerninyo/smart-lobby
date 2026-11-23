@@ -1,6 +1,6 @@
 {
   "name": "smart-lobby",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "description": "Smart Building Digital Signage Kiosk & Dual-Mode Committee Management Platform",
   "main": "server.js",
   "scripts": {

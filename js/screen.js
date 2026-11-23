@@ -584,6 +584,7 @@ class BuildingSignageApp {
     this.slideTimer = null;
     this.progressTimer = null;
     this.slideDurationMs = 12000;
+    this.activeSlideDurationMs = 12000;
     this.slideStartTime = 0;
     this.isPaused = false;
     this.pauseTimeout = null;
@@ -983,7 +984,7 @@ class BuildingSignageApp {
     const stageContainer = document.getElementById('stage-container');
     if (stageContainer) {
       stageContainer.addEventListener('click', (e) => {
-        if (e.target !== prevBtn && e.target !== nextBtn) {
+        if (!e.target.closest('#stage-prev-btn, #stage-next-btn, .interest-slide-layout')) {
           this.pauseTemporarily(20000);
         }
       });
@@ -1067,10 +1068,19 @@ class BuildingSignageApp {
 
   pauseTemporarily(durationMs = 25000) {
     this.isPaused = true;
+    if (this.slideTimer) {
+      clearTimeout(this.slideTimer);
+      clearInterval(this.slideTimer);
+      this.slideTimer = null;
+    }
     clearTimeout(this.pauseTimeout);
     this.pauseTimeout = setTimeout(() => {
       this.isPaused = false;
+      this.activeSlideDurationMs = this.getSlideDurationMs();
       this.slideStartTime = Date.now();
+      const progressFill = document.getElementById('stage-progress-fill');
+      if (progressFill) progressFill.style.width = '0%';
+      this.scheduleSlideTimer(this.activeSlideDurationMs);
     }, durationMs);
   }
 
@@ -1108,7 +1118,11 @@ class BuildingSignageApp {
     // Immediately resume slideshow when modal is closed
     clearTimeout(this.pauseTimeout);
     this.isPaused = false;
+    this.activeSlideDurationMs = this.getSlideDurationMs();
     this.slideStartTime = Date.now();
+    const progressFill = document.getElementById('stage-progress-fill');
+    if (progressFill) progressFill.style.width = '0%';
+    this.scheduleSlideTimer(this.activeSlideDurationMs);
   }
 
   isMemorialDayActive() {
@@ -1486,14 +1500,7 @@ class BuildingSignageApp {
     if (isEmergency) {
       this.stopRadioImmediate();
       this.isSecretMuted = true;
-      if (this.slideTimer) {
-        clearInterval(this.slideTimer);
-        this.slideTimer = null;
-      }
-      if (this.progressTimer) {
-        clearInterval(this.progressTimer);
-        this.progressTimer = null;
-      }
+      this.stopSlideshowTimers();
     } else {
       if (this.wasEmergencyAlert) {
         this.isSecretMuted = false;
@@ -1511,21 +1518,14 @@ class BuildingSignageApp {
     if (isYomKippur) {
       this.stopRadioImmediate();
       this.isSecretMuted = true;
-      if (this.slideTimer) {
-        clearInterval(this.slideTimer);
-        this.slideTimer = null;
-      }
-      if (this.progressTimer) {
-        clearInterval(this.progressTimer);
-        this.progressTimer = null;
-      }
+      this.stopSlideshowTimers();
     } else if (!isEmergency) {
       if (this.wasYomKippur) {
         this.isSecretMuted = false;
         this.checkRadioSchedule();
       }
       // Restart or update slideshow timing if duration changed or returning from Yom Kippur mode
-      if (this.slides && this.slides.length > 1 && (!this.slideTimer || oldDurationMs !== this.slideDurationMs)) {
+      if (this.slides && this.slides.length > 1 && (!this.progressTimer || oldDurationMs !== this.slideDurationMs)) {
         this.startSlideshow();
       }
     }
@@ -3189,7 +3189,13 @@ class BuildingSignageApp {
     if (tipText && nextData.tip) tipText.textContent = nextData.tip.text;
 
     if (showToast) {
-      this.pauseTemporarily(18000);
+      clearTimeout(this.pauseTimeout);
+      this.isPaused = false;
+      this.activeSlideDurationMs = Math.max(20000, this.getSlideDurationMs());
+      this.slideStartTime = Date.now();
+      const progressFill = document.getElementById('stage-progress-fill');
+      if (progressFill) progressFill.style.width = '0%';
+      this.scheduleSlideTimer(this.activeSlideDurationMs);
       this.showTouchToast(nextData.isMemorial ? 'הוצג פרק זיכרון ומורשת נוסף' : 'נטענו עובדת היום וחידת טריוויה חדשה! 🧠', nextData.isMemorial ? '🕯️' : '✨');
     }
   }
@@ -3871,22 +3877,23 @@ class BuildingSignageApp {
       container.appendChild(card);
     });
 
-    if (this.slides.length <= 1) {
-      if (this.slideTimer) {
-        clearInterval(this.slideTimer);
-        this.slideTimer = null;
-      }
-      if (this.progressTimer) {
-        clearInterval(this.progressTimer);
-        this.progressTimer = null;
-      }
-    } else if (!this.isYomKippurModeActive() && !this.isEmergencyAlertActive() && !this.slideTimer) {
+    if (this.slides.length <= 1 || this.isYomKippurModeActive() || this.isEmergencyAlertActive()) {
+      this.stopSlideshowTimers();
+    } else if (!this.progressTimer) {
       this.startSlideshow();
+    } else {
+      this.activeSlideDurationMs = this.getSlideDurationMs();
+      if (!this.isPaused) {
+        const elapsed = Math.max(0, Date.now() - (this.slideStartTime || Date.now()));
+        const remaining = Math.max(1000, this.activeSlideDurationMs - elapsed);
+        this.scheduleSlideTimer(remaining);
+      }
     }
   }
 
-  startSlideshow() {
+  stopSlideshowTimers() {
     if (this.slideTimer) {
+      clearTimeout(this.slideTimer);
       clearInterval(this.slideTimer);
       this.slideTimer = null;
     }
@@ -3894,24 +3901,58 @@ class BuildingSignageApp {
       clearInterval(this.progressTimer);
       this.progressTimer = null;
     }
-    if (this.isYomKippurModeActive() || this.slides.length <= 1) return;
+  }
 
+  getSlideDurationMs(slide = this.slides?.[this.currentSlideIndex]) {
+    const baseMs = this.slideDurationMs || 12000;
+    if (slide && slide.type === 'daily_interest') {
+      const customTriviaSec = Number(this.settings?.display?.triviaSlideDurationSeconds);
+      if (Number.isFinite(customTriviaSec) && customTriviaSec > 0) {
+        return customTriviaSec * 1000;
+      }
+      // Give the 3-card Daily Interest & Trivia screen ~50% longer reading time (18s vs 12s standard)
+      return Math.max(baseMs + 5000, Math.round(baseMs * 1.5));
+    }
+    return baseMs;
+  }
+
+  scheduleSlideTimer(delayMs) {
+    if (this.slideTimer) {
+      clearTimeout(this.slideTimer);
+      clearInterval(this.slideTimer);
+      this.slideTimer = null;
+    }
+    if (this.isYomKippurModeActive() || this.isEmergencyAlertActive() || this.slides.length <= 1) return;
+    const waitMs = Math.max(250, Number(delayMs) || this.getSlideDurationMs());
+    this.slideTimer = setTimeout(() => {
+      this.slideTimer = null;
+      if (this.isYomKippurModeActive() || this.isEmergencyAlertActive() || this.slides.length <= 1) return;
+      if (this.isPaused) return;
+      this.nextSlide();
+    }, waitMs);
+  }
+
+  startSlideshow() {
+    this.stopSlideshowTimers();
+    if (this.isYomKippurModeActive() || this.isEmergencyAlertActive() || this.slides.length <= 1) return;
+
+    this.activeSlideDurationMs = this.getSlideDurationMs();
     this.slideStartTime = Date.now();
     const progressFill = document.getElementById('stage-progress-fill');
+    if (progressFill) progressFill.style.width = '0%';
 
     const progressStepMs = this.settings?.display?.liteMode ? 400 : 100;
     this.progressTimer = setInterval(() => {
       if (this.isPaused) return;
+      const durationMs = this.activeSlideDurationMs || this.getSlideDurationMs();
       const elapsed = Date.now() - this.slideStartTime;
-      const pct = Math.min(100, (elapsed / this.slideDurationMs) * 100);
+      const pct = Math.min(100, (elapsed / durationMs) * 100);
       if (progressFill) progressFill.style.width = `${pct}%`;
     }, progressStepMs);
 
-    this.slideTimer = setInterval(() => {
-      if (!this.isPaused) {
-        this.nextSlide();
-      }
-    }, this.slideDurationMs);
+    if (!this.isPaused) {
+      this.scheduleSlideTimer(this.activeSlideDurationMs);
+    }
   }
 
   nextSlide() {
@@ -3930,7 +3971,10 @@ class BuildingSignageApp {
     if (this.slides.length === 0) return;
     const prevIdx = this.currentSlideIndex;
     this.currentSlideIndex = (index + this.slides.length) % this.slides.length;
+    this.activeSlideDurationMs = this.getSlideDurationMs();
     this.slideStartTime = Date.now();
+    const progressFill = document.getElementById('stage-progress-fill');
+    if (progressFill) progressFill.style.width = '0%';
 
     // Advance notice image variety pool on full deck wrap-around (when not in Lite Mode)
     if (this.currentSlideIndex === 0 && prevIdx > 0 && !this.settings?.display?.liteMode) {
@@ -3959,6 +4003,14 @@ class BuildingSignageApp {
     });
 
     this.rotateBackground();
+
+    if (this.slides.length > 1 && !this.isYomKippurModeActive() && !this.isEmergencyAlertActive()) {
+      if (!this.progressTimer) {
+        this.startSlideshow();
+      } else if (!this.isPaused) {
+        this.scheduleSlideTimer(this.activeSlideDurationMs);
+      }
+    }
   }
 
   rotateBackground() {

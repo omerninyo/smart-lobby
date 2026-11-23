@@ -1,4 +1,4 @@
-# 🕯️ Year-Round Israel Calendar, Live Wikipedia, 1080p Panels & Modular News (v2.7.0)
+# 🕯️ Year-Round Israel Calendar, Live Wikipedia, 1080p Panels & Modular News (v2.7.1)
 
 The lobby display (`index.html`) combines a full year-round Israeli & Hebrew calendar engine with live Hebrew Wikipedia history, `1920×1080` full-stage scaled environmental/transit/trivia panels, and a 14-channel modular news ticker.
 
@@ -26,6 +26,7 @@ The lobby display (`index.html`) combines a full year-round Israeli & Hebrew cal
 
 ## 🧠 Full-Stage `1920×1080` "Elevator Moment of Interest" + Live Wikipedia (`daily_interest`)
 * Blends **50+ curated Hebrew science, space & local nature sets** with **live daily Hebrew Wikipedia "On This Day" (`תבנית:היום בהיסטוריה`)** events (cached once per 24h in `localStorage` with family-friendly filtering), **14 dedicated Holiday & Shabbat pools**, and a dignified **Memorial Day heritage mode**, rendered in distance-readable `1080p` typography (`~31px–35px`).
+* **Extended Adaptive Reading Window (`v2.7.1`):** Because the screen presents three dense knowledge cards side-by-side, `getSlideDurationMs()` automatically grants `daily_interest` **50% longer stage dwell time (`18s` vs. `12s` standard slides, or `20s` when tapped for a fresh riddle)** synchronized 1:1 with `#stage-progress-fill`.
 
 ---
 
